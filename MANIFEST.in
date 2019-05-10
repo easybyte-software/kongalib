@@ -1,0 +1,7 @@
+include VERSION
+include README
+include LICENSE
+include src/_kongalib/*.h
+include src/_kongalib/yajl-2.0.1/src/*.h
+include src/_kongalib/yajl-2.0.1/src/api/*.h
+include src/_kongalib/yajl-2.0.1/include/yajl/*.h
