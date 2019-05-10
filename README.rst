@@ -16,6 +16,9 @@ l'installazione per questi sistemi è pertanto banale e si effettua tramite *pip
 	pip install kongalib
 
 
+Compilazione manuale
+--------------------
+
 Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 *kongalib* sono i seguenti:
 
@@ -54,6 +57,11 @@ seguenti pacchetti *deb*:
 La compilazione è possibile tramite la usuale procedura dei pacchetti Python::
 
 	python setup.py install
+
+
+.. note:: Sotto piattaforma Windows per la corretta compilazione è necessario
+   impostare la variabile d'ambiente ``KONGASDK`` alla directory d'installazione
+   dell'`SDK di Konga`_
 
 
 Risorse
