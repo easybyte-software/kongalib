@@ -59,9 +59,9 @@ La compilazione è possibile tramite la usuale procedura dei pacchetti Python::
 	python setup.py install
 
 
-.. note:: Sotto piattaforma Windows per la corretta compilazione è necessario
-	impostare la variabile d'ambiente ``KONGASDK`` alla directory d'installazione
-	dell'`SDK di Konga`_
+Da notare che sotto piattaforma Windows per la corretta compilazione è necessario
+impostare la variabile d'ambiente ``KONGASDK`` alla directory d'installazione
+dell'`SDK di Konga`_.
 
 
 Risorse
