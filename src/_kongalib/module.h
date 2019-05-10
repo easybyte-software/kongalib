@@ -1,12 +1,19 @@
-/** @file mga/module/module.h
+/*
+ *		 _                           _ _ _
+ *		| |                         | (_) |
+ *		| | _____  _ __   __ _  __ _| |_| |__
+ *		| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+ *		|   < (_) | | | | (_| | (_| | | | |_) |
+ *		|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+ *		                  __/ |
+ *		                 |___/
  *
- *		Python MGA module global header file.
  *
- *		$Revision: 30955 $
- *		$Date: 2019-03-04 13:00:12 +0100 (Mon, 04 Mar 2019) $
- *		$Author: lillo $
+ *		Konga client library, by EasyByte Software
  *
+ *		https://github.com/easybyte-software/kongalib
  */
+
 
 #ifndef __MGA_MODULE_H__
 #define __MGA_MODULE_H__

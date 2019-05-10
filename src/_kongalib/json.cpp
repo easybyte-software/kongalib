@@ -1,16 +1,19 @@
-/** @file mga/module/json.cpp
+/*
+ *		 _                           _ _ _
+ *		| |                         | (_) |
+ *		| | _____  _ __   __ _  __ _| |_| |__
+ *		| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+ *		|   < (_) | | | | (_| | (_| | | | |_) |
+ *		|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+ *		                  __/ |
+ *		                 |___/
  *
- *		JSON codec for MGA module, based on YAJL.
  *
- *		$Revision: 30756 $
- *		$Date: 2019-02-15 09:46:34 +0100 (Fri, 15 Feb 2019) $
- *		$Author: lillo $
+ *		Konga client library, by EasyByte Software
  *
- *		\defgroup mga_module MGA Python extension module
- *		The MGA Python extension module is a wrapper around the \ref mga_client and part of the \ref CL for Python.
+ *		https://github.com/easybyte-software/kongalib
  */
 
-/*@{*/
 
 #include "module.h"
 

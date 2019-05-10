@@ -1,16 +1,19 @@
-/** @file mga/module/module.cpp
+/*
+ *		 _                           _ _ _
+ *		| |                         | (_) |
+ *		| | _____  _ __   __ _  __ _| |_| |__
+ *		| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+ *		|   < (_) | | | | (_| | (_| | | | |_) |
+ *		|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+ *		                  __/ |
+ *		                 |___/
  *
- *		Main MGA Python module file.
  *
- *		$Revision: 30987 $
- *		$Date: 2019-03-06 11:20:47 +0100 (Wed, 06 Mar 2019) $
- *		$Author: lillo $
+ *		Konga client library, by EasyByte Software
  *
- *		\defgroup mga_module MGA Python extension module
- *		The MGA Python extension module is a wrapper around the \ref mga_client and part of the \ref CL for Python.
+ *		https://github.com/easybyte-software/kongalib
  */
 
-/*@{*/
 
 #include "Python.h"
 

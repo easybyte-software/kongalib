@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+#	 _                           _ _ _
+#	| |                         | (_) |
+#	| | _____  _ __   __ _  __ _| |_| |__
+#	| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+#	|   < (_) | | | | (_| | (_| | | | |_) |
+#	|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+#	                  __/ |
+#	                 |___/
 #
-#	Konga Client library
+#	Konga client library, by EasyByte Software
 #
-#		Scripting support
-#
+#	https://github.com/easybyte-software/kongalib
+
 
 from __future__ import print_function
 from __future__ import absolute_import

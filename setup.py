@@ -58,6 +58,9 @@ def _new_compiler(*args, **kwargs):
 distutils.ccompiler.new_compiler = _new_compiler
 
 
+konga_sdk = os.environ.get('KONGASDK', None)
+
+
 if sys.platform == 'darwin':
 	sdk = os.environ.get('SDK', None)
 	for index, arg in enumerate(sys.argv):
@@ -93,36 +96,28 @@ if sys.platform == 'darwin':
 		else:
 			print('Error: no valid SDK found!')
 			sys.exit(1)
-	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -F/Library/Frameworks -I/usr/local/include' % (macosx_version_min, sdk)
-	ldflags = '-Wl,-syslibroot,%s -L/usr/local/lib -framework Foundation -lkonga_client_s -lebpr_s -lpcre -lz -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, macosx_version_min)
+	if konga_sdk is None:
+		konga_sdk = '/usr/local'
+	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -F/Library/Frameworks -I%s/include' % (macosx_version_min, sdk, konga_sdk)
+	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Foundation -lkonga_client_s -lebpr_s -lpcre -lz -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11'
 	ldflags += ' -stdlib=libc++'
-	sdk = os.environ.get('KONGASDK')
-	if sdk:
-		cflags += ' -I"%s/include"' % sdk
-		ldflags += ' -L"%s/lib"' % sdk
 	extra_libs = ''
 elif sys.platform == 'win32':
 	suffix = '_d' if debug else ''
 	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /Z7 /wd4244 /wd4005 /wd4267'
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /ignore:4197'
 	extra_libs = 'ebpr_s%s konga_client_s%s zlib%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32' % (suffix, suffix, suffix[1:])
-	sdk = os.environ.get('KONGASDK')
-	if sdk:
-		cflags += ' /I"%s\\Include"' % sdk
-		ldflags += ' /LIBPATH:"%s\\Lib"' % sdk
+	if konga_sdk is not None:
+		cflags += ' /I"%s\\Include"' % konga_sdk
+		ldflags += ' /LIBPATH:"%s\\Lib"' % konga_sdk
 else:
-	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -fvisibility=hidden -I/usr/local/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS'
-	ldflags = '-L/usr/local/lib -lkonga_client_s -lebpr_s -lpcre -lz -ldbus-1'
+	if konga_sdk is None:
+		konga_sdk = '/usr/local'
+	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS' % konga_sdk
+	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lpcre -lz -ldbus-1' % konga_sdk
 	extra_libs = ''
 
-
-if 'KONGALIB_CFLAGS' in os.environ:
-	cflags = '%s %s' % (os.environ['KONGALIB_CFLAGS'], cflags)
-#	print("***** CUSTOM KONGALIB_CFLAGS")
-if 'KONGALIB_LDFLAGS' in os.environ:
-	ldflags = '%s %s' % (os.environ['KONGALIB_LDFLAGS'], ldflags)
-#	print("***** CUSTOM KONGALIB_LDFLAGS")
 
 defines = [
 	('NOUNCRYPT', None),
@@ -169,7 +164,7 @@ setup(
     description = "Konga client library",
     license = "LGPL",
     keywords = [ "konga", "client", "erp" ],
-    url = "http://www.easybyte.it",
+    url = "https://github.com/easybyte-software/kongalib",
 	classifiers = [
 		"Natural Language :: Italian",
 		"Programming Language :: Python",
