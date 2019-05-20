@@ -156,6 +156,9 @@ class Client(object):
 		sulla connessione appena stabilita. Se *success* è una funzione nella forma ``success(info, userdata)`` allora ``connect`` restituisce
 		immediatamente un oggetto :class:`~kongalib.Deferred` e la chiamata viene eseguita in modo asincrono; la callback *success* verrà
 		invocata con le informazioni sulla connessione e *userdata* se e quando la connessione viene stabilita.
+		Il parametro *options* può essere un ``dict`` contenente opzioni aggiuntive per la connessione; al momento le opzioni supportate sono:
+
+		- ``tenant_key`` (*str*): chiave del tenant per stabilire la connessione con un server multitenant.
 		"""
 		if (server is None) and (host is None):
 			raise ValueError("either 'host' or 'server' parameter must be specified")
