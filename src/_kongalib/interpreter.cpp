@@ -123,7 +123,7 @@ public:
 
 			module = PyImport_AddModule("__main__");
 			dict = PyModule_GetDict(module);
-			
+
 			item = PyCodec_Encoder("ascii");
 			Py_XDECREF(item);
 
@@ -150,6 +150,14 @@ public:
 #if DEBUG
 				fprintf(stderr, "InterpreterJob::Run() got execute request\n");
 #endif
+#if PY3K
+				item = PyUnicode_DecodeUTF8(fInterpreter->fFileName.c_str(), fInterpreter->fFileName.size(), "replace");
+#else
+				item = PyString_FromStringAndSize(fInterpreter->fFileName.c_str(), fInterpreter->fFileName.size());
+#endif
+				PyDict_SetItemString(dict, "__file__", item);
+				Py_DECREF(item);
+
 				object = PyList_New(fInterpreter->fArgv.Count());
 				for (i = 0; i < fInterpreter->fArgv.Count(); i++) {
 					item = PyUnicode_DecodeUTF8(fInterpreter->fArgv[i].c_str(), fInterpreter->fArgv[i].size(), "replace");
