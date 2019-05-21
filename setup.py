@@ -118,6 +118,11 @@ else:
 	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lpcre -lz -ldbus-1' % konga_sdk
 	extra_libs = ''
 
+if 'KONGALIB_CFLAGS' in os.environ:
+	cflags = '%s %s' % (os.environ['KONGALIB_CFLAGS'], cflags)
+if 'KONGALIB_LDFLAGS' in os.environ:
+	ldflags = '%s %s' % (os.environ['KONGALIB_LDFLAGS'], ldflags)
+
 
 defines = [
 	('NOUNCRYPT', None),
