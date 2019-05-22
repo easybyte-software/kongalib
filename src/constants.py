@@ -133,6 +133,7 @@ TRIGGER_OUTPUT = 2068
 TRIGGER_ERROR = 2069
 CRYPTO_SUPPORT_ENABLED = 2070                                  #: Crittografia dei dati abilitata
 EDI_SERVICE_ENABLED = 2071
+SERVER_NOT_CONFIGURED_ARCHIVE = 2072                           #: Risorse del server non trovate
 DRIVER_LOAD_FAILED = 2100
 MALFORMED_DRIVER = 2101
 INCOMPATIBLE_DRIVER_VERSION = 2102
