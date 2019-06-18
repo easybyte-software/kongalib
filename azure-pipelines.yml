@@ -30,7 +30,7 @@ jobs:
   - checkout: self
 
   - script: |
-      apt install zlib1g-dev libz-dev libdbus-1-dev libpcre3-dev cmake
+      sudo apt install zlib1g-dev libz-dev libdbus-1-dev libpcre3-dev cmake
       git clone https://$(user):$(password)@github.com/easybyte-software/konga.git 
     displayName: 'Install dependencies'
 
