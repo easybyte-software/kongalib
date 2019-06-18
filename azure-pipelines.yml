@@ -46,7 +46,7 @@ jobs:
       mkdir -p out
       cd out
       cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-      make
+      make -j2
       sudo make install
       cd ../..
     displayName: 'Installing ebpr and konga_client'
@@ -111,7 +111,7 @@ jobs:
       mkdir -p out
       cd out
       cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-      make
+      make -j2 VERBOSE=1
       sudo make install
       cd ../..
     displayName: 'Installing ebpr and konga_client'
