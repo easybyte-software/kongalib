@@ -36,6 +36,8 @@ jobs:
       sudo apt install zlib1g-dev libz-dev libdbus-1-dev libpcre3-dev cmake
       git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
       wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
+      sudo python -m pip install -U pip
+      sudo pip install -U setuptools wheel
     displayName: 'Download dependencies'
 
   - script: |
@@ -58,7 +60,7 @@ jobs:
     displayName: 'Installing ebpr and konga_client'
 
   - script: 
-      python setup.py build
+      python setup.py bdist_wheel
     displayName: 'Building wheel'
 
   
