@@ -20,7 +20,6 @@ jobs:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
-    maxParallel: 2
   steps:
   - task: UsePythonVersion@0
     inputs:
@@ -62,5 +61,16 @@ jobs:
   - script: |
       python setup.py bdist_wheel
     displayName: 'Building wheel'
+  
+  - task: CopyFiles@2
+    inputs:
+      contents: dist/*.whl
+      targetFolder: '$(Build.ArtifactStagingDirectory)'
+      flattenFolders: true
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: 'Linux wheels'
 
   
