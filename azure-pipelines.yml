@@ -28,11 +28,34 @@ jobs:
     displayName: 'Use Python $(python.version)'
   
   - checkout: self
+    clean: true
 
   - script: |
+      set -e
+      sudo apt-get update
       sudo apt install zlib1g-dev libz-dev libdbus-1-dev libpcre3-dev cmake
-      git clone https://$(user):$(password)@github.com/easybyte-software/konga.git 
-    displayName: 'Install dependencies'
+      git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
+      wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
+    displayName: 'Download dependencies'
+
+  - script: |
+      tar -zxvf mpdecimal-2.4.2.tar.gz
+      cd mpdecimal-2.4.2
+      ./configure
+      CFLAGS=-fPIC make -j2
+      sudo make install
+      cd ..
+    displayName: 'Installing mpdecimal'
+  
+  - script: |
+      cd konga
+      mkdir -p out
+      cd out
+      cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
+      make
+      sudo make install
+      cd ../..
+    displayName: 'Installing ebpr and konga_client'
 
   - script: 
       python setup.py build
