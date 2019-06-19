@@ -51,7 +51,7 @@ steps:
 - task: BatchScript@1
   inputs:
     filename: azure-wheel-helpers\build-deps.bat
-    arguments: $(mpdec_bits) "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" $(python.architecture)
+    arguments: $(mpdec_bits) $(python.architecture)
     workingFolder: azure-wheel-helpers
   displayName: 'Install C dependencies (Windows Python 2.7)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 

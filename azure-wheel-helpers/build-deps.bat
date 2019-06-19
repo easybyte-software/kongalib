@@ -2,8 +2,8 @@
 @echo off
 
 if "%2" neq "" (
-	echo "Calling vcvarsall at %2"
-    call %2 %3
+	echo "Calling vcvarsall"
+    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" %2
 )
 
 echo Preparing third_party
