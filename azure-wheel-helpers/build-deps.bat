@@ -2,7 +2,7 @@
 @echo off
 
 if "%2" neq "" (
-	echo "Calling vcvarsall"
+	echo Calling vcvarsall
     call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" %2
 )
 
@@ -27,12 +27,12 @@ dir /s "%ROOT%\third_party"
 echo Compiling zlib
 cd "%ROOT%\zlib-1.2.11"
 nmake -f win32\Makefile.msc zlib.lib
-copy /Y zlib.lib "%ROOT%\third_party\lib"',
-copy /Y zlib.h "%ROOT%\third_party\include"',
-copy /Y zconf.h "%ROOT%\third_party\include"',
+copy /Y zlib.lib "%ROOT%\third_party\lib"
+copy /Y zlib.h "%ROOT%\third_party\include"
+copy /Y zconf.h "%ROOT%\third_party\include"
 
 echo Compiling pcre
-cd "%ROOT%\pcre-8.43"
+cd "%ROOT%\pcre-8.31"
 md out
 cd out
 cmake -G "NMake Makefiles" -DPCRE_SUPPORT_UTF=On -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ROOT%\third_party ..
