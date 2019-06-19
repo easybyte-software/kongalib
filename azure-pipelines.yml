@@ -98,5 +98,4 @@ jobs:
   steps:
     - template: azure-wheel-helpers/azure-setup.yml
     - template: azure-wheel-helpers/azure-steps.yml
-    - template: azure-wheel-helpers/azure-tests.yml
     - template: azure-wheel-helpers/azure-publish-dist.yml
