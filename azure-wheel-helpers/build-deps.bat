@@ -41,6 +41,6 @@ echo Compiling ebpr and konga_client
 cd "%BUILD_SOURCESDIRECTORY%\konga"
 md out
 cd out
-cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY="%BUILD_SOURCESDIRECTORY%\third_party" -G "NMake Makefiles"
+cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY="%BUILD_SOURCESDIRECTORY%\third_party" -DCMAKE_INSTALL_PREFIX=%BUILD_SOURCESDIRECTORY%\third_party -G "NMake Makefiles"
 nmake
 nmake install
