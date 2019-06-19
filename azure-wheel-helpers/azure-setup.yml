@@ -21,6 +21,14 @@ steps:
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: |
+    choco install vcpython27 --yes
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.zip', 'mpdecimal-2.4.2.zip')"
+    7z x mpdecimal-2.4.2.zip
+    git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
+  displayName: 'Download dependencies (Windows)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
+
+- script: |
     tar -zxvf mpdecimal-2.4.2.tar.gz
     cd mpdecimal-2.4.2
     ./configure
@@ -35,6 +43,29 @@ steps:
     sudo make install
   displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
+
+- script: |
+    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" $(python.architecture)
+    md third_party
+    pushd third_party
+    md include
+    md lib
+    popd
+    pushd mpdecimal-2.4.2\build
+    vcbuild$(mpdec_bits)
+    copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib %~dp0\third_party\lib\mpdec.lib
+    copy /Y dist$(mpdec_bits)\*.h %~dp0\third_party\include
+    copy /Y ..\libmpdec\vc*.h %~dp0\third_party\include
+    popd
+    pushd konga
+    md out
+    pushd out
+    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY=%~dp0\third_party -G "NMake Makefiles"
+    nmake
+    nmake install
+    popd
+  displayName: 'Install C dependencies (Windows Python 2.7)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 
 
 - script: ./macos-install-python.sh '$(python.version)'
   workingDirectory: azure-wheel-helpers
