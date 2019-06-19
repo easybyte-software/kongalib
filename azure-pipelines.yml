@@ -1,140 +1,106 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+# Copyright (c) 2019, Henry Schreiner.
+#
+# Distributed under the 3-clause BSD license, see accompanying file LICENSE
+# or https://github.com/scikit-hep/azure-wheel-helpers for details.
 
+# Template - you must copy (or symlink) this to your .ci folder
+# Packages usually will have a little custom code in here, and
+# can override any of the templates from here, as well
+
+# Triggers can be overridden in the GUI. Suggested use follows:
 trigger:
 - master
 
+# For a master-develop workflow:
+# pr:
+#   - master
+# trigger:
+#   - master
+
+
+
+# Either set these value here, or in the GUI
+variables:
+  package_name: kongalib     # This is the output name, - is replaced by _
+  many_linux_base: quay.io/pypa/manylinux1_ # Should be quay.io/pypa/manylinux1_ or skhep/manylinuxgcc-
+
 jobs:
-- job: Linux
+
+- job: LinuxSDist
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-latest'
+  variables:
+    python.architecture: 'none'
+  steps:
+    - script: |
+        python -m pip install setuptools
+        python setup.py sdist
+      displayName: Publish sdist
+    - template: azure-wheel-helpers/azure-publish-dist.yml
+
+- job: ManyLinux
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
-      Python35:
-        python.version: '3.5'
-      Python36:
-        python.version: '3.6'
-      Python37:
-        python.version: '3.7'
-  steps:
-  - checkout: self
-    clean: true
-
-  - script: |
-      set -e
-      sudo apt-get update
-      sudo apt install zlib1g-dev libz-dev libdbus-1-dev libpcre3-dev cmake
-      git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
-      wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
-    displayName: 'Download dependencies'
-
-  - script: |
-      tar -zxvf mpdecimal-2.4.2.tar.gz
-      cd mpdecimal-2.4.2
-      ./configure
-      CFLAGS=-fPIC make -j2
-      sudo make install
-      cd ..
-    displayName: 'Installing mpdecimal'
-  
-  - script: |
-      cd konga
-      mkdir -p out
-      cd out
-      cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-      make -j2
-      sudo make install
-      cd ../..
-    displayName: 'Installing ebpr and konga_client'
-
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
-  
-  - script: |
-      python -m pip install -U pip
-      pip install -U setuptools wheel
-      python setup.py bdist_wheel
-    displayName: 'Building wheel'
-  
-  - task: CopyFiles@2
-    inputs:
-      contents: dist/*.whl
-      targetFolder: '$(Build.ArtifactStagingDirectory)'
-      flattenFolders: true
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: 'Linux wheels'
-
-- job: macOS
+      64Bit:
+        arch: x86_64
+        plat: manylinux1_x86_64
+        image: $(many_linux_base)x86_64
+        python.architecture: x64
+      32Bit:
+        arch: i686
+        plat: manylinux1_i686
+        image: $(many_linux_base)i686
+        python.architecture: x86
   pool:
-    vmImage: 'macOS-10.14'
-  strategy:
-    matrix:
-      Python27:
-        python.version: '2.7'
-      Python35:
-        python.version: '3.5'
-      Python36:
-        python.version: '3.6'
-      Python37:
-        python.version: '3.7'
+    vmImage: 'ubuntu-latest'
   steps:
-  - checkout: self
-    clean: true
+    - template: azure-wheel-helpers/azure-manylinux-wheels.yml
+    - template: azure-wheel-helpers/azure-publish-dist.yml
 
-  - script: |
-      set -e
-      brew install zlib pcre
-      git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
-      wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
-    displayName: 'Download dependencies'
+# - job: macOS
+#   variables:
+#     python.architecture: 'x64'
+#   strategy:
+#     matrix:
+#       Python27:
+#         python.version: '2.7'
+#       Python36:
+#         python.version: '3.6'
+#       Python37:
+#         python.version: '3.7'
+#   pool:
+#     vmImage: 'macOS-latest'
+#   steps:
+#     - template: azure-wheel-helpers/azure-setup.yml
+#     - template: azure-wheel-helpers/azure-steps.yml
+#     - template: azure-wheel-helpers/azure-tests.yml
+#     - template: azure-wheel-helpers/azure-publish-dist.yml
 
-  - script: |
-      tar -zxvf mpdecimal-2.4.2.tar.gz
-      cd mpdecimal-2.4.2
-      ./configure
-      CFLAGS=-fPIC make -j2
-      sudo make install
-      cd ..
-    displayName: 'Installing mpdecimal'
-  
-  - script: |
-      cd konga
-      mkdir -p out
-      cd out
-      cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-      make -j2 VERBOSE=1
-      sudo make install
-      cd ../..
-    displayName: 'Installing ebpr and konga_client'
-
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-    displayName: 'Use Python $(python.version)'
-
-  - script: |
-      export MACOSX_DEPLOYMENT_TARGET="10.8"
-      python -m pip install -U pip
-      pip install -U setuptools wheel
-      python setup.py bdist_wheel
-    displayName: 'Building wheel'
-  
-  - task: CopyFiles@2
-    inputs:
-      contents: dist/*.whl
-      targetFolder: '$(Build.ArtifactStagingDirectory)'
-      flattenFolders: true
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: 'macOS wheels'
+# - job: Windows
+#   strategy:
+#     matrix:
+#       Python27:
+#         python.version: '2.7'
+#         python.architecture: 'x64'
+#       Python36:
+#         python.version: '3.6'
+#         python.architecture: 'x64'
+#       Python37:
+#         python.version: '3.7'
+#         python.architecture: 'x64'
+#       Python27_32:
+#         python.version: '2.7'
+#         python.architecture: 'x86'
+#       Python36_32:
+#         python.version: '3.6'
+#         python.architecture: 'x86'
+#       Python37_32:
+#         python.version: '3.7'
+#         python.architecture: 'x86'
+#   pool:
+#     vmImage: 'vs2017-win2016'
+#   steps:
+#     - template: azure-wheel-helpers/azure-setup.yml
+#     - template: azure-wheel-helpers/azure-steps.yml
+#     - template: azure-wheel-helpers/azure-tests.yml
+#     - template: azure-wheel-helpers/azure-publish-dist.yml
