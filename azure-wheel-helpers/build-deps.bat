@@ -1,7 +1,9 @@
+@setlocal enableextensions enabledelayedexpansion
 @echo off
 
 if "%2" neq "" (
-    call "%2" "%3"
+	echo "Calling vcvarsall at %2"
+    call %2 %3
 )
 
 echo Preparing third_party
