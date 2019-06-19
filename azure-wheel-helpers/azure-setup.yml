@@ -51,11 +51,13 @@ steps:
     md include
     md lib
     popd
-    pushd mpdecimal-2.4.2\build
+    pushd mpdecimal-2.4.2
+    pushd build
     vcbuild$(mpdec_bits)
     copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib %~dp0\third_party\lib\mpdec.lib
     copy /Y dist$(mpdec_bits)\*.h %~dp0\third_party\include
     copy /Y ..\libmpdec\vc*.h %~dp0\third_party\include
+    popd
     popd
     pushd konga
     md out

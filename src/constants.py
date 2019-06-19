@@ -734,6 +734,7 @@ PAPERTE_DATE_MISS = 5425                                       #: Specificare un
 PAPERTE_DATE_INVALID = 5426                                    #: Specificare una data registrazione valida!
 DATIGESTIONALIDE_TIPODATO_MISS = 5427
 PREVENTIVI_ALIQUOTA_MISS = 5428
+EB_DOC_FISC_ESIG_IVA_ERR = 5429                                #: Il tipo di esigibilità IVA del documento fiscale è diverso da quello della causale contabile!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
