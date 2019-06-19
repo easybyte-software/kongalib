@@ -53,15 +53,15 @@ steps:
     popd
     pushd mpdecimal-2.4.2\vcbuild
     vcbuild$(mpdec_bits)
-    copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib %~dp0\third_party\lib\mpdec.lib
-    copy /Y dist$(mpdec_bits)\*.h %~dp0\third_party\include
-    copy /Y ..\libmpdec\vc*.h %~dp0\third_party\include
+    copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib "$(Build.SourcesDirectory)\third_party\lib\mpdec.lib"
+    copy /Y dist$(mpdec_bits)\*.h "$(Build.SourcesDirectory)\third_party\include"
+    copy /Y ..\libmpdec\vc*.h "$(Build.SourcesDirectory)\third_party\include"
     popd
-    dir /s %~dp0\third_party
+    dir /s "$(Build.SourcesDirectory)\third_party"
     pushd konga
     md out
     pushd out
-    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY=%~dp0\third_party -G "NMake Makefiles"
+    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY="$(Build.SourcesDirectory)\third_party" -G "NMake Makefiles"
     nmake
     nmake install
     popd
