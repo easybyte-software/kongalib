@@ -17,8 +17,13 @@ steps:
 - script: |
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python -m pip wheel . -w wheelhouse/
-  displayName: 'Build wheel'
-  condition: and(succeeded(), not(and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7'))))
+  displayName: 'Build wheel (Windows)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['python.version'], '2.7')) 
+
+- script: |
+    python -m pip wheel . -w wheelhouse/
+  displayName: 'Build wheel (macOS)'
+  condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
     ls -lh wheelhouse
