@@ -2,8 +2,8 @@
 @echo off
 
 if "%PYTHON_VERSION%"=="2.7" (
-	echo Calling Python 2.7 vcvarsall
-    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" "%PYTHON_ARCHITECTURE%"
+    echo Calling Python 2.7 vcvarsall for architecture %PYTHON_ARCHITECTURE%
+    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 )
 
 echo Preparing third_party
