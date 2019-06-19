@@ -6,7 +6,7 @@
 
 steps:
 - script: |
-    docker run -e GH_USER=$(user) -e GH_PASSWORD=$(password) --rm -v `pwd`:/io $(image) /io/azure-wheel-helpers/build-wheels.sh
+    docker run --rm -v `pwd`:/io $(image) /io/azure-wheel-helpers/build-wheels.sh
   displayName: Build wheels
 
 - script: |

@@ -8,8 +8,31 @@
 
 steps:
 
+- script: |
+    wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
+    tar -zxvf mpdecimal-2.4.2.tar.gz
+    git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
+  displayName: 'Download dependencies'
+  condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
+
+- script: |
+    tar -zxvf mpdecimal-2.4.2.tar.gz
+    cd mpdecimal-2.4.2
+    ./configure
+    CFLAGS=-fPIC make -j2
+    sudo make install
+    cd ..
+    cd konga
+    mkdir -p out
+    cd out
+    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
+    make -j2
+    sudo make install
+  displayName: 'Install C dependencies'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
+
 - script: ./macos-install-python.sh '$(python.version)'
-  workingDirectory: .ci/azure-wheel-helpers
+  workingDirectory: azure-wheel-helpers
   displayName: Install Python.org Python
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin')) 
 
@@ -17,12 +40,12 @@ steps:
   inputs:
     versionSpec: '$(python.version)'
     architecture: '$(python.architecture)'
-  condition: and(succeeded(), ne(variables['Agent.OS'], 'Darwin')) 
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
     mkdir -p dist
     python -m pip install --upgrade pip
-    python -m pip install --upgrade pytest wheel twine setuptools
-    python -m pip install -r .ci/requirements-build.txt
-  displayName: 'Install dependencies'
+    python -m pip install --upgrade wheel twine setuptools
+  displayName: 'Install Python dependencies'
+  condition: and(succeeded(), ne(variables['Agent.OS'], 'Linux'))
 

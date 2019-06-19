@@ -4,19 +4,12 @@ set -e -x
 
 yum install -y zlib-devel pcre-devel dbus-devel dbus-libs cmake
 
-mkdir temp
-cd temp
-
-wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
-tar -zxvf mpdecimal-2.4.2.tar.gz
-cd mpdecimal-2.4.2
+cd /io/mpdecimal-2.4.2
 ./configure
 CFLAGS=-fPIC make -j2
 sudo make install
-cd ..
 
-git clone https://${GH_USER}:${GH_PASSWORD}@github.com/easybyte-software/konga.git
-cd konga
+cd /io/konga
 mkdir -p out
 cd out
 cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
