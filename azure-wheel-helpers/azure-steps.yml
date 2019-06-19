@@ -21,15 +21,15 @@ steps:
 - script: |
     ls -lh wheelhouse
     mkdir -p dist
-    cp wheelhouse/$(package_name)* dist/.
+    cp wheelhouse/kongalib* dist/.
   displayName: 'Show wheelhouse'
 
 - script: |
-    python -m pip install $(package_name) --no-index -f wheelhouse
+    python -m pip install kongalib --no-index -f wheelhouse
   displayName: 'Install wheel'
 
 - script: |
     python -m pip install delocate
-    /Library/Frameworks/Python.framework/Versions/$(python.version)/bin/delocate-wheel dist/$(package_name)*.whl
+    /Library/Frameworks/Python.framework/Versions/$(python.version)/bin/delocate-wheel dist/kongalib*.whl
   displayName: 'Delocate wheels'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin')) 

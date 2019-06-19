@@ -18,12 +18,6 @@ trigger:
 #   - master
 
 
-
-# Either set these value here, or in the GUI
-variables:
-  package_name: kongalib     # This is the output name, - is replaced by _
-  many_linux_base: quay.io/pypa/manylinux1_ # Should be quay.io/pypa/manylinux1_ or skhep/manylinuxgcc-
-
 jobs:
 
 - job: LinuxSDist
@@ -44,12 +38,12 @@ jobs:
       64Bit:
         arch: x86_64
         plat: manylinux1_x86_64
-        image: $(many_linux_base)x86_64
+        image: quay.io/pypa/manylinux1_x86_64
         python.architecture: x64
       32Bit:
         arch: i686
         plat: manylinux1_i686
-        image: $(many_linux_base)i686
+        image: quay.io/pypa/manylinux1_i686
         python.architecture: x86
   pool:
     vmImage: 'ubuntu-latest'
