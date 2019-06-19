@@ -52,7 +52,7 @@ steps:
     md lib
     popd
     pushd mpdecimal-2.4.2\vcbuild
-    vcbuild$(mpdec_bits)
+    call "vcbuild$(mpdec_bits).bat"
     copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib "$(Build.SourcesDirectory)\third_party\lib\mpdec.lib"
     copy /Y dist$(mpdec_bits)\*.h "$(Build.SourcesDirectory)\third_party\include"
     copy /Y ..\libmpdec\vc*.h "$(Build.SourcesDirectory)\third_party\include"
