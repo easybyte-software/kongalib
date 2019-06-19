@@ -57,12 +57,14 @@ steps:
     copy /Y dist$(mpdec_bits)\*.h %~dp0\third_party\include
     copy /Y ..\libmpdec\vc*.h %~dp0\third_party\include
     popd
+    dir /s %~dp0\third_party
     pushd konga
     md out
     pushd out
     cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY=%~dp0\third_party -G "NMake Makefiles"
     nmake
     nmake install
+    popd
     popd
   displayName: 'Install C dependencies (Windows Python 2.7)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 
