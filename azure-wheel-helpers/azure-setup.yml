@@ -51,10 +51,10 @@ steps:
 - task: BatchScript@1
   inputs:
     filename: azure-wheel-helpers\build-deps.bat
-    arguments: $(mpdec_bits) $(python.architecture)
     workingFolder: azure-wheel-helpers
-  displayName: 'Install C dependencies (Windows Python 2.7)'
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 
+  displayName: 'Install C dependencies (Windows)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
+
 
 - script: ./macos-install-python.sh '$(python.version)'
   workingDirectory: azure-wheel-helpers
