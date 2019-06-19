@@ -16,6 +16,11 @@ steps:
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
+    brew install zlib pcre
+  displayName: 'Download dependencies (macOS)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
+
+- script: |
     tar -zxvf mpdecimal-2.4.2.tar.gz
     cd mpdecimal-2.4.2
     ./configure
