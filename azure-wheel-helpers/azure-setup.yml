@@ -12,7 +12,7 @@ steps:
     wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
     tar -zxvf mpdecimal-2.4.2.tar.gz
     git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
-  displayName: 'Download dependencies'
+  displayName: 'Download dependencies (Unix)'
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
@@ -28,7 +28,7 @@ steps:
     cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
     make -j2
     sudo make install
-  displayName: 'Install C dependencies'
+  displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: ./macos-install-python.sh '$(python.version)'

@@ -12,5 +12,5 @@ steps:
 - script: |
     ls -lh wheelhouse/
     mkdir -p dist
-    cp wheelhouse/$(package_name)*.whl dist/.
+    cp wheelhouse/$(package_name)*manylinux*.whl dist/.
   displayName: Show and copy wheels
