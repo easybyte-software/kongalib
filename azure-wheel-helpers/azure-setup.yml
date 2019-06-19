@@ -24,6 +24,10 @@ steps:
     choco install vcpython27 --yes
     python -c "from urllib.request import urlretrieve; urlretrieve('https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.zip', 'mpdecimal-2.4.2.zip')"
     7z x mpdecimal-2.4.2.zip
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://zlib.net/zlib-1.2.11.tar.gz', 'zlib-1.2.11.tar.gz')"
+    7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.43.zip', 'pcre-8.43.zip')"
+    7z x pcre-8.43.zip
     git clone https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
@@ -44,28 +48,8 @@ steps:
   displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
-- script: |
-    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" $(python.architecture)
-    md third_party
-    pushd third_party
-    md include
-    md lib
-    popd
-    pushd mpdecimal-2.4.2\vcbuild
-    call "vcbuild$(mpdec_bits).bat"
-    copy /Y dist$(mpdec_bits)\libmpdec-2.4.2.lib "$(Build.SourcesDirectory)\third_party\lib\mpdec.lib"
-    copy /Y dist$(mpdec_bits)\*.h "$(Build.SourcesDirectory)\third_party\include"
-    copy /Y ..\libmpdec\vc*.h "$(Build.SourcesDirectory)\third_party\include"
-    popd
-    dir /s "$(Build.SourcesDirectory)\third_party"
-    pushd konga
-    md out
-    pushd out
-    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DTHIRD_PARTY="$(Build.SourcesDirectory)\third_party" -G "NMake Makefiles"
-    nmake
-    nmake install
-    popd
-    popd
+- script: .\build-deps.bat $(mpdec_bits) "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" $(python.architecture)
+  workingDirectory: azure-wheel-helpers
   displayName: 'Install C dependencies (Windows Python 2.7)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 
 
