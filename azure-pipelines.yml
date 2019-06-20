@@ -77,22 +77,22 @@ jobs:
         python.version: '2.7'
         python.architecture: 'x64'
         mpdec_bits: '64'
-      # Python36:
-      #   python.version: '3.6'
-      #   python.architecture: 'x64'
-      # Python37:
-      #   python.version: '3.7'
-      #   python.architecture: 'x64'
+      Python36:
+        python.version: '3.6'
+        python.architecture: 'x64'
+      Python37:
+        python.version: '3.7'
+        python.architecture: 'x64'
       Python27_32:
         python.version: '2.7'
         python.architecture: 'x86'
         mpdec_bits: '32'
-      # Python36_32:
-      #   python.version: '3.6'
-      #   python.architecture: 'x86'
-      # Python37_32:
-      #   python.version: '3.7'
-      #   python.architecture: 'x86'
+      Python36_32:
+        python.version: '3.6'
+        python.architecture: 'x86'
+      Python37_32:
+        python.version: '3.7'
+        python.architecture: 'x86'
   pool:
     vmImage: 'vs2017-win2016'
   steps:
