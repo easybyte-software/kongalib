@@ -2,8 +2,10 @@ steps:
 
 - script: |
     call "$(vcvarsall)" $(python.architecture)
-    set MSSdk=1
-    set DISTUTILS_USE_SDK=1
+    if "$(python.version)"=="2.7" (
+      set MSSdk=1
+      set DISTUTILS_USE_SDK=1
+    )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python -m pip wheel . -w wheelhouse/
   displayName: 'Build wheel (Windows Python 2.7)'
