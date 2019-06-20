@@ -28,7 +28,7 @@ Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 Sono supportate le versioni di Windows dalla 7 in su. Come prerequisiti è
 necessario installare:
 
-	- Microsoft Visual Studio (versione 2015 o successiva)
+	- Microsoft Visual Studio 2017
 	- `SDK di Konga`_
 
 
@@ -61,18 +61,15 @@ La compilazione è possibile tramite la usuale procedura dei pacchetti Python::
 
 .. note:: Sotto piattaforma Windows per la corretta compilazione è necessario
 	impostare la variabile d'ambiente `KONGASDK` alla directory d'installazione
-	dell'`SDK di Konga`_.
+	dell'`SDK di Konga`_. Notare inoltre che l'SDK di Konga è compilato con
+	Visual Studio 2017 e non è compatibile con Python 2.x (che sotto Windows
+	richiede Visual Studio 2008); se si desidera usare *kongalib* con Python 2.x
+	sotto Windows, è necessario usare la *wheel* precompilata installabile
+	tramite *pip*.
 
 
 Risorse
 -------
-
-`Versioni stable e nightly`_
-
-	L'ultima versione ufficiale è sempre disponibile su PyPI; se tuttavia si
-	desidera scaricare una versione *stable* o *nightly* specifica oppure una
-	vecchia versione, è possibile farlo da qui.
-
 
 `Documentazione di kongalib`_
 
@@ -87,7 +84,6 @@ Risorse
 
 	
 
-.. _Versioni stable e nightly: http://public.easybyte.it/downloads
 .. _EasyByte Konga: http://www.easybyte.it/it/pro
 .. _Documentazione di kongalib: http://public.easybyte.it/docs/kongalib
 .. _Documentazione del dizionario dei dati: http://public.easybyte.it/docs/datadict
