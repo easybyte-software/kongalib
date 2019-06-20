@@ -16,14 +16,14 @@ cd third_party
 md include
 md bin
 md lib
+
+echo Compiling libmpdec
+cd "%BUILD_SOURCESDIRECTORY%\mpdecimal-2.4.2\vcbuild"
 if "%PYTHON_ARCHITECTURE%"=="x86" (
 	set "MPDEC_BITS=32"
 ) else (
 	set "MPDEC_BITS=64"
 )
-
-echo Compiling libmpdec
-cd "%BUILD_SOURCESDIRECTORY%\mpdecimal-2.4.2\vcbuild"
 call "vcbuild%MPDEC_BITS%"
 copy /Y "dist%MPDEC_BITS%\libmpdec-2.4.2.lib" "%BUILD_SOURCESDIRECTORY%\third_party\lib\mpdec.lib"
 copy /Y dist%MPDEC_BITS%\*.h "%BUILD_SOURCESDIRECTORY%\third_party\include"

@@ -1,11 +1,10 @@
 trigger:
-- master
+  tags:
+    include:
+    - v*
 
-# trigger:
-#   tags:
-#     include:
-#     - v*
-
+variables:
+  konga_branch: develop
 
 jobs:
 
