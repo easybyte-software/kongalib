@@ -8,7 +8,7 @@ steps:
     )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python -m pip wheel . -w wheelhouse/
-  displayName: 'Build wheel (Windows Python 2.7)'
+  displayName: 'Build wheel (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
