@@ -1,29 +1,18 @@
-# Copyright (c) 2019, Henry Schreiner.
-#
-# Distributed under the 3-clause BSD license, see accompanying file LICENSE
-# or https://github.com/scikit-hep/azure-wheel-helpers for details.
-
 steps:
 
 - script: |
-    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" $(python.architecture)
+    call "$(vcvarsall)" $(python.architecture)
     set MSSdk=1
     set DISTUTILS_USE_SDK=1
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python -m pip wheel . -w wheelhouse/
   displayName: 'Build wheel (Windows Python 2.7)'
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['python.version'], '2.7')) 
-
-- script: |
-    set KONGASDK=$(Build.SourcesDirectory)\third_party
-    python -m pip wheel . -w wheelhouse/
-  displayName: 'Build wheel (Windows)'
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['python.version'], '2.7')) 
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
     python -m pip wheel . -w wheelhouse/
   displayName: 'Build wheel (macOS)'
-  condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: |
     ls -lh wheelhouse

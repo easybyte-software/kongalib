@@ -1,12 +1,6 @@
-
-# Copyright (c) 2019, Henry Schreiner.
-#
-# Distributed under the 3-clause BSD license, see accompanying file LICENSE
-# or https://github.com/scikit-hep/azure-wheel-helpers for details.
-
 steps:
 - script: |
-    docker run --rm -v `pwd`:/io $(image) /io/azure-wheel-helpers/build-wheels.sh
+    docker run --rm -v `pwd`:/io $(image) /io/azure-pipelines/build-wheels.sh
   displayName: Build wheels
 
 - script: |

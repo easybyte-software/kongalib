@@ -1,10 +1,3 @@
-#!/usr/bin/env bash
-
-# Copyright (c) 2019, Henry Schreiner.
-#
-# Distributed under the 3-clause BSD license, see accompanying file LICENSE
-# or https://github.com/scikit-hep/azure-wheel-helpers for details.
-
 PYTHON_VERSION="$1"
 
 case $PYTHON_VERSION in
