@@ -76,7 +76,6 @@ jobs:
       Python27:
         python.version: '2.7'
         python.architecture: 'x64'
-        mpdec_bits: '64'
       Python36:
         python.version: '3.6'
         python.architecture: 'x64'
@@ -86,7 +85,6 @@ jobs:
       Python27_32:
         python.version: '2.7'
         python.architecture: 'x86'
-        mpdec_bits: '32'
       Python36_32:
         python.version: '3.6'
         python.architecture: 'x86'

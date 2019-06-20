@@ -48,7 +48,7 @@ steps:
   displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
-- task: BatchScript@1
+  - task: BatchScript@1
   inputs:
     filename: azure-wheel-helpers\build-deps.bat
     workingFolder: azure-wheel-helpers

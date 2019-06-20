@@ -2,8 +2,11 @@
 @echo off
 
 if "%PYTHON_VERSION%"=="2.7" (
-    echo Calling Python 2.7 vcvarsall for architecture %PYTHON_ARCHITECTURE%
+    echo Calling VS 2008 vcvarsall for Python 2.7 %PYTHON_ARCHITECTURE%
     call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" %PYTHON_ARCHITECTURE%
+) else (
+	echo Calling VS 2015 vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
+	call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 )
 
 echo Preparing third_party
@@ -13,6 +16,11 @@ cd third_party
 md include
 md bin
 md lib
+if "%PYTHON_ARCHITECTURE%"=="x86" (
+	set "MPDEC_BITS=32"
+) else (
+	set "MPDEC_BITS=64"
+)
 
 echo Compiling libmpdec
 cd "%BUILD_SOURCESDIRECTORY%\mpdecimal-2.4.2\vcbuild"
