@@ -1,3 +1,6 @@
+# trigger:
+# - master
+
 trigger:
   tags:
     include:
