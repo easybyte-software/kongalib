@@ -372,7 +372,6 @@ public:
 					Py_DECREF(func);
 				}
 				
-#if !PY3K
 				func = PyDict_GetItemString(dict, "_shutdown");
 				if (func) {
 					PyObject *res = NULL;
@@ -384,7 +383,6 @@ public:
 					Py_XDECREF(res);
 					Py_DECREF(func);
 				}
-#endif
 				
 				Py_DECREF(module);
 			}
