@@ -137,6 +137,7 @@ class Log(object):
 
 		class Stripper(HTMLParser):
 			def __init__(self):
+				self.convert_charrefs = True
 				self.reset()
 				self.fed = []
 				self.feed(html)
