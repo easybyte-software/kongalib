@@ -729,8 +729,10 @@ _cleanup(PyObject *self, PyObject *args)
 
 			for (std::list<MGA::InterpreterObject *>::iterator it = sInterpreterList.begin(); it != sInterpreterList.end(); it++) {
 				MGA::InterpreterObject *interpreter = *it;
-				if (tstate != interpreter->fState)
+				if (tstate != interpreter->fState) {
 					interpreter->Stop(state);
+					interpreter->Destroy();
+				}
 			}
 
 			Py_BEGIN_ALLOW_THREADS

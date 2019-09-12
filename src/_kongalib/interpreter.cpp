@@ -725,15 +725,27 @@ namespace MGA {
 			untrackInterpreter(this, state);
 		}
 		// fprintf(stderr, "*** ~InterpreterObject\n");
-		PyThreadState *old_state = PyThreadState_Get();
-		PyThreadState_Swap(fState);
-		Py_EndInterpreter(fState);
-		PyThreadState_Swap(old_state);
+		Destroy();
+	}
+
+	void
+	InterpreterObject::Destroy()
+	{
+		PyThreadState *state = fState;
+		if (state) {
+			fState = NULL;
+			PyThreadState *old_state = PyThreadState_Get();
+			PyThreadState_Swap(state);
+			Py_EndInterpreter(state);
+			PyThreadState_Swap(old_state);
+		}
 	}
 
 	void
 	InterpreterObject::Stop(MODULE_STATE *state)
 	{
+		if (!fState)
+			return;
 		if (!state)
 			state = GET_STATE();
 		fRunning = false;

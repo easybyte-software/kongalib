@@ -160,6 +160,7 @@ typedef struct InterpreterObject
 
 	void Start(MODULE_STATE *state = NULL);
 	void Stop(MODULE_STATE *state = NULL);
+	void Destroy();
 	
 	CL_Job				*fJob;
 	volatile bool		fRunning;
