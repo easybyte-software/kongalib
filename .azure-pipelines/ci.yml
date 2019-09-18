@@ -21,7 +21,7 @@ jobs:
         python -m pip install setuptools
         python setup.py sdist
       displayName: Publish sdist
-    - template: azure-pipelines/azure-publish-dist.yml
+    - template: ./azure-publish-dist.yml
 
 - job: ManyLinux
   strategy:
@@ -31,17 +31,12 @@ jobs:
         plat: manylinux1_x86_64
         image: quay.io/pypa/manylinux1_x86_64
         python.architecture: x64
-      32Bit:
-        arch: i686
-        plat: manylinux1_i686
-        image: quay.io/pypa/manylinux1_i686
-        python.architecture: x86
   pool:
     vmImage: 'ubuntu-latest'
   steps:
-    - template: azure-pipelines/azure-setup.yml
-    - template: azure-pipelines/azure-manylinux-wheels.yml
-    - template: azure-pipelines/azure-publish-dist.yml
+    - template: ./azure-setup.yml
+    - template: ./azure-manylinux-wheels.yml
+    - template: ./azure-publish-dist.yml
 
 - job: macOS
   variables:
@@ -57,9 +52,9 @@ jobs:
   pool:
     vmImage: 'macOS-latest'
   steps:
-    - template: azure-pipelines/azure-setup.yml
-    - template: azure-pipelines/azure-steps.yml
-    - template: azure-pipelines/azure-publish-dist.yml
+    - template: ./azure-setup.yml
+    - template: ./azure-steps.yml
+    - template: ./azure-publish-dist.yml
 
 - job: Windows
   strategy:
@@ -91,6 +86,6 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-    - template: azure-pipelines/azure-setup.yml
-    - template: azure-pipelines/azure-steps.yml
-    - template: azure-pipelines/azure-publish-dist.yml
+    - template: ./azure-setup.yml
+    - template: ./azure-steps.yml
+    - template: ./azure-publish-dist.yml
