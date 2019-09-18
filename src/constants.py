@@ -755,6 +755,7 @@ MATRICOLA_FATTURA_SCONTRINO = 6015                             #: Matricola
 RIGA_DOC_FISC_ARROTONDAMENTO_POS = 6016                        #: Arrotondamento positivo
 RIGA_DOC_FISC_ARROTONDAMENTO_NEG = 6017                        #: Arrotondamento negativo
 DESC_AUTO_PAGAMENTO_EFFETTO = 6018                             #: Pagamento da effetto
+DESC_AUTO_INSOLUTO_EFFETTO = 6019                              #: Insoluto da effetto
 EDI_EVENT_CHANGED_DOC_STATE = 6500
 EDI_EVENT_CHANGED_DOC_STATE_EX = 6501
 EDI_EVENT_CHANGED_XML = 6502                                   #: Modificato file XML
