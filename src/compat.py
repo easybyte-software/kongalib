@@ -485,6 +485,19 @@ def _patch_etree():
 
 if PY3:
 	def ensure_source_compatibility(source):
+		import re
+		lines = source.splitlines()
+		for line in lines:
+			if (not line) or (not line.strip()) or (line.strip()[0] == '\n'):
+				continue
+			m = re.match(r'# \-\*\- py3k-safe \-\*\-', line)
+			if (m is None) and (line.strip()[0] == '#'):
+				continue
+			break
+		else:
+			m = None
+		if m is not None:
+			return source
 		try:
 			import application, slew
 			import os, os.path
