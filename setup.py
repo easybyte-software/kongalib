@@ -52,7 +52,7 @@ def _new_compiler(*args, **kwargs):
 		compiler.src_extensions.append(".mm")
 	elif sys.platform == 'win32':
 		compiler.initialize()
-		compiler.compile_options.append('/Z7')
+		compiler.compile_options.append('/Zi')
 	return compiler
 
 distutils.ccompiler.new_compiler = _new_compiler
@@ -105,7 +105,7 @@ if sys.platform == 'darwin':
 	extra_libs = ''
 elif sys.platform == 'win32':
 	suffix = '_d' if debug else ''
-	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /Z7 /wd4244 /wd4005 /wd4267'
+	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /Zi /wd4244 /wd4005 /wd4267'
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /ignore:4197 /ignore:4099'
 	extra_libs = 'ebpr_s%s konga_client_s%s zlib%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32' % (suffix, suffix, suffix[1:])
 	if konga_sdk is not None:
