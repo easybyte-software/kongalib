@@ -320,8 +320,14 @@ enc_reset(MGA::JSONEncoderObject *self, PyObject *args, PyObject *kwds)
 {
 	yajl_gen_free(self->fHandle);
 	self->fHandle = yajl_gen_alloc(NULL);
-	yajl_gen_config(self->fHandle, yajl_gen_beautify, 1);
-	yajl_gen_config(self->fHandle, yajl_gen_indent_string, "\t");
+	if (self->fPretty) {
+		yajl_gen_config(self->fHandle, yajl_gen_beautify, 1);
+		yajl_gen_config(self->fHandle, yajl_gen_indent_string, "\t");
+	}
+	else {
+		yajl_gen_config(self->fHandle, yajl_gen_beautify, 0);
+		yajl_gen_config(self->fHandle, yajl_gen_indent_string, "");
+	}
 	Py_RETURN_NONE;
 }
 
@@ -344,15 +350,26 @@ enc_dealloc(MGA::JSONEncoderObject *self)
 
 
 static int
-enc_init(MGA::JSONDecoderObject *self, PyObject *args, PyObject *kwds)
+enc_init(MGA::JSONEncoderObject *self, PyObject *args, PyObject *kwds)
 {
 	string encoding;
+	PyObject *pretty = Py_True;
 	
-	if (!PyArg_ParseTuple(args, "|O&", MGA::ConvertString, &encoding))
+	if (!PyArg_ParseTuple(args, "|O&O", MGA::ConvertString, &encoding, &pretty))
 		return -1;
 	
 	if (!encoding.empty())
 		self->fEncoding = encoding;
+
+	self->fPretty = PyObject_IsTrue(pretty) ? true : false;
+	if (self->fPretty) {
+		yajl_gen_config(self->fHandle, yajl_gen_beautify, 1);
+		yajl_gen_config(self->fHandle, yajl_gen_indent_string, "\t");
+	}
+	else {
+		yajl_gen_config(self->fHandle, yajl_gen_beautify, 0);
+		yajl_gen_config(self->fHandle, yajl_gen_indent_string, "");
+	}
 	return 0;
 }
 
@@ -867,7 +884,7 @@ PyTypeObject MGA::JSONDecoderType = {
 namespace MGA {
 	
 	JSONEncoderObject::JSONEncoderObject()
-		: fEncoding("utf-8")
+		: fEncoding("utf-8"), fPretty(true)
 	{
 		fHandle = yajl_gen_alloc(NULL);
 		yajl_gen_config(fHandle, yajl_gen_beautify, 1);

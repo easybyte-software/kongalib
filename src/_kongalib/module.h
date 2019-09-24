@@ -129,6 +129,7 @@ typedef struct JSONEncoderObject
 	
 	yajl_gen		fHandle;
 	string			fEncoding;
+	bool			fPretty;
 } JSONEncoderObject;
 
 
