@@ -83,7 +83,7 @@ class Decoder(JSONDecoder):
 
 
 def dumps(obj, encoding='utf-8', pretty=True):
-	return Encoder(encoding).encode(obj)
+	return Encoder(encoding, pretty).encode(obj)
 
 
 def dump(obj, fp, encoding='utf-8'):
