@@ -89,7 +89,7 @@ if sys.platform == 'darwin':
 			print('Error: unknown SDK:', sdk)
 			sys.exit(1)
 	else:
-		for version in ('10.8', '10.9', '10.10', '10.11', '10.12', '10.13', '10.14'):
+		for version in ('10.8', '10.9', '10.10', '10.11', '10.12', '10.13', '10.14', '10.15'):
 			sdk, macosx_version_min, macosx_version = find_sdk(version)
 			if sdk is not None:
 				break
