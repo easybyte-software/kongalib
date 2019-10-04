@@ -98,7 +98,7 @@ if sys.platform == 'darwin':
 			sys.exit(1)
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
-	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -F/Library/Frameworks -I%s/include' % (macosx_version_min, sdk, konga_sdk)
+	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
 	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Foundation -lkonga_client_s -lebpr_s -lpcre -lz -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11'
 	ldflags += ' -stdlib=libc++'
