@@ -30,19 +30,19 @@
 #include "yajl/yajl_parse.h"
 #include "yajl/yajl_gen.h"
 
-#include <ebpr/types.h>
-#include <ebpr/system.h>
-#include <ebpr/decimal.h>
-#include <ebpr/timestamp.h>
-#include <ebpr/socket.h>
-#include <ebpr/dispatcher.h>
-#include <ebpr/cipher.h>
+#include "ebpr/types.h"
+#include "ebpr/system.h"
+#include "ebpr/decimal.h"
+#include "ebpr/timestamp.h"
+#include "ebpr/socket.h"
+#include "ebpr/dispatcher.h"
+#include "ebpr/cipher.h"
 
-#include <konga_client/client.h>
-#include <konga_client/common.h>
+#include "konga_client/client.h"
+#include "konga_client/common.h"
 
-#include <ebpr/messages.h>
-#include <konga_client/messages.h>
+#include "ebpr/messages.h"
+#include "konga_client/messages.h"
 
 
 #if (defined(__GNUC__) || defined(__clang__))
