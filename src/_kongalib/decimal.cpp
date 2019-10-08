@@ -804,6 +804,7 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	static char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
+	bool dealloc = false;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O&", kwlist, MGA::ConvertDecimal, &value))
 		return NULL;
@@ -811,9 +812,11 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!value) {
 		value = MGA::DecimalObject::Allocate();
 		value->fValue = 1;
+		dealloc = true;
 	}
 	if (value->fValue == 0) {
-		Py_DECREF(value);
+		if (dealloc)
+			Py_DECREF(value);
 		PyErr_SetString(PyExc_ZeroDivisionError, "ceil operand cannot be zero");
 		return NULL;
 	}
@@ -821,7 +824,8 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	result = MGA::DecimalObject::Allocate();
 	result->fValue = self->fValue.Ceil(value->fValue);
 	
-	Py_DECREF(value);
+	if (dealloc)
+		Py_DECREF(value);
 	
 	return result;
 }
@@ -833,6 +837,7 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	static char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
+	bool dealloc = false;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O&", kwlist, MGA::ConvertDecimal, &value))
 		return NULL;
@@ -840,9 +845,11 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!value) {
 		value = MGA::DecimalObject::Allocate();
 		value->fValue = 1;
+		dealloc = true;
 	}
 	if (value->fValue == 0) {
-		Py_DECREF(value);
+		if (dealloc)
+			Py_DECREF(value);
 		PyErr_SetString(PyExc_ZeroDivisionError, "floor operand cannot be zero");
 		return NULL;
 	}
@@ -850,7 +857,8 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	result = MGA::DecimalObject::Allocate();
 	result->fValue = self->fValue.Floor(value->fValue);
 	
-	Py_DECREF(value);
+	if (dealloc)
+		Py_DECREF(value);
 	
 	return result;
 }
@@ -862,6 +870,7 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	static char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
+	bool dealloc = false;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O&", kwlist, MGA::ConvertDecimal, &value))
 		return NULL;
@@ -869,9 +878,11 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!value) {
 		value = MGA::DecimalObject::Allocate();
 		value->fValue = 1;
+		dealloc = true;
 	}
 	if (value->fValue == 0) {
-		Py_DECREF(value);
+		if (dealloc)
+			Py_DECREF(value);
 		PyErr_SetString(PyExc_ZeroDivisionError, "round operand cannot be zero");
 		return NULL;
 	}
@@ -879,7 +890,8 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	result = MGA::DecimalObject::Allocate();
 	result->fValue = self->fValue.Round(value->fValue);
 	
-	Py_DECREF(value);
+	if (dealloc)
+		Py_DECREF(value);
 	
 	return result;
 }
@@ -909,6 +921,7 @@ MGA_Decimal_multiply(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	MGA::DecimalObject *other, *result;
 	MGA::DecimalObject *value = NULL;
 	int mode = CL_Decimal::ROUND;
+	bool dealloc = false;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&|O&i", kwlist, MGA::ConvertDecimal, &other, MGA::ConvertDecimal, &value, &mode))
 		return NULL;
@@ -916,12 +929,14 @@ MGA_Decimal_multiply(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!value) {
 		value = MGA::DecimalObject::Allocate();
 		value->fValue = 1;
+		dealloc = true;
 	}
 	
 	result = MGA::DecimalObject::Allocate();
 	result->fValue = self->fValue.Multiply(other->fValue, value->fValue, (CL_Decimal::RoundType)mode);
 	
-	Py_DECREF(value);
+	if (dealloc)
+		Py_DECREF(value);
 	Py_DECREF(other);
 	
 	return result;
@@ -935,16 +950,19 @@ MGA_Decimal_divide(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	MGA::DecimalObject *other, *result;
 	MGA::DecimalObject *value = NULL;
 	int mode = CL_Decimal::ROUND;
-	
+	bool dealloc = false;
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&|O&i", kwlist, MGA::ConvertDecimal, &other, MGA::ConvertDecimal, &value, &mode))
 		return NULL;
 	
 	if (!value) {
 		value = MGA::DecimalObject::Allocate();
 		value->fValue = 1;
+		dealloc = true;
 	}
 	if (value->fValue == 0) {
-		Py_DECREF(value);
+		if (dealloc)
+			Py_DECREF(value);
 		PyErr_SetString(PyExc_ZeroDivisionError, "decimal division");
 		return NULL;
 	}
@@ -952,7 +970,8 @@ MGA_Decimal_divide(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	result = MGA::DecimalObject::Allocate();
 	result->fValue = self->fValue.Divide(other->fValue, value->fValue, (CL_Decimal::RoundType)mode);
 	
-	Py_DECREF(value);
+	if (dealloc)
+		Py_DECREF(value);
 	Py_DECREF(other);
 	
 	return result;

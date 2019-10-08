@@ -961,6 +961,7 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fMethodEndMap);
 	Py_CLEAR(s->fMethodStartArray);
 	Py_CLEAR(s->fMethodEndArray);
+	Py_CLEAR(s->fMethodWrite);
 
 	return 0;
 }
@@ -1017,6 +1018,7 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fMethodEndMap);
 	Py_VISIT(s->fMethodStartArray);
 	Py_VISIT(s->fMethodEndArray);
+	Py_VISIT(s->fMethodWrite);
 	
 	return 0;
 }

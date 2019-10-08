@@ -403,8 +403,18 @@ public:
 			if (func) {
 				PyObject *res = NULL;
 				Py_INCREF(func);
+#if PY3K
+				res = PyEval_CallObject(func, (PyObject *)NULL);
+				if (res) {
+					Py_DECREF(res);
+					Py_DECREF(func);
+					func = PyDict_GetItemString(dict, "_clear");
+					res = PyEval_CallObject(func, (PyObject *)NULL);
+				}
+#else
 				PySys_SetObject("exitfunc", (PyObject *)NULL);
 				res = PyEval_CallObject(func, (PyObject *)NULL);
+#endif
 				if (res) {
 					Py_DECREF(res);
 				}
