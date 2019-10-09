@@ -805,7 +805,7 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		len = width;
 	}
 	if (((int64)self->fValue != 0) && (neg)) {
-		memmove(buffer + 1, buffer, (wcslen(buffer) + 1) * sizeof(wchar_t));
+		memmove(buffer + 1, buffer, (len + 1) * sizeof(wchar_t));
 		p = buffer;
 		while (*(p + 1) == ' ')
 			p++;
