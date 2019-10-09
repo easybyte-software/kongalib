@@ -16,6 +16,7 @@
 
 
 #include "module.h"
+#include <wchar.h>
 
 
 /**
@@ -729,72 +730,90 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	
 	if (sep)
 		monetary = 1;
-	
-	char buffer[64];
+
+	// fprintf(stderr, "Format %s (mon: %s), locale: { name: %s, isoname: %s, decsep: %s, tsep: %s, mondecsep: %s, montsep: %s }\n", self->fValue.ToString().c_str(), monetary?"Y":"N", info.fName.c_str(), info.fISOName.c_str(), info.fDecimalSep.c_str(), info.fThousandSep.c_str(), info.fMonDecimalSep.c_str(), info.fMonThousandSep.c_str());
+
+	wchar_t dsep, tsep;
+	wchar_t buffer[64], *p = buffer;
 	int64 iPart = self->fValue;
 	int64 fPart = iPart % CL_DECIMAL_UNIT;
-	int64 mask;
-	int32 iPos, fPos = 0;
+	int32 len = 0;
 	
 	bool neg = (iPart < 0);
 	iPart /= CL_DECIMAL_UNIT;
 	iPart = CL_ABS64(iPart);
-	mask = fPart >> 63LL;
-	fPart = (fPart ^ mask) - mask;
+
+	if (monetary) {
+		dsep = CL_FromUTF8(info.fMonDecimalSep)[0];
+		tsep = CL_FromUTF8(info.fMonThousandSep)[0];
+	}
+	else {
+		dsep = CL_FromUTF8(info.fDecimalSep)[0];
+		tsep = CL_FromUTF8(info.fThousandSep)[0];
+	}
 	
 	if (sep) {
 		int32 i, digits = iPart ? ((int32)log10((double)iPart) + 1) : 1;
-		
-		iPos = digits + ((digits - 1) / 3);
+		int32 iPos = digits + ((digits - 1) / 3);
 		for (i = 0; i < iPos; i++) {
 			if ((i % 4) == 3) {
-				buffer[iPos - i - 1] = info.fThousandSep[0];
+				buffer[iPos - i - 1] = tsep;
 			}
 			else {
-				buffer[iPos - i - 1] = char(iPart % 10) + '0';
+				buffer[iPos - i - 1] = (iPart % 10) + '0';
 				iPart /= 10LL;
 			}
 		}
-		buffer[iPos] = '\0';
+		p += iPos;
+		*p = '\0';
+		len = iPos;
 	}
-	else
-		iPos = sprintf(buffer, CL_INT64_FORMAT_SPEC, iPart);
+	else {
+#ifdef __CL_WIN32__
+		len = swprintf(buffer, 63, L"%I64d", iPart);
+#else
+		len = swprintf(buffer, 63, L"%lld", iPart);
+#endif
+		p += len;
+	}
 	
 	if (precision) {
-		if (monetary)
-			buffer[iPos] = info.fDecimalSep[0];
-		else
-			buffer[iPos] = '.';
-		fPos = 0;
+		int64 mask = fPart >> 63LL;
+		fPart = (fPart ^ mask) - mask;
+
+		*p++ = dsep;
+		int32 fPos = 0;
 		mask = CL_DECIMAL_UNIT / 10;
 		do {
-			buffer[iPos + ++fPos] = '0' + ((fPart / mask) % 10);
-			if ((fPart % mask) == 0)
+			*p++ = '0' + ((fPart / mask) % 10);
+			if (((fPart % mask) == 0) || (++fPos >= precision))
 				break;
 			mask /= 10;
 		} while (fPos < 6);
-		if (fPos < precision)
-			memset(buffer + iPos + 1 + fPos, '0', precision - fPos);
-		fPos = precision;
-		buffer[iPos + 1 + fPos] = '\0';
-		iPos++;
-	}
-	iPos += fPos;
-	if (width) {
-		if (width > iPos) {
-			memmove(buffer + width - iPos, buffer, iPos + 1);
-			if (padzero)
-				memset(buffer, '0', width - iPos);
-			else
-				memset(buffer, ' ', width - iPos);
+		while (fPos < precision) {
+			*p++ = '0';
+			fPos++;
 		}
+		len += fPos + 1;
+		*p = '\0';
+	}
+	if ((width) && (width > len)) {
+		memmove(buffer + (width - len), buffer, (len + 1) * sizeof(wchar_t));
+		for (int32 i = 0; i < width - len; i++) {
+			buffer[i] = padzero ? '0' : ' ';
+		}
+		len = width;
 	}
 	if (((int64)self->fValue != 0) && (neg)) {
-		memmove(buffer + 1, buffer, strlen(buffer) + 1);
-		buffer[0] = '-';
+		memmove(buffer + 1, buffer, (wcslen(buffer) + 1) * sizeof(wchar_t));
+		p = buffer;
+		while (*(p + 1) == ' ')
+			p++;
+		*p = '-';
+		len++;
 	}
 	
-	return PyUnicode_FromString(buffer);
+	return PyUnicode_FromWideChar(buffer, len);
 }
 
 
