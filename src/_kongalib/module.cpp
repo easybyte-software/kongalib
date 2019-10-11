@@ -866,12 +866,12 @@ _aes_set_key(PyObject *self, PyObject *args, PyObject *kwds)
 	MGA::MODULE_STATE *state = GET_STATE();
 	char *kwlist[] = { "key", NULL };
 	char *keyBuffer;
-	int keyLen;
+	Py_ssize_t keyLen;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &keyBuffer, &keyLen))
 		return NULL;
 
-	CL_Blob key(keyBuffer, keyLen);
+	CL_Blob key(keyBuffer, (int32)keyLen);
 	key.Rewind();
 	if (state)
 		state->fCipher.SetKey(key);
@@ -886,7 +886,7 @@ _aes_encrypt(PyObject *self, PyObject *args, PyObject *kwds)
 	MGA::MODULE_STATE *state = GET_STATE();
 	char *kwlist[] = { "data", NULL };
 	char *dataBuffer;
-	int dataLen;
+	Py_ssize_t dataLen;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &dataBuffer, &dataLen))
 		return NULL;
@@ -896,7 +896,7 @@ _aes_encrypt(PyObject *self, PyObject *args, PyObject *kwds)
 	if (state)
 		state->fCipher.Encrypt(data, dataLen);
 
-	return PyBytes_FromStringAndSize((const char *)data.GetData(), (Py_ssize_t)dataLen);
+	return PyBytes_FromStringAndSize((const char *)data.GetData(), dataLen);
 }
 
 
@@ -906,7 +906,7 @@ _aes_decrypt(PyObject *self, PyObject *args, PyObject *kwds)
 	MGA::MODULE_STATE *state = GET_STATE();
 	char *kwlist[] = { "data", NULL };
 	char *dataBuffer;
-	int dataLen;
+	Py_ssize_t dataLen;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &dataBuffer, &dataLen))
 		return NULL;
@@ -916,7 +916,7 @@ _aes_decrypt(PyObject *self, PyObject *args, PyObject *kwds)
 	if (state)
 		state->fCipher.Decrypt(data, dataLen);
 
-	return PyBytes_FromStringAndSize((const char *)data.GetData(), (Py_ssize_t)dataLen);
+	return PyBytes_FromStringAndSize((const char *)data.GetData(), dataLen);
 }
 
 
