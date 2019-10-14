@@ -407,8 +407,8 @@ public:
 				res = PyEval_CallObject(func, (PyObject *)NULL);
 				if (res) {
 					Py_DECREF(res);
-					Py_DECREF(func);
 					func = PyDict_GetItemString(dict, "_clear");
+					Py_INCREF(func);
 					res = PyEval_CallObject(func, (PyObject *)NULL);
 				}
 #else
