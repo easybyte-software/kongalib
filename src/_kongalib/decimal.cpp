@@ -748,8 +748,14 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		tsep = CL_FromUTF8(info.fMonThousandSep)[0];
 	}
 	else {
-		dsep = CL_FromUTF8(info.fDecimalSep)[0];
-		tsep = CL_FromUTF8(info.fThousandSep)[0];
+		if (sep) {
+			dsep = CL_FromUTF8(info.fDecimalSep)[0];
+			tsep = CL_FromUTF8(info.fThousandSep)[0];
+		}
+		else {
+			dsep = '.';
+			tsep = ',';
+		}
 	}
 	
 	if (sep) {
