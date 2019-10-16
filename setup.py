@@ -105,7 +105,7 @@ if sys.platform == 'darwin':
 	extra_libs = ''
 elif sys.platform == 'win32':
 	suffix = '_d' if debug else ''
-	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267'
+	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267 /FS'
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /ignore:4197 /ignore:4099'
 	extra_libs = 'ebpr_s%s konga_client_s%s zlib%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32' % (suffix, suffix, suffix[1:])
 	if konga_sdk is not None:
