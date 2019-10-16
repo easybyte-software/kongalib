@@ -1,4 +1,6 @@
 build
+build_py2
+build_py3
 dist
 *.egg-info
 **/*.pyc
