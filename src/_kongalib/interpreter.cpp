@@ -128,6 +128,7 @@ public:
 			Py_XDECREF(item);
 
 			fInterpreter->fThreadAlive = true;
+			fInterpreter->fStateThreadID = state->thread_id;
 			
 			for (;;) {
 #if DEBUG
@@ -427,6 +428,8 @@ public:
 			}
 			Py_XDECREF(module);
 			
+			fInterpreter->fStateThreadID = 0;
+
 			PyThreadState_Clear(state);
 			PyThreadState_Swap(NULL);
 			PyThreadState_Delete(state);
@@ -576,8 +579,8 @@ interpreter_stop(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 {
 	if (self->fState) {
 		PyThreadState *state = PyThreadState_Swap(self->fState);
-		if (PyEval_GetFrame())
-			PyThreadState_SetAsyncExc(self->fState->thread_id, PyExc_SystemExit);
+		if (self->fStateThreadID)
+			PyThreadState_SetAsyncExc(self->fStateThreadID, PyExc_SystemExit);
 		PyThreadState_Swap(state);
 	}
 	
@@ -588,7 +591,7 @@ interpreter_stop(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 interpreter_is_running(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 {
-	PyObject *result = (self->fState ? Py_True : Py_False);
+	PyObject *result = (self->fExecute ? Py_True : Py_False);
 	Py_INCREF(result);
 	return result;
 }
@@ -702,7 +705,7 @@ PyTypeObject MGA::InterpreterType = {
 namespace MGA {
 	
 	InterpreterObject::InterpreterObject()
-		: fRunning(true), fExecute(false), fState(NULL), fThreadAlive(false)
+		: fRunning(true), fExecute(false), fState(NULL), fStateThreadID(0), fThreadAlive(false)
 	{
 		MODULE_STATE *state = GET_STATE();
 

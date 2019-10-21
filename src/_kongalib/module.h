@@ -175,6 +175,7 @@ typedef struct InterpreterObject
 	volatile uint32		fStartTime;
 	uint32				fTimeOut;
 	PyThreadState		*fState;
+	unsigned long		fStateThreadID;
 	CL_Array<string>	fArgv;
 	CL_Array<string>	fPath;
 	volatile bool		fThreadAlive;
