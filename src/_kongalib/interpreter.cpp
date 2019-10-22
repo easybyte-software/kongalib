@@ -484,6 +484,11 @@ interpreter_execute(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds
 	char *kwlist[] = { "script", "filename", "argv", "path", "timeout", NULL };
 	PyObject *script = NULL, *argv = NULL, *path = NULL;
 	
+	if (!self->fRunning) {
+		PyErr_SetString(PyExc_RuntimeError, "Cannot execute on a stopped interpreter");
+		return NULL;
+	}
+
 	self->fScript = "";
 	self->fHasCode = false;
 	self->fFileName = "<script>";
@@ -583,6 +588,10 @@ interpreter_stop(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 			PyThreadState_SetAsyncExc(self->fStateThreadID, PyExc_SystemExit);
 		PyThreadState_Swap(state);
 	}
+	MGA::MODULE_STATE *state = GET_STATE();
+	if (state) {
+		self->Stop(state);
+	}
 	
 	Py_RETURN_NONE;
 }
@@ -591,7 +600,7 @@ interpreter_stop(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 interpreter_is_running(MGA::InterpreterObject *self, PyObject *args, PyObject *kwds)
 {
-	PyObject *result = (self->fExecute ? Py_True : Py_False);
+	PyObject *result = (self->fStateThreadID ? Py_True : Py_False);
 	Py_INCREF(result);
 	return result;
 }
