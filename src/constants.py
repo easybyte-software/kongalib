@@ -737,6 +737,7 @@ DATIGESTIONALIDE_TIPODATO_MISS = 5427
 PREVENTIVI_ALIQUOTA_MISS = 5428
 EB_DOC_FISC_ESIG_IVA_ERR = 5429                                #: Il tipo di esigibilità IVA del documento fiscale è diverso da quello della causale contabile!
 EB_CLIENTI_EMAIL_EXISTS = 5430                                 #: Nell'archivio clienti è già presente un cliente con l'indirizzo email specificato!
+CONFERMA_DF_VERIFICA_QTA_FALLITA = 5431                        #: Impossibile confermare il documento fiscale: manca la verifica delle quantità
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
