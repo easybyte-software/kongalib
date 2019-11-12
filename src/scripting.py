@@ -346,6 +346,10 @@ class BuiltinHandler(object):
 	
 	def read_line(self):
 		sys.__stdin__.readline()
+
+	def getpass(self, prompt='Password: ', stream=None):
+		self.write_stdout(prompt)
+		return self.read_line()
 	
 	def get_prefixes(self):
 		return os.getcwd(), os.getcwd()
