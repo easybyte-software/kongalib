@@ -147,7 +147,8 @@ setup(
     
     packages = [ 'kongalib' ],
     package_dir = { 'kongalib': 'src' },
-    
+    py_modules = [ 'kongautil', 'kongaui' ],
+
     ext_modules = [ Extension('kongalib._kongalib',
     	glob.glob(os.path.join('src', '_kongalib', '*.cpp')) + glob.glob(os.path.join('src', '_kongalib', 'yajl-2.0.1', 'src', '*.c')),
     	include_dirs = [
@@ -160,6 +161,10 @@ setup(
     	extra_link_args = ldflags.split(),
     	libraries = extra_libs.split(),
     ) ],
+    
+    install_requires=[
+        'colorama',
+    ],
     
 	zip_safe = True,
 

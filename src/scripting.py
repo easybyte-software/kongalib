@@ -85,6 +85,9 @@ class Proxy(object):
 			logger.error("[Proxy] init error: %s" % traceback.format_exc())
 			raise
 		debug_log("[Proxy] connection established")
+
+	def is_valid(self):
+		return self.__conn is not None
 	
 	def close(self):
 		if self.__conn is not None:
