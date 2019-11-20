@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 from kongalib import InterpreterTimeout, Error, start_timer, PY3
 from ._kongalib import Interpreter, get_application_log_path, set_interpreter_timeout
+from kongautil import ScriptContext
 
 import sys
 import os
@@ -379,56 +380,6 @@ class BuiltinHandler(object):
 	
 	def noop(self):
 		pass
-
-
-
-class ScriptContext(object):
-	def __init__(self, database, company, tablename, record_id, record_code, record_data, **kwargs):
-		self._database = database
-		self._company = company
-		self._tablename = tablename
-		self._record_id = record_id
-		self._record_code = record_code
-		self._record_data = record_data
-		self._params = kwargs
-		self._result = None
-
-	@property
-	def database(self):
-		return self._database
-
-	@property
-	def company(self):
-		return self._company
-
-	@property
-	def tablename(self):
-		return self._tablename
-	
-	@property
-	def record_id(self):
-		return self._record_id
-	
-	@property
-	def record_code(self):
-		return self._record_code
-	
-	@property
-	def record_data(self):
-		return self._record_data
-
-	@property
-	def params(self):
-		return self._params
-
-	@property
-	def result(self):
-		return self._result
-
-	@result.setter
-	def result(self, result):
-		self._result = result
-		proxy.util.set_script_result(result)
 
 
 

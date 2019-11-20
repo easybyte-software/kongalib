@@ -1,4 +1,16 @@
 # -*- coding: utf-8 -*-
+#	 _                           _ _ _
+#	| |                         | (_) |
+#	| | _____  _ __   __ _  __ _| |_| |__
+#	| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+#	|   < (_) | | | | (_| | (_| | | | |_) |
+#	|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+#	                  __/ |
+#	                 |___/
+#
+#	Konga client library, by EasyByte Software
+#
+#	https://github.com/easybyte-software/kongalib
 
 from __future__ import print_function
 
@@ -25,27 +37,27 @@ else:
 
 
 
-BUTTON_OK							= 0x0001
-BUTTON_YES							= 0x0002
-BUTTON_YES_ALL						= 0x0004
-BUTTON_NO							= 0x0008
-BUTTON_NO_ALL						= 0x0010
-BUTTON_CANCEL						= 0x0020
-BUTTON_OPEN							= 0x0040
-BUTTON_SAVE							= 0x0080
-BUTTON_SAVE_ALL						= 0x0100
-BUTTON_CLOSE						= 0x0200
-BUTTON_DISCARD						= 0x0400
-BUTTON_APPLY						= 0x0800
-BUTTON_RESET						= 0x1000
-BUTTON_ABORT						= 0x2000
-BUTTON_RETRY						= 0x4000
-BUTTON_IGNORE						= 0x8000
+BUTTON_OK							= 0x0001		#: Bottone "Ok"
+BUTTON_YES							= 0x0002		#: Bottone "Si"
+BUTTON_YES_ALL						= 0x0004		#: Bottone "Si tutti"
+BUTTON_NO							= 0x0008		#: Bottone "No"
+BUTTON_NO_ALL						= 0x0010		#: Bottone "No tutti"
+BUTTON_CANCEL						= 0x0020		#: Bottone "Annulla"
+BUTTON_OPEN							= 0x0040		#: Bottone "Apri"
+BUTTON_SAVE							= 0x0080		#: Bottone "Salva"
+BUTTON_SAVE_ALL						= 0x0100		#: Bottone "Salva tutti"
+BUTTON_CLOSE						= 0x0200		#: Bottone "Chiudi"
+BUTTON_DISCARD						= 0x0400		#: Bottone "Tralascia"
+BUTTON_APPLY						= 0x0800		#: Bottone "Applica"
+BUTTON_RESET						= 0x1000		#: Bottone "Ripristina"
+BUTTON_ABORT						= 0x2000		#: Bottone "Interrompi"
+BUTTON_RETRY						= 0x4000		#: Bottone "Riprova"
+BUTTON_IGNORE						= 0x8000		#: Bottone "Ignora"
 
-ICON_ERROR							= 24
-ICON_QUESTION						= 25
-ICON_WARNING						= 26
-ICON_INFORMATION					= 27
+ICON_ERROR							= 24			#: Icona di errore
+ICON_QUESTION						= 25			#: Icona di domanda
+ICON_WARNING						= 26			#: Icona di avviso
+ICON_INFORMATION					= 27			#: Icona informativa
 
 
 
@@ -55,7 +67,9 @@ def _shutdown():
 	except:
 		pass
 atexit.register(_shutdown)
-colorama.init()
+
+if not _proxy.is_valid():
+	colorama.init()
 
 
 
@@ -105,6 +119,9 @@ def _get_term_width():
 
 
 def message_box(text, title='', buttons=BUTTON_OK, icon=ICON_INFORMATION):
+	"""Mostra una finestra di dialogo modale con titolo *title*, messaggio *text* e icona *icon* (una delle costanti ``ICON_*``). La finestra mostrerà i bottoni identificati
+	da *buttons*, che può contenere uno o più costanti ``BUTTON_*`` in *or* tra loro, e ritornerà la costante relativa al bottone selezionato dall'utente per chiudere la
+	finestra."""
 	if _proxy.is_valid():
 		return _proxy.ui.message_box(text, title, buttons, icon)
 	else:
@@ -153,19 +170,40 @@ def message_box(text, title='', buttons=BUTTON_OK, icon=ICON_INFORMATION):
 							break
 		answer = None
 		while answer not in buttons_map:
-			answer = input(', '.join(labels) + ': ')
+			try:
+				answer = input(', '.join(labels) + ': ')
+			except KeyboardInterrupt:
+				if buttons & BUTTON_CANCEL:
+					return BUTTON_CANCEL
+				elif buttons & BUTTON_NO:
+					return BUTTON_NO
+				elif buttons & BUTTON_CLOSE:
+					return BUTTON_CLOSE
+				elif buttons & BUTTON_DISCARD:
+					return BUTTON_DISCARD
+				elif buttons & BUTTON_ABORT:
+					return BUTTON_ABORT
+				return buttons & ~(buttons - 1)
 		return buttons_map[answer]
 
 
 
 def open_file(message=None, specs=None, path='', multi=False):
+	"""Mostra una finestra di caricamento file con titolo *message. *specs* può essere una lista di tuple ``(extension, description)`` per permettere di caricare solo
+	file di tipi specifici; *path* è il percorso predefinito, e *multi* permette di selezionare più di un file da caricare.
+	Se *multi* è ``False``, la funzione restituisce il percorso del file selezionato o ``None`` se l'utente ha annullato il caricamento, altrimenti restituisce la lista di file
+	selezionati. Se eseguita al di fuori di Konga, questa funzione ignora i parametri *specs*, *path* e *multi*, e l'utente dovrà inserire il percorso completo del file da caricare;
+	se verrà inserito un percorso vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
 		return _proxy.ui.open_file(message, specs, path, multi)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
 		while True:
-			filename = input('Enter an existing filename to open or none to cancel: ')
+			try:
+				filename = input('Enter an existing filename to open or none to cancel: ')
+			except KeyboardInterrupt:
+				return None
 			if not filename:
 				return None
 			if os.path.exists(filename) and os.path.isfile(filename):
@@ -175,24 +213,38 @@ def open_file(message=None, specs=None, path='', multi=False):
 
 
 def save_file(message=None, spec=None, path=''):
+	"""Mostra una finestra di salvataggio file con titolo *message. *spec* può essere una tupla nella forma ``(extension, description)`` per permettere di salvare file di un
+	tipo specifico; *path* è il percorso predefinito. La funzione restituisce il percorso del file da salvare oppure ``None`` se l'utente ha annullato il salvataggio.
+	Se eseguita al di fuori di Konga, questa funzione ignora i parametri *specs* e *path*, e l'utente dovrà inserire il percorso completo del file da salvare;
+	se verrà inserito un percorso vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
 		return _proxy.ui.save_file(message, spec, path)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
-		filename = input('Enter filename to be saved or none to cancel: ')
+		try:
+			filename = input('Enter filename to be saved or none to cancel: ')
+		except KeyboardInterrupt:
+			return None
 		return filename or None
 
 
 
 def choose_directory(message=None, path=''):
+	"""Mostra una finestra di selezione directory con titolo *message* e percorso iniziale *path*. La funzione restituisce il percorso della directory selezionata oppure ``None``
+	se l'utente ha annullato l'operazione.
+	Se eseguita al di fuori di Konga, questa funzione ignora il parametro *path*, e l'utente dovrà inserire il percorso completo della directory; se verrà inserito un percorso
+	vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
 		return _proxy.ui.choose_directory(message, path)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
 		while True:
-			dirname = input('Enter an existing directory to open or none to cancel: ')
+			try:
+				dirname = input('Enter an existing directory to open or none to cancel: ')
+			except KeyboardInterrupt:
+				return None
 			if not dirname:
 				return None
 			if os.path.exists(dirname) and os.path.isdir(dirname):
@@ -202,6 +254,15 @@ def choose_directory(message=None, path=''):
 
 
 def select_record(tablename, multi=False, size=None, where_expr=None, code_azienda=None, num_esercizio=None):
+	"""Mostra una finestra di selezione record di Konga; la finestra mostrerà i record della tabella *tablename* e avrà dimensione *size* (tupla di due elementi nella forma
+	``(width, height)``). *where_expr* può essere un'espressione SQL *WHERE* per filtrare i record selezionabili; *code_azienda* e *code_esercizio* filtrano ulteriormente
+	i record visualizzati usando l'azienda e l'esercizio specificati.
+	Se *multi* è ``True``, la funzione restituisce una lista di record selezionati sotto forma di ``dict``, altrimenti restituisce il ``dict`` del singolo record selezionato.
+	In tutti i casi se l'utente annulla l'operazione, la funzione restituirà ``None``.
+	
+	.. warning::
+	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
+	"""
 	if _proxy.is_valid():
 		return _proxy.ui.select_record(tablename, multi, size, where_expr, code_azienda=code_azienda, num_esercizio=num_esercizio)
 	else:
@@ -210,6 +271,8 @@ def select_record(tablename, multi=False, size=None, where_expr=None, code_azien
 
 
 def open_progress(title=None, cancellable=True):
+	"""Mostra una finestra di progresso con titolo *title*, potenzialmente annullabile dall'utente se *cancellable* è ``True``; la funzione ritorna immediatamente.
+	Se eseguita fuori da Konga, questa funzione ignora il parametro *cancellable*."""
 	if _proxy.is_valid():
 		_proxy.ui.open_progress(title or u'Operazione in corso…', cancellable)
 	else:
@@ -220,6 +283,7 @@ def open_progress(title=None, cancellable=True):
 
 
 def close_progress():
+	"""Nasconde la finestra di progresso precedentemente mostrata con :func:`kongaui.open_progress`."""
 	if _proxy.is_valid():
 		_proxy.ui.close_progress()
 	else:
@@ -229,6 +293,9 @@ def close_progress():
 
 
 def set_progress(progress=None, message=None, state=None):
+	"""Imposta l'avanzamento corrente nella finestra di progresso precedentemente mostrata con :func:`kongaui.open_progress`. *progress* può essere ``None``
+	per specificare un avanzamento indefinito, oppure un valore compreso tra 0 e 100 per specificare la percentuale di avanzamento completata. *message* e
+	*state* sono messaggi aggiuntivi da mostrare nella finestra di avanzamento."""
 	if _proxy.is_valid():
 		_proxy.ui.set_progress(progress, message, state)
 	else:
@@ -273,6 +340,7 @@ def set_progress(progress=None, message=None, state=None):
 
 
 def is_progress_aborted():
+	"""Restituisce ``True`` se l'utente ha annullato la finestra di progresso precedentemente mostrata con :func:`kongaui.open_progress`."""
 	if _proxy.is_valid():
 		return _proxy.ui.is_progress_aborted()
 	else:
@@ -281,6 +349,12 @@ def is_progress_aborted():
 
 
 def open_window(command, key_id=None, key_code=None, code_azienda=None, num_esercizio=None):
+	"""Apre una finestra di Konga mostrando il comando *command*, ed eventualmente aprendo il record identificato univocamente o da *key_id* (ID del record), o
+	dalla tupla (*key_code*, *code_azienda*, *code_esercizio*) (Codice del record, codice dell'azienda e codice dell'esercizio).
+	
+	.. warning::
+	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
+	"""
 	if _proxy.is_valid():
 		_proxy.ui.open_window(command, key_id, key_code, code_azienda, num_esercizio)
 	else:
@@ -289,6 +363,20 @@ def open_window(command, key_id=None, key_code=None, code_azienda=None, num_eser
 
 
 def execute_form(form_data, title=None):
+	"""Apre un form di immissione dati con titolo *title*. *form_data* deve essere una lista di ``dict`` con le specifiche dei campi da mostrare; nel ``dict``
+	di un singolo campo, l'unica chiave richiesta è ``name``, che deve identificare univocamente il nome del campo. E' possibile specificare l'etichetta da
+	mostrare accando al campo stesso tramite la chiave ``label``; la tipologia di dato consentità è specificata tramite la chiave ``type``, che può assumere
+	i valori:
+	* ``str``: testo semplice, con possibile lunghezza massima ``length`` se la chiave è specificata;
+	* ``password``: parola chiave;
+	* ``decimal``: valore decimale (:class:`kongalib.Decimal`);
+	* ``range``: valore intero compreso tra un valore minimo (specificato dalla chiave ``min`` con valore predefinito ``0``) e un valore massimo (specificato dalla
+		chiave ``max`` con valore predefinito ``100``);
+	* ``bool``: valore booleano;
+	* ``date``: data (``datetime.date``);
+	* ``choice``: valore interno che identifica l'indice di una scelta tra quelle specificate nella chiave ``items`` (lista di stringhe);
+	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo. Se l'utente annulla il form la funzione restituisce ``None``,
+	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente."""
 	if _proxy.is_valid():
 		return _proxy.ui.execute_form(form_data, title=None)
 	else:
