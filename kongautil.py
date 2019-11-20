@@ -243,21 +243,21 @@ def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 
 
 def suspend_timeout():
-	"""Sospende il timeout di esecuzione dello script. La funzione non comporta eccezioni ma è ignorata se eseguita al di fuori di Konga."""
+	"""Sospende il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
 		return _proxy.builtin.set_timeout()
 
 
 
 def resume_timeout(timeout):
-	"""Ripristina il timeout di esecuzione dello script. La funzione non comporta eccezioni ma è ignorata se eseguita al di fuori di Konga."""
+	"""Ripristina il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
 		_proxy.builtin.set_timeout(timeout)
 
 
 
 def set_timeout(timeout):
-	"""Imposta il timeout di esecuzione dello script in secondi, passati i quali verrà mostrata una finestra di avviso. La funzione non comporta eccezioni ma è ignorata se eseguita al di fuori di Konga."""
+	"""Imposta il timeout di esecuzione dello script in secondi, passati i quali verrà mostrata una finestra di avviso. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
 		_proxy.builtin.set_timeout(timeout * 1000)
 
@@ -303,14 +303,14 @@ def get_site_packages():
 
 def notify_data_changes(table_name, row_id=None):
 	"""Notifica Konga che uno o tutti i record di una tabella sono stati modificati, causando un aggiornamento a tutti quei client Konga che stanno operando su tali record. Se *row_id* è ``None``, tutti
-	i record della tabella *table_name* verranno marcati come modificati, altrimenti il solo record con *ID* *row_id*. La funzione non comporta eccezioni ma è ignorata se eseguita al di fuori di Konga."""
+	i record della tabella *table_name* verranno marcati come modificati, altrimenti il solo record con *ID* *row_id*. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
 		_proxy.util.notify_data_changes(table_name, row_id)
 
 
 
 def get_context():
-	"""Restituisce un oggetto di class :class:`kongautil.ScriptContext` da usare per la gestione dell'I/O da parte degli script usati come azioni esterne di Konga.
+	"""Restituisce un oggetto di classe :class:`kongautil.ScriptContext` da usare per la gestione dell'I/O da parte degli script usati come azioni esterne di Konga.
 
 	.. warning::
 	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.

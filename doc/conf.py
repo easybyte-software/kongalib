@@ -16,6 +16,7 @@ import sys, os, re, datetime
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+print "SYS PATH", os.path.abspath('..')
 sys.path = [ os.path.abspath('..'), os.path.abspath('_static') ] + sys.path
 
 # -- General configuration -----------------------------------------------------

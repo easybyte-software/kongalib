@@ -458,4 +458,3 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 
 
 
-from kongautil import ScriptContext

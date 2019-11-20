@@ -367,14 +367,15 @@ def execute_form(form_data, title=None):
 	di un singolo campo, l'unica chiave richiesta è ``name``, che deve identificare univocamente il nome del campo. E' possibile specificare l'etichetta da
 	mostrare accando al campo stesso tramite la chiave ``label``; la tipologia di dato consentità è specificata tramite la chiave ``type``, che può assumere
 	i valori:
+
 	* ``str``: testo semplice, con possibile lunghezza massima ``length`` se la chiave è specificata;
 	* ``password``: parola chiave;
 	* ``decimal``: valore decimale (:class:`kongalib.Decimal`);
-	* ``range``: valore intero compreso tra un valore minimo (specificato dalla chiave ``min`` con valore predefinito ``0``) e un valore massimo (specificato dalla
-		chiave ``max`` con valore predefinito ``100``);
+	* ``range``: valore intero compreso tra un valore minimo (specificato dalla chiave ``min`` con valore predefinito ``0``) e un valore massimo (specificato dalla chiave ``max`` con valore predefinito ``100``);
 	* ``bool``: valore booleano;
 	* ``date``: data (``datetime.date``);
 	* ``choice``: valore interno che identifica l'indice di una scelta tra quelle specificate nella chiave ``items`` (lista di stringhe);
+	
 	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo. Se l'utente annulla il form la funzione restituisce ``None``,
 	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente."""
 	if _proxy.is_valid():

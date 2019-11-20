@@ -21,7 +21,7 @@ kongautil
 
 
 .. automodule:: kongautil
-	:members: PRINT_TARGET_PREVIEW, PRINT_TARGET_PAPER, PRINT_TARGET_PDF, PRINT_TARGET_CSV, PRINT_TARGET_XLS, KongaRequiredError, connect, get_window_vars, print_layout, print_log, suspend_timeout, resume_timeout, set_timeout, get_external_images_path, get_external_attachments_path, get_site_packages, notify_data_changes, get_context
+	:members: PRINT_TARGET_PREVIEW, PRINT_TARGET_PAPER, PRINT_TARGET_PDF, PRINT_TARGET_CSV, PRINT_TARGET_XLS, KongaRequiredError, ScriptContext, connect, get_window_vars, print_layout, print_log, suspend_timeout, resume_timeout, set_timeout, get_external_images_path, get_external_attachments_path, get_site_packages, notify_data_changes, get_context
 	:member-order: bysource
 
 
