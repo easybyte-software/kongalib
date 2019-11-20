@@ -91,13 +91,12 @@ class ScriptContext(object):
 
 	@property
 	def result(self):
-		"""Ritorna il valore di ritorno dell'azione esterna correntemente impostato."""
+		"""Ritorna o imposta il valore di ritorno dell'azione esterna, in modo che Konga possa usarlo al termine dell'esecuzione dell'azione
+		stessa. Il tipo ed il valore che andranno impostati dipendono dal tipo di azione esterna che si sta eseguendo."""
 		return self._result
 
 	@result.setter
 	def result(self, result):
-		"""Imposta il valore di ritorno dell'azione esterna, in modo che Konga possa usarlo al termine dell'esecuzione dell'azione
-		stessa. Il tipo ed il valore che andranno impostati dipendono dal tipo di azione esterna che si sta eseguendo."""
 		self._result = result
 		_proxy.util.set_script_result(result)
 
