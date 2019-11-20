@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 from kongalib import InterpreterTimeout, Error, start_timer, PY3
 from ._kongalib import Interpreter, get_application_log_path, set_interpreter_timeout
-from kongautil import ScriptContext
 
 import sys
 import os
@@ -457,3 +456,6 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 		_handlers['builtin']._set_interpreter(None)
 		del interpreter
 
+
+
+from kongautil import ScriptContext
