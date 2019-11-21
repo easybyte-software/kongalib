@@ -141,6 +141,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				driver = args.driver
 				database = args.database
 				username = args.username
+				password = args.password
 				tenant_key = args.tenant_key
 			except:
 				pass
