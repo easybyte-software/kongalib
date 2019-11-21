@@ -336,7 +336,7 @@ def set_progress(progress=None, message=None, state=None):
 				block = u'\u2588'
 			else:
 				block = '#'
-			progress = (block * ((progress * 30) // 100))
+			progress = (block * int((progress * 30) // 100))
 			bar = '|%-30s| %s' % (progress, elide(', '.join(text), term_width - 34))
 		print('\033[2K\r' + bar, end='')
 		sys.stdout.flush()

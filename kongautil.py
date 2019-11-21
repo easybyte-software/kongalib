@@ -107,7 +107,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	con il server, il database e l'utenza correntemente aperti sul programma, e i parametri passati a questa funzione saranno ignorati.
 	Se eseguita fuori da Konga, la funzione proverà a collegarsi al primo server disponibile sulla rete locale, aprendo il primo
 	database disponibile autenticandosi col l'utenza *admin* con password vuota; ogni parametro di connessione può essere forzato
-	tramite i parametri passati a questa funzione."""
+	tramite i parametri passati a questa funzione, oppure da linea di comando specificando gli argomenti ``--host``, ``--port``,
+	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
@@ -120,19 +121,53 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	else:
 		client = kongalib.Client()
 		if host is None:
+			import argparse
+			class ArgumentParser(argparse.ArgumentParser):
+				def exit(self, status=0, message=None):
+					if status:
+						raise RuntimeError
+			parser = ArgumentParser()
+			parser.add_argument('--host')
+			parser.add_argument('--port', type=int, default=None)
+			parser.add_argument('--driver')
+			parser.add_argument('-d', '--database')
+			parser.add_argument('-u', '--username')
+			parser.add_argument('-p', '--password')
+			parser.add_argument('-k', '--tenant-key')
+			try:
+				args = parser.parse_args()
+				host = args.host
+				port = args.port
+				driver = args.driver
+				database = args.database
+				username = args.username
+				tenant_key = args.tenant_key
+			except:
+				pass
+		if host is None:
 			servers_list = client.list_servers(timeout=500)
 			if servers_list:
 				host = servers_list[0]['host']
 				port = servers_list[0]['port']
 		if host is not None:
-			client.connect(host=host, port=port, options={ 'tenant_key': tenant_key })
+			client.connect(host=host, port=port or 0, options={ 'tenant_key': tenant_key })
+			db_list = None
 			if driver is None:
-				drivers_list = client.list_drivers(timeout=500)
-				if drivers_list:
-					driver = drivers_list[0]['name']
+				if database is not None:
+					db_list = client.list_databases(timeout=500)
+					for driver, dbs in db_list.items():
+						if database in [ db['name'] for db in dbs ]:
+							break
+					else:
+						driver = None
+				if driver is None:
+					drivers_list = client.list_drivers(timeout=500)
+					if drivers_list:
+						driver = drivers_list[0]['name']
 			if (driver is not None) and (database is None):
-				db_list = client.list_databases(driver, timeout=500)
-				if db_list:
+				if db_list is None:
+					db_list = client.list_databases(driver, timeout=500)
+				if db_list and (len(db_list[driver]) > 0):
 					database = db_list[driver][0]['name']
 			if (driver is not None) and (database is not None):
 				client.open_database(driver, database)
@@ -232,12 +267,12 @@ def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 		import colorama
 		print(colorama.Style.BRIGHT + title + colorama.Style.RESET_ALL)
 		status = {
-			kongalib.Log.INFO:		colorama.Style.BRIGHT + "INFO" + colorama.Style.RESET_ALL,
-			kongalib.Log.WARNING:	colorama.Style.BRIGHT + colorama.Fore.YELLOW + "WARNING" + colorama.Style.RESET_ALL,
-			kongalib.Log.ERROR:		colorama.Style.BRIGHT + colorama.Fore.RED + "ERROR" + colorama.Style.RESET_ALL,
+			kongalib.Log.INFO:		colorama.Style.BRIGHT + "INFO      " + colorama.Style.RESET_ALL,
+			kongalib.Log.WARNING:	colorama.Style.BRIGHT + colorama.Fore.YELLOW + "WARNING   " + colorama.Style.RESET_ALL,
+			kongalib.Log.ERROR:		colorama.Style.BRIGHT + colorama.Fore.RED + "ERROR     " + colorama.Style.RESET_ALL,
 		}
 		for message in log.get_messages():
-			print('%-10s%s' % (status[message[0]], message[1]))
+			print('%s%s' % (status[message[0]], message[1]))
 
 
 
