@@ -173,6 +173,7 @@ def message_box(text, title='', buttons=BUTTON_OK, icon=ICON_INFORMATION):
 			try:
 				answer = input(', '.join(labels) + ': ')
 			except KeyboardInterrupt:
+				print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
 				if buttons & BUTTON_CANCEL:
 					return BUTTON_CANCEL
 				elif buttons & BUTTON_NO:
@@ -203,6 +204,7 @@ def open_file(message=None, specs=None, path='', multi=False):
 			try:
 				filename = input('Enter an existing filename to open or none to cancel: ')
 			except KeyboardInterrupt:
+				print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
 				return None
 			if not filename:
 				return None
@@ -225,6 +227,7 @@ def save_file(message=None, spec=None, path=''):
 		try:
 			filename = input('Enter filename to be saved or none to cancel: ')
 		except KeyboardInterrupt:
+			print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
 			return None
 		return filename or None
 
@@ -244,6 +247,7 @@ def choose_directory(message=None, path=''):
 			try:
 				dirname = input('Enter an existing directory to open or none to cancel: ')
 			except KeyboardInterrupt:
+				print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
 				return None
 			if not dirname:
 				return None
@@ -362,11 +366,11 @@ def open_window(command, key_id=None, key_code=None, code_azienda=None, num_eser
 
 
 
-def execute_form(form_data, title=None):
-	"""Apre un form di immissione dati con titolo *title*. *form_data* deve essere una lista di ``dict`` con le specifiche dei campi da mostrare; nel ``dict``
-	di un singolo campo, l'unica chiave richiesta è ``name``, che deve identificare univocamente il nome del campo. E' possibile specificare l'etichetta da
-	mostrare accando al campo stesso tramite la chiave ``label``; la tipologia di dato consentità è specificata tramite la chiave ``type``, che può assumere
-	i valori:
+def execute_form(form_data, title=None, message=None, condition=None):
+	"""Apre un form di immissione dati con titolo *title*; se *message* è specificato, il testo corrispondente sarà visualizzato in alto nella finestra del form.
+	*form_data* deve essere una lista di ``dict`` con le specifiche dei campi da mostrare; nel ``dict``	di un singolo campo, l'unica chiave richiesta è ``name``,
+	che deve identificare univocamente il nome del campo. E' possibile specificare l'etichetta da mostrare accando al campo stesso tramite la chiave ``label``;
+	la tipologia di dato consentità è specificata tramite la chiave ``type``, che può assumere i valori:
 
 	* ``str``: testo semplice, con possibile lunghezza massima ``length`` se la chiave è specificata;
 	* ``password``: parola chiave;
@@ -375,17 +379,22 @@ def execute_form(form_data, title=None):
 	* ``bool``: valore booleano;
 	* ``date``: data (``datetime.date``);
 	* ``choice``: valore interno che identifica l'indice di una scelta tra quelle specificate nella chiave ``items`` (lista di stringhe);
-	
+
 	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo. Se l'utente annulla il form la funzione restituisce ``None``,
-	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente."""
+	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
+	Il parametro *condition*, se presente, permette di specificare una condizione di validazione per il form sotto forma di espressione Python; i nomi dei campi
+	specificati in *form_data* saranno disponibili come variabili nell'esecuzione di questa condizione, il cui esito determinerà se consentire o meno l'uscita
+	dal form con successo."""
 	if _proxy.is_valid():
-		return _proxy.ui.execute_form(form_data, title=None)
+		return _proxy.ui.execute_form(form_data, title, message, condition)
 	else:
 		import kongalib, decimal, datetime, getpass
 		class InvalidInput(RuntimeError):
 			pass
 		if title:
 			print(colorama.Style.BRIGHT + textwrap.fill(title, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
+		if message:
+			print(textwrap.fill(message, width=_get_term_width() - 1))
 		result = {}
 		for entry in form_data:
 			if not isinstance(entry, dict):
@@ -492,6 +501,7 @@ def execute_form(form_data, title=None):
 				try:
 					value = prompt(label + ': ')
 				except KeyboardInterrupt:
+					print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
 					return None
 				if (not value) and (default is not None):
 					value = default
@@ -501,6 +511,10 @@ def execute_form(form_data, title=None):
 				except InvalidInput as e:
 					print(colorama.Fore.RED + str(e) + colorama.Fore.RESET)
 			result[name] = value
+		if condition is not None:
+			if not eval(condition, result.copy()):
+				print(colorama.Style.BRIGHT + colorama.Fore.RED + "Form input data validation failed; aborted" + colorama.Style.RESET_ALL)
+				result = None
 		return result
 
 
