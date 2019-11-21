@@ -7,7 +7,7 @@ trigger:
     - v*
 
 variables:
-  konga_branch: develop
+  konga_branch: stable-1.8.0
 
 jobs:
 
@@ -28,8 +28,8 @@ jobs:
     matrix:
       64Bit:
         arch: x86_64
-        plat: manylinux1_x86_64
-        image: quay.io/pypa/manylinux1_x86_64
+        plat: manylinux2010_x86_64
+        image: quay.io/pypa/manylinux2010_x86_64
         python.architecture: x64
   pool:
     vmImage: 'ubuntu-latest'
@@ -49,6 +49,8 @@ jobs:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
+      Python37:
+        python.version: '3.8'
   pool:
     vmImage: 'macOS-latest'
   steps:
@@ -84,7 +86,7 @@ jobs:
         python.architecture: 'x86'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-latest'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
