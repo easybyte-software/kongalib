@@ -205,7 +205,6 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 
 
 
-
 def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 	"""Stampa il contenuto dell'oggetto *log* di classe :class:`kongalib.Log`; se si esegue questa funzione dall'interno di Konga, verrà usata la funzione
 	:func:`print_layout`, passando i parametri *target* e *filename*; viceversa se si esegue fuori da Konga, il log verrà stampato su terminale."""
@@ -298,31 +297,49 @@ def set_timeout(timeout):
 
 
 
+def _get_external_path(images, table_name, code_azienda):
+	import os, os.path
+	paths = _client.select_data('EB_Master', ['PathFileLocali'])[0][0].split(chr(0))
+	for path in paths:
+		path = os.path.normpath(path)
+		if os.access(path, os.F_OK|os.R_OK|os.W_OK):
+			if code_azienda:
+				business_path = os.path.join(path, 'aziende', _client.select_data('EB_Aziende', ['RagioneSociale'], "Codice = '%s'" % code_azienda)[0][0])
+			else:
+				business_path = None
+
+			table_type = _client.execute(kongalib.CMD_GET_COMMAND_TYPE, { kongalib.IN_TABLE_NAME: table_name })[kongalib.OUT_TYPE]
+			if (table_type == 2) and (business_path is None):
+				raise ValueError('Business code required for business tables')
+			if (table_type == 2) or ((table_type == 3) and (code_azienda is not None)):
+				path = business_path
+			else:
+				path = os.path.join(path, 'common')
+			return os.path.join(path, 'Immagini' if images else 'Allegati', table_name)
+	else:
+		raise RuntimeError('Unable to autodetect external data path')
+
+
+
 def get_external_images_path(table_name, code_azienda):
 	"""Restituisce il percorso per accedere ai file delle immagini associate ai record della tabella *table_name* per il database corrente e l'azienda specificata da *code_azienda* (passando ``None`` come
 	*code_azienda* verrà restituito il percorso dei file comuni a tutte le aziende); se nessun database è attualmente connesso, la funzione restituirà ``None``.
-
-	.. warning::
-	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
 	"""
 	if _proxy.is_valid():
 		return _proxy.util.get_external_path(True, table_name, code_azienda)
 	else:
-		raise KongaRequiredError
+		return _get_external_path(True, table_name, code_azienda)
 
 
 
 def get_external_attachments_path(table_name, code_azienda):
 	"""Restituisce il percorso per accedere ai file degli allegati associati ai record della tabella *table_name* per il database corrente e l'azienda specificata da *code_azienda* (passando ``None`` come
 	*code_azienda* verrà restituito il percorso dei file comuni a tutte le aziende); se nessun database è attualmente connesso, la funzione restituirà ``None``.
-
-	.. warning::
-	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
 	"""
 	if _proxy.is_valid():
 		return _proxy.util.get_external_path(False, table_name, code_azienda)
 	else:
-		raise KongaRequiredError
+		return _get_external_path(False, table_name, code_azienda)
 
 
 
@@ -356,4 +373,12 @@ def get_context():
 		raise KongaRequiredError
 
 
+
+if _proxy.is_valid():
+	_client = None
+else:
+	try:
+		_client = connect()
+	except:
+		_client = kongalib.Client()
 
