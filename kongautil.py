@@ -14,6 +14,8 @@
 
 from __future__ import print_function
 
+import sys
+import os, os.path
 import kongalib
 
 from kongalib.scripting import proxy as _proxy
@@ -24,6 +26,9 @@ PRINT_TARGET_PAPER				= 1		#: Stampa su carta
 PRINT_TARGET_PDF				= 2		#: Stampa su file PDF
 PRINT_TARGET_CSV				= 3		#: Stampa su file CSV
 PRINT_TARGET_XLS				= 4		#: Stampa su file Excel
+
+
+_last_client = None
 
 
 
@@ -119,6 +124,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			client.authenticate(username, password)
 			return client
 	else:
+		global _last_client
 		client = kongalib.Client()
 		if host is None:
 			import argparse
@@ -173,6 +179,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			if (driver is not None) and (database is not None):
 				client.open_database(driver, database)
 				client.authenticate(username or 'admin', password or '')
+				_last_client = client
 				return client
 	raise kongalib.Error(kongalib.DATABASE_NOT_CONNECTED, "No database connected")
 
@@ -189,19 +196,111 @@ def get_window_vars():
 
 
 
-def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=PRINT_TARGET_PREVIEW, filename=None):
+def _run_script(script, log):
+	import tempfile, subprocess
+	client_exe = None
+	if sys.platform == 'win32':
+		files = ( 'kongaclient.com', 'konga.com' )
+	else:
+		files = ( 'easybyte-konga-client', 'easybyte-konga' )
+	path = os.environ.get("PATH", None)
+	if path is None:
+		try:
+			path = os.confstr("CS_PATH")
+		except (AttributeError, ValueError):
+			path = os.defpath
+	if path is not None:
+		path = path.split(os.pathsep)
+		for exe in files:
+			seen = set()
+			for dir in path:
+				normdir = os.path.normcase(dir)
+				if not normdir in seen:
+					seen.add(normdir)
+					name = os.path.join(dir, exe)
+					if os.path.exists(name) and os.access(name, os.F_OK | os.X_OK) and not os.path.isdir(name):
+						client_exe = exe
+						break
+			if client_exe is not None:
+				break
+	if client_exe is None:
+		raise RuntimeError('Cannot find Konga executable')
+	if _last_client is not None:
+		info = _last_client.get_connection_info()
+		lines = [
+			'.connect "%s" -p %d' % (info['host'], info['port']),
+			'.user "%s" -p "%s"' % (info['user']['name'], info['user']['password']),
+			'.open_database "%s" -d "%s"' % (info['database']['name'], info['database']['driver']),
+		]
+	else:
+		lines = []
+	temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+	with temp:
+		temp.write('\n'.join(lines + script))
+	try:
+		output = subprocess.check_output('%s --script "%s"' % (client_exe, temp.name), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
+		for line in output:
+			log.info(line)
+	except subprocess.CalledProcessError as e:
+		log.warning("Errors running script:")
+		output = e.output.splitlines()
+		for line in output:
+			log.error(line)
+		log.info("Original script was:")
+		for line in script:
+			log.info("    %s" % line)
+	finally:
+		os.unlink(temp.name)
+
+
+
+def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=None, filename=None):
 	"""Esegue una stampa su Konga. *command_or_layout* può essere un nome di comando di Konga, oppure un sorgente XML contenente la struttura stessa del layout da
 	stampare; *builtins* è un ``dict`` i cui valori verranno passati al motore di stampa e saranno disponibili all'interno degli script del layout; *code_azienda* e
-	*code_esercizio* identificano l'azienda e l'esercizio per cui eseguire la stampa, mentre *target* è una delle costanti ``PRINT_*`` definite sopra, che
-	specificano la destinazione della stampa; *filename* è il nome del file da salvare ed ha un senso solo quando si stampa su file.
+	*code_esercizio* identificano l'azienda e l'esercizio per cui eseguire la stampa, mentre *target* è una delle costanti ``PRINT_TARGET_*`` definite sopra, che
+	specificano la destinazione della stampa (se non specificata e la funzione è eseguita all'interno di Konga, verrà assunta ``PRINT_TARGET_PREVIEW``,
+	altrimenti ``PRINT_TARGET_PDF``); *filename* è il nome del file da salvare ed ha un senso solo quando si stampa su file.
+	La funzione restituisce un oggetto di classe :class:`kongalib.Log` con il resoconto dell'operazione di stampa.
 	
 	.. warning::
-	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
+	   Se eseguita fuori da Konga, questa funzione richiede che sull'host sia stato installato Konga Client (o Konga), e non supporta come *target* i valori
+	   ``PRINT_TARGET_PREVIEW`` e ``PRINT_TARGET_PAPER``.
 	"""
 	if _proxy.is_valid():
+		if target is None:
+			target = PRINT_TARGET_PREVIEW
 		return _proxy.util.print_layout(command_or_layout, builtins or {}, code_azienda, code_esercizio, target, filename)
 	else:
-		raise KongaRequiredError
+		log = kongalib.Log()
+		if not filename:
+			raise ValueError("Output filename must be specified")
+		if isinstance(command_or_layout, kongalib.text_base_types) and (command_or_layout.strip().startswith('<?xml') or command_or_layout.strip().startswith('<layout')):
+			import tempfile
+			temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+			with temp:
+				temp.write(command_or_layout)
+			command_or_layout = temp.name
+		else:
+			temp = None
+		target = {
+			PRINT_TARGET_PDF:		'pdf',
+			PRINT_TARGET_CSV:		'csv',
+			PRINT_TARGET_XLS:		'xls',
+		}.get(target, 'pdf')
+		builtins = builtins or {}
+		if code_azienda:
+			builtins['COMPANY_CODE'] = code_azienda
+		if code_esercizio:
+			builtins['ACCOUNTING_YEAR_CODE'] = code_esercizio
+		script = [
+			'.print "%s" %s -o %s -f "%s"' % (command_or_layout, ' '.join([ '%s=%s' % (key, repr(value)) for key, value in builtins.items() ]), target, filename)
+		]
+		try:
+			_run_script(script, log)
+		finally:
+			if temp is not None:
+				os.unlink(temp)
+		return log
 
 
 
@@ -299,16 +398,16 @@ def set_timeout(timeout):
 
 def _get_external_path(images, table_name, code_azienda):
 	import os, os.path
-	paths = _client.select_data('EB_Master', ['PathFileLocali'])[0][0].split(chr(0))
+	client = _last_client or connect()
+	paths = client.select_data('EB_Master', ['PathFileLocali'])[0][0].split(chr(0))
 	for path in paths:
 		path = os.path.normpath(path)
 		if os.access(path, os.F_OK|os.R_OK|os.W_OK):
 			if code_azienda:
-				business_path = os.path.join(path, 'aziende', _client.select_data('EB_Aziende', ['RagioneSociale'], "Codice = '%s'" % code_azienda)[0][0])
+				business_path = os.path.join(path, 'aziende', client.select_data('EB_Aziende', ['RagioneSociale'], "Codice = '%s'" % code_azienda)[0][0])
 			else:
 				business_path = None
-
-			table_type = _client.execute(kongalib.CMD_GET_COMMAND_TYPE, { kongalib.IN_TABLE_NAME: table_name })[kongalib.OUT_TYPE]
+			table_type = client.execute(kongalib.CMD_GET_TABLE_TYPES)[kongalib.OUT_TYPES].get(table_name, 1)
 			if (table_type == 2) and (business_path is None):
 				raise ValueError('Business code required for business tables')
 			if (table_type == 2) or ((table_type == 3) and (code_azienda is not None)):
@@ -373,12 +472,4 @@ def get_context():
 		raise KongaRequiredError
 
 
-
-if _proxy.is_valid():
-	_client = None
-else:
-	try:
-		_client = connect()
-	except:
-		_client = kongalib.Client()
 
