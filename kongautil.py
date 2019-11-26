@@ -460,6 +460,18 @@ def notify_data_changes(table_name, row_id=None):
 
 
 
+def open_uri(uri):
+	"""Tenta di aprire l'URI specificato con l'applicazione predefinita di sistema (se configurata)."""
+	import subprocess
+	if sys.platform == 'darwin':
+		subprocess.call(('open', uri))
+	elif sys.platform == 'win32':
+		os.startfile(uri)
+	else:
+		subprocess.call(('xdg-open', uri))
+
+
+
 def get_context():
 	"""Restituisce un oggetto di classe :class:`kongautil.ScriptContext` da usare per la gestione dell'I/O da parte degli script usati come azioni esterne di Konga.
 
