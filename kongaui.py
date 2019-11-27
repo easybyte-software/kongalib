@@ -388,8 +388,9 @@ def execute_form(form_data, title=None, message=None, condition=None):
 	* ``company_code``: simile a ``code``, specifica l'azienda su cui gli altri campi ``code`` possono essere ricercati;
 	* ``accounting_year_code``: simile a ``code``, specifica l'esercizio su cui gli altri campi ``code`` possono essere ricercati;
 
-	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo. Se l'utente annulla il form la funzione restituisce ``None``,
-	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
+	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo; inoltre se è presente la chiave ``focus`` (con qualsiasi
+	valore), il campo corrispondente prenderà il focus all'avvio della finestra. Se l'utente annulla il form la funzione restituisce ``None``, altrimenti un
+	``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
 	Il parametro *condition*, se presente, permette di specificare una condizione di validazione per il form sotto forma di espressione Python; i nomi dei campi
 	specificati in *form_data* saranno disponibili come variabili nell'esecuzione di questa condizione, il cui esito determinerà se consentire o meno l'uscita
 	dal form con successo."""
