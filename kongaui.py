@@ -376,9 +376,17 @@ def execute_form(form_data, title=None, message=None, condition=None):
 	* ``password``: parola chiave;
 	* ``decimal``: valore decimale (:class:`kongalib.Decimal`);
 	* ``range``: valore intero compreso tra un valore minimo (specificato dalla chiave ``min`` con valore predefinito ``0``) e un valore massimo (specificato dalla chiave ``max`` con valore predefinito ``100``);
+	* ``slider``: simile a ``range`` ma viene visualizzato come cursore di selezione valore scorrevole;
 	* ``bool``: valore booleano;
 	* ``date``: data (``datetime.date``);
 	* ``choice``: valore interno che identifica l'indice di una scelta tra quelle specificate nella chiave ``items`` (lista di stringhe);
+	* ``listbox``: simile a ``choice`` ma viene visualizzato come lista di elementi da cui fare una scelta;
+	* ``load``: nome di file esistente da caricare;
+	* ``save``: nome di file da salvare;
+	* ``dir``: nome di directory esistente;
+	* ``code``: stringa di testo che identifica il codice di un record, la cui tabella è indicata dalla chiave ``table``;
+	* ``company_code``: simile a ``code``, specifica l'azienda su cui gli altri campi ``code`` possono essere ricercati;
+	* ``accounting_year_code``: simile a ``code``, specifica l'esercizio su cui gli altri campi ``code`` possono essere ricercati;
 
 	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo. Se l'utente annulla il form la funzione restituisce ``None``,
 	altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
