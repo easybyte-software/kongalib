@@ -162,13 +162,13 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 					if status:
 						raise RuntimeError
 			parser = ArgumentParser()
-			parser.add_argument('--host')
-			parser.add_argument('--port', type=int, default=None)
-			parser.add_argument('--driver')
-			parser.add_argument('-d', '--database')
-			parser.add_argument('-u', '--username')
-			parser.add_argument('-p', '--password')
-			parser.add_argument('-k', '--tenant-key')
+			parser.add_argument('--host', default=host)
+			parser.add_argument('--port', type=int, default=port)
+			parser.add_argument('--driver', default=driver)
+			parser.add_argument('-d', '--database', default=database)
+			parser.add_argument('-u', '--username', default=username)
+			parser.add_argument('-p', '--password', default=password)
+			parser.add_argument('-k', '--tenant-key', default=tenant_key)
 			try:
 				args = parser.parse_args()
 				host = args.host
