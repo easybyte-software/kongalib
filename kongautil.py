@@ -113,7 +113,9 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	Se eseguita fuori da Konga, la funzione proverà a collegarsi al primo server disponibile sulla rete locale, aprendo il primo
 	database disponibile autenticandosi col l'utenza *admin* con password vuota; ogni parametro di connessione può essere forzato
 	tramite i parametri passati a questa funzione, oppure da linea di comando specificando gli argomenti ``--host``, ``--port``,
-	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``."""
+	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``. Inoltre, è possibile definire i
+	parametri come variabili all'interno di un file di configurazione, nella sezione ``[kongautil.connect]``; tale file deve avere
+	lo stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
@@ -128,6 +130,33 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 		client = kongalib.Client()
 		if host is None:
 			import argparse
+			try:
+				import configparser
+			except:
+				import ConfigParser as configparser
+			config = configparser.RawConfigParser({
+				'host':			host or '',
+				'port':			str(port or ''),
+				'driver':		driver or '',
+				'database':		database or '',
+				'username':		username or '',
+				'password':		password or '',
+				'tenant_key':	tenant_key or '',
+			})
+			config.add_section('kongautil.connect')
+			try:
+				config.read(os.path.splitext(sys.argv[0])[0] + '.cfg')
+			except:
+				pass
+			host = config.get('kongautil.connect', 'host') or None
+			try:	port = int(config.get('kongautil.connect', 'port'))
+			except:	pass
+			driver = config.get('kongautil.connect', 'driver') or None
+			database = config.get('kongautil.connect', 'database') or None
+			username = config.get('kongautil.connect', 'username') or None
+			password = config.get('kongautil.connect', 'password') or None
+			tenant_key = config.get('kongautil.connect', 'tenant_key') or None
+
 			class ArgumentParser(argparse.ArgumentParser):
 				def exit(self, status=0, message=None):
 					if status:
