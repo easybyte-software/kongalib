@@ -107,7 +107,7 @@ class ScriptContext(object):
 
 
 
-def connect(host=None, port=None, driver=None, database=None, username=None, password=None, tenant_key=None):
+def connect(host=None, port=None, driver=None, database=None, username=None, password=None, tenant_key=None, config=None):
 	"""Restituisce un oggetto :class:`kongalib.Client` già connesso. Se eseguito dall'interno di Konga, la connessione sarà stabilita
 	con il server, il database e l'utenza correntemente aperti sul programma, e i parametri passati a questa funzione saranno ignorati.
 	Se eseguita fuori da Konga, la funzione proverà a collegarsi al primo server disponibile sulla rete locale, aprendo il primo
@@ -115,7 +115,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	tramite i parametri passati a questa funzione, oppure da linea di comando specificando gli argomenti ``--host``, ``--port``,
 	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``. Inoltre, è possibile definire i
 	parametri come variabili all'interno di un file di configurazione, nella sezione ``[kongautil.connect]``; tale file deve avere
-	lo stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``."""
+	il nome passato a questa funzione con il parametro ``config``, altrimenti lo stesso nome dello script lanciato da terminale, ma
+	con estensione ``.cfg``."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
@@ -134,6 +135,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				import configparser
 			except:
 				import ConfigParser as configparser
+			filename = config or (os.path.splitext(sys.argv[0])[0] + '.cfg')
 			config = configparser.RawConfigParser({
 				'host':			host or '',
 				'port':			str(port or ''),
@@ -145,7 +147,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			})
 			config.add_section('kongautil.connect')
 			try:
-				config.read(os.path.splitext(sys.argv[0])[0] + '.cfg')
+				config.read(filename)
 			except:
 				pass
 			host = config.get('kongautil.connect', 'host') or None
