@@ -135,6 +135,7 @@ CRYPTO_SUPPORT_ENABLED = 2070                                  #: Crittografia d
 EDI_SERVICE_ENABLED = 2071
 SERVER_NOT_CONFIGURED_ARCHIVE = 2072                           #: Risorse del server non trovate
 INDEX_STORAGE_CONVERTION_ERROR = 2073                          #: Errore di conversione indice di ricerca del database; si prega di vedere il log del server per maggiori informazioni
+FTS_ERROR = 2074                                               #: Errore nell'indice di ricerca del database; si prega di vedere il log del server per maggiori informazioni
 DRIVER_LOAD_FAILED = 2100
 MALFORMED_DRIVER = 2101
 INCOMPATIBLE_DRIVER_VERSION = 2102
