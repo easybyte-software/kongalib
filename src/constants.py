@@ -275,6 +275,7 @@ WEB_SERVICE_DESC_BINARY = 3053                                 #: Accesso dirett
 WEB_JSON_RPC_INVALID_REQUEST = 3100                            #: La richiesta non è una richiesta JSON-RPC valida
 WEB_JSON_RPC_METHOD_NOT_FOUND = 3101                           #: La procedura remota richiesta non esiste o non è disponibile
 WEB_CONSOLE_TITLE = 3200                                       #: Console di amministrazione remota di Konga
+WEB_INVALID_BINARY_DATA = 3300                                 #: Dati binari non validi; previsti dati codificati in base64
 UNKNOWN_COMMAND = 4000                                         #: Comando sconosciuto
 DATABASE_ALREADY_EXISTS = 4001                                 #: Il database già esiste
 DATABASE_DRIVER_NOT_FOUND = 4002                               #: Driver di database non trovato
