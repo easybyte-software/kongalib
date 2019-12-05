@@ -166,9 +166,19 @@ class Log(object):
 		usando :meth:`strip_html`."""
 		return u'\n'.join([ self.format_message(message) for message in self.messages ])
 	
-	def dump(self):
-		"""Esattamente come :meth:`dumps` ma stampa il dump su ``stdout``."""
-		print(self.dumps())
+	def dump(self, logger=None):
+		"""Esattamente come :meth:`dumps` ma stampa il dump su ``stdout``. Se ``logger`` è un'istanza di ``logging.Logger``, verrà usata per l'output
+		invece di ``stdout``."""
+		if logger is None:
+			print(self.dumps())
+		else:
+			for message in self.get_messages():
+				method = {
+					Log.ERROR:		logger.error,
+					Log.WARNING:	logger.warning,
+				}.get(message[0], logger.info)
+				method(ensure_text(self.strip_html(message[1])))
+
 
 
 class Error(Exception):
