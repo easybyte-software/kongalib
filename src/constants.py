@@ -768,6 +768,7 @@ EDI_EVENT_CHANGED_XML = 6502                                   #: Modificato fil
 EDI_EVENT_RECEIVED_DESC = 6503                                 #: Ricevuto file XML da intermediario
 EDI_EVENT_IMPORTED = 6504                                      #: Scheda creata da file XML importato
 EDI_EVENT_CREATED_FROM_DF = 6505
+EDI_EVENT_REGISTERED_PN = 6506
 EDI_UPLOAD_IO_ERROR = 6600
 EDI_UPLOAD_INT_ERROR = 6601
 EDI_CHECK_OUTCOME_IO_ERROR = 6602
