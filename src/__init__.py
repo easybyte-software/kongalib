@@ -203,6 +203,9 @@ class Error(Exception):
 			return self.__unicode__()
 		else:
 			return self.__unicode__().encode('utf-8')
+	def __repr__(self):
+		return '<Error %d: %s>' % (self.errno, str(self))
+
 
 
 class ErrorList(Error):
@@ -243,6 +246,9 @@ class ErrorList(Error):
 			return self.__unicode__()
 		else:
 			return self.__unicode__().encode('utf-8')
+
+	def __repr__(self):
+		return '<ErrorList: %s>' % repr(self.get_errors())
 	
 	def __iter__(self):
 		return iter(self.errors)
