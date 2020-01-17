@@ -124,96 +124,112 @@ def parse(sql):
 		( 'right', 'NOT' ),
 	)
 	
-	def p_expression_and(t):
+	def p_expression_and(p):
 		'expression : expression AND expression'
-		t[0] = AND(t[1], t[3])
+		p[0] = AND(p[1], p[3])
 	
-	def p_expression_and_value(t):
+	def p_expression_and_value(p):
 		'expression : expression AND value'
 		try:
-			if eval(t[3]):
+			if eval(p[3]):
 				node = OperandEQ('1', '1')
 			else:
 				node = OperandNE('1', '1')
 		except:
 			node = OperandNE('1', '1')
-		t[0] = AND(t[1], node)
+		p[0] = AND(p[1], node)
 	
-	def p_expression_or(t):
+	def p_expression_or(p):
 		'expression : expression OR expression'
-		t[0] = OR(t[1], t[3])
+		p[0] = OR(p[1], p[3])
 	
-	def p_expression_or_value(t):
+	def p_expression_or_value(p):
 		'expression : expression OR value'
 		try:
-			if eval(t[3]):
+			if eval(p[3]):
 				node = OperandEQ('1', '1')
 			else:
 				node = OperandNE('1', '1')
 		except:
 			node = OperandNE('1', '1')
-		t[0] = OR(t[1], node)
+		p[0] = OR(p[1], node)
 	
-	def p_expression_fieldop(t):
+	def p_expression_fieldop(p):
 		'expression : ID OPERAND ID'
-		t[0] = Operand(t[1], t[2], t[3], _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE | _HasLogic.FLAG_VALUE_IS_FIELD)
+		p[0] = Operand(p[1], p[2], p[3], _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE | _HasLogic.FLAG_VALUE_IS_FIELD)
 	
-	def p_expression_binop(t):
+	def p_expression_binop(p):
 		'expression : ID OPERAND VALUE'
-		t[0] = Operand(t[1], t[2], t[3])
+		p[0] = Operand(p[1], p[2], p[3])
+
+	def p_expression_func_fieldop(p):
+		'expression : function OPERAND ID'
+		p[0] = Operand(p[1], p[2], p[3], _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE | _HasLogic.FLAG_VALUE_IS_FIELD)
+
+	def p_expression_func_binop(p):
+		'expression : function OPERAND VALUE'
+		p[0] = Operand(p[1], p[2], p[3])
 	
-	def p_expression_not(t):
+	def p_expression_not(p):
 		'expression : NOT expression'
-		t[0] = NOT(t[2])
+		p[0] = NOT(p[2])
 	
-	def p_expression_paren(t):
+	def p_expression_paren(p):
 		'expression : LPAREN expression RPAREN'
-		t[0] = t[2]
+		p[0] = p[2]
 	
-	def p_expression_is_null(t):
+	def p_expression_is_null(p):
 		'expression : ID IS NULL'
-		t[0] = OperandIsNull(t[1])
+		p[0] = OperandIsNull(p[1])
 	
-	def p_expression_is_not_null(t):
+	def p_expression_is_not_null(p):
 		'expression : ID IS NOT NULL'
-		t[0] = OperandIsNotNull(t[1])
+		p[0] = OperandIsNotNull(p[1])
 	
-	def p_expression_like(t):
+	def p_expression_like(p):
 		'expression : ID LIKE VALUE'
-		t[0] = OperandLIKE(t[1], t[3])
+		p[0] = OperandLIKE(p[1], p[3])
 	
-	def p_expression_not_like(t):
+	def p_expression_not_like(p):
 		'expression : ID NOT LIKE VALUE'
-		t[0] = OperandNotLIKE(t[1], t[4])
+		p[0] = OperandNotLIKE(p[1], p[4])
 	
-	def p_expression_in(t):
+	def p_expression_in(p):
 		'expression : ID IN LPAREN valueslist RPAREN'
 		values = []
-		node = t[4]
+		node = p[4]
 		while node is not None:
 			values.append(node[0])
 			node = node[1]
-		t[0] = OperandIN(t[1], values)
+		p[0] = OperandIN(p[1], values)
 	
-	def p_value_paren(t):
-		'value : LPAREN value RPAREN'
-		t[0] = t[2]
+	def p_function(p):
+		'function : ID LPAREN ID RPAREN'
+		p[0] = '%s(%s)' % (p[1], p[3])
 
-	def p_value(t):
+	def p_function_recursive(p):
+		'function : ID LPAREN function RPAREN'
+		p[0] = '%s(%s)' % (p[1], p[3])
+
+	def p_value_paren(p):
+		'value : LPAREN value RPAREN'
+		p[0] = p[2]
+
+	def p_value(p):
 		'value : VALUE'
-		t[0] = t[1]
+		p[0] = p[1]
 	
-	def p_valueslist_single(t):
+	def p_valueslist_single(p):
 		'valueslist : VALUE'
-		t[0] = (t[1], None)
+		p[0] = (p[1], None)
 	
-	def p_valueslist_multi(t):
+	def p_valueslist_multi(p):
 		'valueslist : VALUE COMMA valueslist'
-		t[0] = (t[1], t[3])
+		p[0] = (p[1], p[3])
 	
-	def p_error(t):
-		if t:
-			raise SyntaxError("Parse error near '%s'" % t.value[0])
+	def p_error(p):
+		if p:
+			raise SyntaxError("Parse error near '%s'" % p.value[0])
 		else:
 			raise SyntaxError("Parse error")
 	
