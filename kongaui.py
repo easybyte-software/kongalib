@@ -374,6 +374,7 @@ def execute_form(form_data, title=None, message=None, condition=None):
 
 	* ``str``: testo semplice, con possibile lunghezza massima ``length`` se la chiave è specificata;
 	* ``password``: parola chiave;
+	* ``int``: valore intero;
 	* ``decimal``: valore decimale (:class:`kongalib.Decimal`);
 	* ``range``: valore intero compreso tra un valore minimo (specificato dalla chiave ``min`` con valore predefinito ``0``) e un valore massimo (specificato dalla chiave ``max`` con valore predefinito ``100``);
 	* ``slider``: simile a ``range`` ma viene visualizzato come cursore di selezione valore scorrevole;
