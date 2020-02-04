@@ -414,7 +414,17 @@ def execute_form(form_data, title=None, message=None, condition=None):
 			label = str(entry.get('label', name))
 			prompt = input
 			wtype = entry.get('type', str)
-			if wtype in ('decimal', kongalib.Decimal, decimal.Decimal):
+			if wtype in ('integer', 'int'):
+				try:
+					default = str(int(entry.get('default', 0)))
+				except:
+					default = '0'
+				def validate(text):
+					try:
+						return int(text)
+					except:
+						raise InvalidInput('Expected integer number')
+			elif wtype in ('decimal', kongalib.Decimal, decimal.Decimal):
 				try:
 					default = str(kongalib.Decimal(entry.get('default', 0)))
 				except:
