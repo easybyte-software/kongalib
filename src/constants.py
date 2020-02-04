@@ -744,6 +744,7 @@ DATI_INTRA_CODICE_MISS = 5432                                  #: Non è stato s
 DATI_INTRA_CLFOR_MISS = 5433                                   #: Non è stato specificato il cliente/fornitore a cui si riferisce la scheda!
 DATI_DETT_SCAD_MISS = 5434                                     #: Non è stato specificato alcun dettaglio per le scadenze!
 DATI_INTRA_DELETE_PROGRESSIVO = 5435                           #: Non è possibile eliminare i dati intrast contenuti nella registrazione di prima nota perchè sono stati inviati!
+PN_CLIFO_INCASSO_MISS = 5436                                   #: Manca il Cliente/Fornitore per l'incasso automatico!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
