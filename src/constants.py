@@ -782,6 +782,7 @@ EDI_FETCH_DOCUMENTS_IO_ERROR = 6606
 EDI_SET_DOCUMENT_DATA_IO_ERROR = 6607
 EDI_FETCH_DOCUMENT_DOC_ALREADY_EXISTS = 6608                   #: Un documento elettronico con lo stesso ID SDI è già presente nel database
 EDI_FETCH_DOCUMENT_NOT_FOUND = 6609                            #: Documento elettronico non trovato
+EDI_FETCH_DOCUMENT_INVALID_XML = 6610
 EDI_NO_INTERCHANGE = 6700                                      #: Nessun contratto per la comunicazione automatica dei documenti elettronici è stato attivato per questa azienda
 EDI_CANNOT_DELETE_RECORD = 6701
 EDI_IMPORT_ERROR = 6702
