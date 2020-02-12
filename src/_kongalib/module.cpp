@@ -459,7 +459,7 @@ save_xml(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	doc.SetRoot(table->SaveXML());
+	doc.SetRoot(table->SaveXML(&doc));
 	CL_Delete(table);
 	doc.Save(stream);
 	stream.Rewind();
@@ -506,7 +506,7 @@ load_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 	
 	root = doc.GetRoot();
-	if ((!root) || (!table.LoadXML(root))) {
+	if ((!root) || (!table.LoadXML(&doc, root))) {
 		PyErr_SetString(PyExc_ValueError, "malformed XML dictionary definition");
 		return NULL;
 	}
