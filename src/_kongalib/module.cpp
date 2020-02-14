@@ -488,7 +488,7 @@ load_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	CLU_Table table;
 	string xml;
 	CL_XML_Document doc;
-	CL_XML_Node *root;
+	CL_XML_Node root;
 	bool load;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &xml))
