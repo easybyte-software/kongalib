@@ -49,7 +49,7 @@ jobs:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
-      Python37:
+      Python38:
         python.version: '3.8'
   pool:
     vmImage: 'macOS-latest'
@@ -73,6 +73,10 @@ jobs:
         python.version: '3.7'
         python.architecture: 'x64'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+      Python38:
+        python.version: '3.8'
+        python.architecture: 'x64'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python27_32:
         python.version: '2.7'
         python.architecture: 'x86'
@@ -83,6 +87,10 @@ jobs:
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python37_32:
         python.version: '3.7'
+        python.architecture: 'x86'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+      Python38_32:
+        python.version: '3.8'
         python.architecture: 'x86'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
