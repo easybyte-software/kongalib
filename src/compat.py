@@ -406,6 +406,7 @@ def _patch_etree():
 			OriginalXMLTreeBuilder.__init__(self, html, target)
 			self._parser.StartCdataSectionHandler = self._start_cdata
 			self._parser.EndCdataSectionHandler = self._end_cdata
+			self._parser.CharacterDataHandler = self._data
 			if (not parse_comments) or remove_comments:
 				self._parser.CommentHandler = None
 			else:
@@ -469,7 +470,7 @@ def _patch_etree():
 			if self._cdataSection:
 				self._cdataBuffer.append(text)
 			else:
-				OriginalXMLTreeBuilder._data(self, text)
+				self._target.data(text)
 	
 	def CDATA(text=None):
 		element = ET.Element(None)
