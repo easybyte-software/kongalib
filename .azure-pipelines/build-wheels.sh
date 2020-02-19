@@ -19,10 +19,10 @@ cd /io
 rm -fr build dist *.egg-info
 
 
-PYTHONS=(/opt/python/*/bin)
+PYTHONS=(/opt/python/cp27-cp27mu /opt/python/cp36-cp36m /opt/python/cp37-cp37m /opt/python/cp38-cp38)
 
 for PYBIN in "${PYTHONS[@]}"; do
-    "${PYBIN}/pip" wheel /io/ -w wheelhouse/
+    "${PYBIN}/bin/pip" wheel /io/ -w wheelhouse/
 done
 
 for whl in wheelhouse/kongalib-*.whl; do
@@ -30,6 +30,6 @@ for whl in wheelhouse/kongalib-*.whl; do
 done
 
 for PYBIN in "${PYTHONS[@]}"; do
-    "${PYBIN}/python" -m pip install kongalib --no-index -f /io/wheelhouse
+    "${PYBIN}/bin/python" -m pip install kongalib --no-index -f /io/wheelhouse
 done
 
