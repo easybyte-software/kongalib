@@ -1,3 +1,7 @@
+.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
+	:alt: Build Status
+
+
 Kongalib
 ========
 
