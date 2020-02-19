@@ -1,7 +1,7 @@
 steps:
 
 - script: |
-    docker run --rm -v `pwd`:/io $(image) /io/.azure-pipelines/build-wheels.sh
+    docker run --rm -v `pwd`:/io $(image) -e "VERBOSE=$VERBOSE" /io/.azure-pipelines/build-wheels.sh
   displayName: Build wheels
 
 - script: |
