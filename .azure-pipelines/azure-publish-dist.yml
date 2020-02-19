@@ -5,9 +5,10 @@ steps:
     artifactFeeds: easybyte-software
     externalFeeds: pypi
 
-# - script: |
-#     twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
-#   displayName: 'Upload wheels to PyPI'
+- script: |
+    twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
+  displayName: 'Upload wheels to PyPI'
+  condition: and(succeeded(), eq(variables['PUBLISH'], '1'))
 
 - task: PublishPipelineArtifact@0
   inputs:
