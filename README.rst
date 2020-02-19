@@ -1,7 +1,3 @@
-.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
-	:alt: Build Status
-
-
 Kongalib
 ========
 
@@ -22,6 +18,9 @@ l'installazione per questi sistemi è pertanto banale e si effettua tramite *pip
 
 Compilazione manuale
 --------------------
+
+.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
+	:alt: Build Status
 
 Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 *kongalib* sono i seguenti:
