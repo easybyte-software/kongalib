@@ -25,6 +25,7 @@ steps:
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
+    export KONGALIB_ROOT=`pwd`
     tar -zxvf mpdecimal-2.4.2.tar.gz
     cd mpdecimal-2.4.2
     ./configure
