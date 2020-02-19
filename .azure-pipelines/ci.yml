@@ -37,7 +37,7 @@ jobs:
         image: quay.io/pypa/manylinux2010_x86_64
         python.architecture: x64
   pool:
-    vmImage: 'ubuntu-latest'
+    vmImage: 'ubuntu-18.0'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-manylinux-wheels.yml
@@ -57,7 +57,7 @@ jobs:
       Python38:
         python.version: '3.8'
   pool:
-    vmImage: 'macOS-latest'
+    vmImage: 'macOS-10.14'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
@@ -99,7 +99,7 @@ jobs:
         python.architecture: 'x86'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
-    vmImage: 'windows-latest'
+    vmImage: 'vs2017-win2016'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
