@@ -1,6 +1,9 @@
 Kongalib
 ========
 
+.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
+	:alt: Build Status
+
 Libreria Python di comunicazione con i server `EasyByte Konga`_. Tramite
 *kongalib* è possibile connettersi ad un server Konga (integrato in Konga Pro o
 standalone in Konga Server), eseguire query sui database e manipolarne i dati
@@ -18,9 +21,6 @@ l'installazione per questi sistemi è pertanto banale e si effettua tramite *pip
 
 Compilazione manuale
 --------------------
-
-.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
-	:alt: Build Status
 
 Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 *kongalib* sono i seguenti:
