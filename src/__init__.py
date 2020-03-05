@@ -327,7 +327,7 @@ class InterpreterTimeout(Exception):
 	pass
 
 
-from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, Interpreter, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, set_interpreter_timeout, _cleanup, lock, unlock, set_default_idle_callback, checksum, _aes_set_key, _aes_set_key, _aes_encrypt, _aes_decrypt
+from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, Interpreter, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, set_interpreter_timeout, _cleanup, lock, unlock, set_default_idle_callback, checksum, _aes_set_key, _aes_set_key, _aes_encrypt, _aes_decrypt, _apply_stylesheet
 from .constants import *
 from .client import *
 from .expression import *

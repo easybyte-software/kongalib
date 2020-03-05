@@ -920,6 +920,34 @@ _aes_decrypt(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 
+static PyObject *
+_apply_stylesheet(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	char *kwlist[] = { "xml", "xslt", NULL };
+	string xml, xslt;
+	CL_Blob xmlBlob, xsltBlob, output;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&", kwlist, MGA::ConvertString, &xml, MGA::ConvertString, &xslt))
+		return NULL;
+
+	xmlBlob.Set(xml.data(), xml.size());
+	xsltBlob.Set(xslt.data(), xslt.size());
+	CL_XML_Document xmlDoc(xmlBlob);
+	CL_XML_Document xsltDoc(xsltBlob, CL_XML_PARSE_REPLACE_ENTITIES);
+
+	if ((!xmlDoc.IsValid()) || (!xsltDoc.IsValid()) || (!xmlDoc.Transform(xsltDoc, &output)) || (output.GetSize() == 0)) {
+		string error = xmlDoc.GetError();
+		if (error.empty())
+			error = xsltDoc.GetError();
+		if (error.empty())
+			error = "transformation error";
+		PyErr_SetString(PyExc_ValueError, CL_StringFormat("Error applying stylesheet: %s", error.c_str()).c_str());
+		return NULL;
+	}
+	return PyUnicode_FromStringAndSize((const char *)output.GetDataForRead(), (Py_ssize_t)output.GetSize());
+}
+
+
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
 	{	"host_lookup",					(PyCFunction)host_lookup,				METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
@@ -940,6 +968,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"_aes_set_key",					(PyCFunction)_aes_set_key,				METH_VARARGS | METH_KEYWORDS,	"_aes_set_key(key)\n\nSets AES cipher key." },
 	{	"_aes_encrypt",					(PyCFunction)_aes_encrypt,				METH_VARARGS | METH_KEYWORDS,	"_aes_encrypt(data) -> data\n\nPerforms AES encryption on a block of data" },
 	{	"_aes_decrypt",					(PyCFunction)_aes_decrypt,				METH_VARARGS | METH_KEYWORDS,	"_aes_decrypt(data) -> data\n\nPerforms AES decryption on a block of data." },
+	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,			METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
 	{	NULL,							NULL,									0,								NULL }
 };
 
