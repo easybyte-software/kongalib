@@ -805,6 +805,7 @@ ELAB_NOT_FOUND = 7000                                          #: Elaborazione n
 ELAB_FAILED = 7001
 ELAB_TABLE_LOCK_ERROR = 7002
 ELAB_INVALID_PARAMETERS = 7003                                 #: Parametri dell'elaborazione mancanti o non validi
+ELAB_TABLE_LOCK_EXPIRED_ERROR = 7004
 ELAB_RIMFIN_DATAREG_MISS = 7100                                #: L'elaborazione Rimanenze Finali deve ricevere come parametro la data di registrazione dei movimenti di carico giacenze iniziali!
 ELAB_RIMFIN_ESERCIZIO_FUTURO_MISS = 7101                       #: L'elaborazione Rimanenze Finali deve ricevere come parametro il riferimento all'esercizio di pertinenza dei movimenti di carico giacenze iniziali!
 ELAB_RIMFIN_CAUS_MAG_GIAC_PROPRIA_MISS = 7102                  #: L'elaborazione Rimanenze Finali deve ricevere come parametro il riferimento alla causale di carico giacenze iniziali merce propria!
