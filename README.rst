@@ -7,7 +7,8 @@ Kongalib
 Libreria Python di comunicazione con i server `EasyByte Konga`_. Tramite
 *kongalib* è possibile connettersi ad un server Konga (integrato in Konga Pro o
 standalone in Konga Server), eseguire query sui database e manipolarne i dati
-facilmente.
+facilmente. La libreria comprende anche i moduli aggiuntivi ``kongaui`` e
+``kongautil``, utili ad interfacciarsi ed integrarsi con Konga e Konga Client.
 
 
 Installazione
@@ -85,11 +86,17 @@ Risorse
 	Per informazioni circa la struttura dei database Konga (nozione necessaria
 	per accedere correttamente ai dati)
 
+
+`Script di utilità comune per Konga`_
+
+	Gli script contenuti in questo repository possono essere utati come esempi
+	nell'uso di kongalib.
 	
 
 .. _EasyByte Konga: http://www.easybyte.it/it/pro
 .. _Documentazione di kongalib: http://public.easybyte.it/docs/kongalib
 .. _Documentazione del dizionario dei dati: http://public.easybyte.it/docs/datadict
+.. _Script di utilità comune per Konga: https://github.com/easybyte-software/konga_scripts
 .. _SDK di Konga: http://public.easybyte.it/downloads/current
 .. _easybyte-konga-dev: http://public.easybyte.it/downloads/current
 .. _manylinux: https://github.com/pypa/manylinux
