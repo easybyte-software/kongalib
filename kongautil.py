@@ -115,8 +115,9 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	tramite i parametri passati a questa funzione, oppure da linea di comando specificando gli argomenti ``--host``, ``--port``,
 	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``. Inoltre, è possibile definire i
 	parametri come variabili all'interno di un file di configurazione, nella sezione ``[kongautil.connect]``; tale file deve avere
-	il nome passato a questa funzione con il parametro ``config``, altrimenti lo stesso nome dello script lanciato da terminale, ma
-	con estensione ``.cfg``."""
+	il nome passato a questa funzione con il parametro ``config``, altrimenti verranno ricercati nell'ordine anche il file con lo
+	stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``, e il file ``~/.kongalib`` (sotto Unix) o
+	``%userprofile%\kongalib.cfg`` (sotto Windows)."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
@@ -135,7 +136,12 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				import configparser
 			except:
 				import ConfigParser as configparser
-			filename = config or (os.path.splitext(sys.argv[0])[0] + '.cfg')
+			files = [
+				os.path.splitext(sys.argv[0])[0] + '.cfg',
+				os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib')),
+			]
+			if config:
+				files.insert(0, config)
 			config = configparser.RawConfigParser({
 				'host':			host or '',
 				'port':			str(port or ''),
@@ -146,10 +152,13 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'tenant_key':	tenant_key or '',
 			})
 			config.add_section('kongautil.connect')
-			try:
-				config.read(filename)
-			except:
-				pass
+			for filename in files:
+				try:
+					config.read(filename)
+				except:
+					pass
+				else:
+					break
 			host = config.get('kongautil.connect', 'host') or None
 			try:	port = int(config.get('kongautil.connect', 'port'))
 			except:	pass
