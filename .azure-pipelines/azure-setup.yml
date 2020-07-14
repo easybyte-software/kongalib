@@ -3,7 +3,7 @@ steps:
 - script: |
     wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
     tar -zxvf mpdecimal-2.4.2.tar.gz
-    git clone -b $[ variables.konga_branch ] https://$(user):$(password)@github.com/easybyte-software/konga.git
+    git clone -b $(konga_branch) ] https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Unix)'
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
@@ -20,7 +20,7 @@ steps:
     7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
     python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.31.zip', 'pcre-8.31.zip')"
     7z x pcre-8.31.zip
-    git clone -b $[ variables.konga_branch ] https://$(user):$(password)@github.com/easybyte-software/konga.git
+    git clone -b $(konga_branch) ] https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
