@@ -1,13 +1,24 @@
 # Optional variables to be set before launching:
 #
-#	VERBOSE			'1' or '0'; if '1', C dependencies are built verbosely
-#	PUBLISH			'1' or '0'; if '1', produced wheels are uploaded to PyPI
+# VERBOSE     '1' or '0'; if '1', C dependencies are built verbosely
+# PUBLISH     '1' or '0'; if '1', produced wheels are uploaded to PyPI
 
 trigger:
 - master
 
-variables:
-  konga_branch: stable-1.8.0
+parameters:
+- name: publish
+  displayName: Publish wheels by uploading to PyPI
+  type: boolean
+  default: false
+- name: verbose
+  displayName: Build C dependencies verbosely
+  type: boolean
+  default: false
+- name: konga_branch
+  displayName: Branch from which to fetch Konga sources
+  type: string
+  default: stable-1.8.0
 
 jobs:
 

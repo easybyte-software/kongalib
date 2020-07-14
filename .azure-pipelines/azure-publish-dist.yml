@@ -8,7 +8,7 @@ steps:
 - script: |
     twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
   displayName: 'Upload wheels to PyPI'
-  condition: and(succeeded(), eq(variables['PUBLISH'], '1'))
+  condition: and(succeeded(), eq(${{ parameters.publish }}, true))
 
 - task: PublishPipelineArtifact@0
   inputs:

@@ -3,7 +3,7 @@ steps:
 - script: |
     wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
     tar -zxvf mpdecimal-2.4.2.tar.gz
-    git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
+    git clone -b ${{ parameters.konga_branch }} https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Unix)'
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
@@ -20,7 +20,7 @@ steps:
     7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
     python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.31.zip', 'pcre-8.31.zip')"
     7z x pcre-8.31.zip
-    git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
+    git clone -b ${{ parameters.konga_branch }} https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
@@ -36,8 +36,8 @@ steps:
     mkdir -p out
     cd out
     cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-    if [ "$VERBOSE" != "1" ]; then make -j2; fi
-    if [ "$VERBOSE" == "1" ]; then make VERBOSE=1; fi
+    if [ "${{ parameters.verbose }}" != "true" ]; then make -j2; fi
+    if [ "${{ parameters.verbose }}" == "true" ]; then make VERBOSE=1; fi
     sudo make install
   displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
