@@ -1,8 +1,8 @@
 steps:
 
 - script: |
-    if [ "$[ variables.verbose ]" != "true" ]; then docker run --rm -v `pwd`:/io -e "VERBOSE=0" -e "KONGALIB_ROOT=/io" $(image) /io/.azure-pipelines/build-wheels.sh; fi
-    if [ "$[ variables.verbose ]" == "true" ]; then docker run --rm -v `pwd`:/io -e "VERBOSE=1" -e "KONGALIB_ROOT=/io" $(image) /io/.azure-pipelines/build-wheels.sh; fi
+    if [ "$(verbose)" != "true" ]; then docker run --rm -v `pwd`:/io -e "VERBOSE=0" -e "KONGALIB_ROOT=/io" $(image) /io/.azure-pipelines/build-wheels.sh; fi
+    if [ "$(verbose)" == "true" ]; then docker run --rm -v `pwd`:/io -e "VERBOSE=1" -e "KONGALIB_ROOT=/io" $(image) /io/.azure-pipelines/build-wheels.sh; fi
   displayName: Build wheels
 
 - script: |

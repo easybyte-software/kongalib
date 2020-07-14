@@ -36,8 +36,8 @@ steps:
     mkdir -p out
     cd out
     cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1
-    if [ "$[ variables.verbose ]" != "true" ]; then make -j2; fi
-    if [ "$[ variables.verbose ]" == "true" ]; then make VERBOSE=1; fi
+    if [ "$(verbose)" != "true" ]; then make -j2; fi
+    if [ "$(verbose)" == "true" ]; then make VERBOSE=1; fi
     sudo make install
   displayName: 'Install C dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
