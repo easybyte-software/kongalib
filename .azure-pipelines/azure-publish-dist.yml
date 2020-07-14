@@ -5,7 +5,7 @@ steps:
     artifactFeeds: easybyte-software
     externalFeeds: pypi
 
-- ${{ eq(parameters.publish, true) }}:
+- ${{ if eq(parameters.publish, true) }}:
   - script: |
       twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
     displayName: 'Upload wheels to PyPI'
