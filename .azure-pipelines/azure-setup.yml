@@ -21,6 +21,9 @@ steps:
     python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.31.zip', 'pcre-8.31.zip')"
     7z x pcre-8.31.zip
     git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
+    del /q konga\doc\technical\kongalib
+    del /q konga\doc\_static\kongalib
+    del /q konga\doc\_static\slew
   displayName: 'Download dependencies (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
