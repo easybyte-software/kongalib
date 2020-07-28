@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-#	 _                           _ _ _
-#	| |                         | (_) |
-#	| | _____  _ __   __ _  __ _| |_| |__
-#	| |/ / _ \| '_ \ / _` |/ _` | | | '_ \
-#	|   < (_) | | | | (_| | (_| | | | |_) |
-#	|_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
-#	                  __/ |
-#	                 |___/
+#  _                           _ _ _
+# | |                         | (_) |
+# | | _____  _ __   __ _  __ _| |_| |__
+# | |/ / _ \| '_ \ / _` |/ _` | | | '_ \
+# |   < (_) | | | | (_| | (_| | | | |_) |
+# |_|\_\___/|_| |_|\__, |\__,_|_|_|_.__/
+#                   __/ |
+#                  |___/
 #
-#	Konga client library, by EasyByte Software
+# Konga client library, by EasyByte Software
 #
-#	https://github.com/easybyte-software/kongalib
+# https://github.com/easybyte-software/kongalib
 
 
 from __future__ import print_function
@@ -114,8 +114,8 @@ def timeout_handler():
 def init_interpreter(init_logging=True):
 	if init_logging:
 		logger.setLevel(logging.DEBUG)
-		try:	os.makedirs(get_application_log_path())
-		except:	pass
+		try:  os.makedirs(get_application_log_path())
+		except: pass
 		formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s", datefmt='%a, %d %b %Y %H:%M:%S')
 		handler = logging.FileHandler(os.path.join(get_application_log_path(), 'script.log'), 'w')
 		handler.setLevel(logging.DEBUG)
@@ -128,8 +128,8 @@ def init_interpreter(init_logging=True):
 		proxy._initialize()
 		sys.stdout = ProxyStdOut()
 		sys.stderr = ProxyStdErr()
-	# 	sys.stdout = io.TextIOWrapper(ProxyStdOut(), 'utf-8', line_buffering=True)
-	# 	sys.stderr = io.TextIOWrapper(ProxyStdErr(), 'utf-8', line_buffering=True)
+	#   sys.stdout = io.TextIOWrapper(ProxyStdOut(), 'utf-8', line_buffering=True)
+	#   sys.stderr = io.TextIOWrapper(ProxyStdErr(), 'utf-8', line_buffering=True)
 		sys.stdin = ProxyStdIn()
 		sys.prefix, sys.exec_prefix = proxy.builtin.get_prefixes()
 		sys.is_kongalib_interpreter = True
@@ -255,7 +255,7 @@ class ServerProxy(object):
 		self.handlers = {}
 		self.listener = None
 		# try:
-		# 	self.listener = multiprocessing.connection.Listener(family='AF_INET')
+		#   self.listener = multiprocessing.connection.Listener(family='AF_INET')
 		# except:
 	
 	def start(self):
@@ -265,16 +265,20 @@ class ServerProxy(object):
 			family = None
 		else:
 			family = gConnFamily
-		self.listener = multiprocessing.connection.Listener(family=family)
+		try:
+			self.listener = multiprocessing.connection.Listener(family=family)
+		except:
+			raise BadConnection()
 		start_timer(0, lambda dummy: self.run())
 
 	def stop(self):
 		self.quit = True
-		self.ready.wait()
-		self.listener.close()
-		self.handlers = {}
-		with ServerProxy.LOCK:
-			ServerProxy.CACHE.append(self)
+		if self.listener is not None:
+			self.ready.wait()
+			self.listener.close()
+			self.handlers = {}
+			with ServerProxy.LOCK:
+				ServerProxy.CACHE.append(self)
 
 	def run(self):
 		debug_log("[ServerProxy] run")
@@ -405,8 +409,8 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	try:
 		while True:
 			p = ServerProxy.create(_handlers)
-			p.start()
 			try:
+				p.start()
 				debug_log("[ServerProxy] listener address is: %s" % repr(p.listener.address))
 				conn_type = multiprocessing.connection.address_type(p.listener.address)
 				if conn_type == 'AF_INET':
@@ -417,10 +421,10 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 				argv.insert(2, address)
 				debug_log("[ServerProxy] waiting proxy: %s" % repr(argv))
 
-		# 		import time
-		# 		start = time.time()
+		#     import time
+		#     start = time.time()
 				interpreter.execute(script, filename, argv, path or [], timeout)
-		# 		print("Script execution time:", time.time() - start)
+		#     print("Script execution time:", time.time() - start)
 			except Exception as e:
 				if getattr(e, '_bad_connection', False) and (gConnFamily is not None):
 					debug_log("[ServerProxy] bad connection, trying default connection family")
