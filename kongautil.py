@@ -116,8 +116,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	``--driver``, ``-d|--database``, ``-u|--username``, ``-p|--password`` e ``-k|--tenant-key``. Inoltre, è possibile definire i
 	parametri come variabili all'interno di un file di configurazione, nella sezione ``[kongautil.connect]``; tale file deve avere
 	il nome passato a questa funzione con il parametro ``config``, altrimenti verranno ricercati nell'ordine anche il file con lo
-	stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``, e il file ``~/.kongalib`` (sotto Unix) o
-	``%userprofile%\kongalib.cfg`` (sotto Windows)."""
+	stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``, il file ``kongalib.cfg`` sempre nella stessa directory
+	da cui si esegue lo script e infine il file ``~/.kongalib`` (sotto Unix) o ``%userprofile%\kongalib.cfg`` (sotto Windows)."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
@@ -138,6 +138,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				import ConfigParser as configparser
 			files = [
 				os.path.splitext(sys.argv[0])[0] + '.cfg',
+				os.path.join(os.path.abspath(os.path.dirname(__file__)), 'kongalib.cfg'),
 				os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib')),
 			]
 			if config:
@@ -524,4 +525,8 @@ def get_context():
 		raise KongaRequiredError
 
 
+
+def is_batch():
+	"""Restituisce ``True`` se lo script è eseguito con Python da linea di comando, ``False`` se è eseguito dall'interno di Konga."""
+	return not _proxy.is_valid()
 
