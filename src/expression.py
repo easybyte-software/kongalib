@@ -475,6 +475,14 @@ class OperandIN(OperandNE):
 
 
 
+class OperandNotIN(OperandNE):
+	def __init__(self, column, value):
+		if not isinstance(value, text_base_types):
+			value = u"('%s')" % (u"', '".join([ ensure_text(x).replace("'", "''") for x in value]))
+		Operand.__init__(self, column, 'NOT IN', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
+
+
+
 class OperandFieldEQ(OperandEQ):
 	def __init__(self, column, value):
 		Operand.__init__(self, column, '=', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE | _HasLogic.FLAG_VALUE_IS_FIELD)
