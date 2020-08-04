@@ -1131,32 +1131,38 @@ MOD_INIT(_kongalib)
 	if (PyType_Ready(&MGA::DecimalType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::DecimalType);
-	PyModule_AddObject(module, "Decimal", (PyObject *)&MGA::DecimalType);
+	if (PyModule_AddObject(module, "Decimal", (PyObject *)&MGA::DecimalType) < 0)
+		return MOD_ERROR;
 	
 	if (PyType_Ready(&MGA::ClientType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::ClientType);
-	PyModule_AddObject(module, "Client", (PyObject *)&MGA::ClientType);
+	if (PyModule_AddObject(module, "Client", (PyObject *)&MGA::ClientType) < 0)
+		return MOD_ERROR;
 	
 	if (PyType_Ready(&MGA::DeferredType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::DeferredType);
-	PyModule_AddObject(module, "Deferred", (PyObject *)&MGA::DeferredType);
+	if (PyModule_AddObject(module, "Deferred", (PyObject *)&MGA::DeferredType) < 0)
+		return MOD_ERROR;
 	
 	if (PyType_Ready(&MGA::JSONEncoderType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::JSONEncoderType);
-	PyModule_AddObject(module, "JSONEncoder", (PyObject *)&MGA::JSONEncoderType);
+	if (PyModule_AddObject(module, "JSONEncoder", (PyObject *)&MGA::JSONEncoderType) < 0)
+		return MOD_ERROR;
 	
 	if (PyType_Ready(&MGA::JSONDecoderType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::JSONDecoderType);
-	PyModule_AddObject(module, "JSONDecoder", (PyObject *)&MGA::JSONDecoderType);
+	if (PyModule_AddObject(module, "JSONDecoder", (PyObject *)&MGA::JSONDecoderType) < 0)
+		return MOD_ERROR;
 	
 	if (PyType_Ready(&MGA::InterpreterType) < 0)
 		return MOD_ERROR;
 	Py_INCREF(&MGA::InterpreterType);
-	PyModule_AddObject(module, "Interpreter", (PyObject *)&MGA::InterpreterType);
+	if (PyModule_AddObject(module, "Interpreter", (PyObject *)&MGA::InterpreterType) < 0)
+		return MOD_ERROR;
 	
 	MGA::InitJSON();
 	MGA::InitInterpreter();
