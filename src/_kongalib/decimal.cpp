@@ -1134,7 +1134,7 @@ static PyMethodDef MGA_Decimal_methods[] = {
 /** Vtable describing the MGA.Decimal type. */
 PyTypeObject MGA::DecimalType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.Decimal",					/* tp_name */
+    "kongalib.Decimal",						/* tp_name */
     sizeof(MGA::DecimalObject),				/* tp_basicsize */
 	0,										/* tp_itemsize */
 	(destructor)MGA_Decimal_dealloc,		/* tp_dealloc */
