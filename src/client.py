@@ -311,29 +311,33 @@ class Client(object):
 		"""
 		return self._impl.query_database(query, native, full_column_names, collapse_blobs, success, error, progress, userdata, timeout)
 	
-	def backup_database(self, password, backup_name, driver, name, auto=True, overwrite=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def backup_database(self, password, backup_name, driver, name, auto=True, overwrite=False, position=0, store_index=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue un backup del database specificato sul server attualmente connesso. Se *auto* è ``False``, è necessario specificare un nome
 		per il backup tramite *backup_name*, altrimenti il backup viene considerato automatico ed un nome univoco è assegnato dal server. Se
-		*overwrite* è ``False`` ed un backup con lo stesso nome esiste già sul server, non sarà possibile eseguire il backup.
+		*overwrite* è ``False`` ed un backup con lo stesso nome esiste già sul server, non sarà possibile eseguire il backup. *position*
+		permette di specificare dove eseguire il backup, ed è una combinazione delle costanti :const:`kongalib.BACKUP_ON_COMPUTER` e
+		:const:`kongalib.BACKUP_ON_CLOUD`, mentre *store_index* specifica se includere l'indice di ricerca full-text nel backup.
 		Se *success* è ``None``, la chiamata è bloccante e viene lanciata l'eccezione :class:`~kongalib.Error` in caso di errore.
 		Se *success* è una funzione nella forma ``success(userdata)``, la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred`
 		e l'operazione viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito con il parametro *userdata*.
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		return self._impl.backup_database(password, backup_name, driver, name, auto, overwrite, success, error, progress, userdata, timeout)
+		return self._impl.backup_database(password, backup_name, driver, name, auto, overwrite, position, store_index, success, error, progress, userdata, timeout)
 	
-	def restore_database(self, password, backup_name, driver, name, change_uuid=True, overwrite=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def restore_database(self, password, backup_name, driver, name, change_uuid=True, overwrite=False, position=0, restore_index=True, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Ripristina un database a partire da un backup effettuato in precedenza sul server connesso. Se *overwrite* è False ed esiste un
 		database gestito da *driver* con lo stesso nome, la funzione riporterà errore. *change_uuid* specifica se cambiare l'UUID associato al
 		database oppure se ripristinare quello originale; se si hanno database con lo stesso nome gestiti da driver diversi è opportuno che
-		almeno l'UUID per essi sia diverso, altrimenti si può incorrere in problemi di aliasing.
+		almeno l'UUID per essi sia diverso, altrimenti si può incorrere in problemi di aliasing. *position* specifica da dove prendere il
+		backup da rispristinare, e deve essere una delle costanti :const:`kongalib.BACKUP_ON_COMPUTER` o :const:`kongalib.BACKUP_ON_CLOUD`;
+		*restore_index* invece permette di specificare se ripristinare o meno l'indice di ricerca qualora fosse contenuto all'interno del backup.
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		return self._impl.restore_database(password, backup_name, driver, name, change_uuid, overwrite, success, error, progress, userdata, timeout)
+		return self._impl.restore_database(password, backup_name, driver, name, change_uuid, overwrite, position, restore_index, success, error, progress, userdata, timeout)
 	
-	def list_backups(self, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def list_backups(self, position=0, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Ottiene la lista dei backup disponibili sul server connesso.
 		Se *success* è ``None``, la chiamata è bloccante e restituisce una lista di backup; ogni backup è un ``dict`` che contiene almeno le chiavi
 		*backup_name*, *uuid*, *date* e *size*; se si verifica un errore viene lanciata l'eccezione :class:`~kongalib.Error`.
@@ -341,9 +345,9 @@ class Client(object):
 		e l'operazione viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito con la lista dei backup ed il
 		parametro *userdata*.
 		"""
-		return self._impl.list_backups(success, error, progress, userdata, timeout)
+		return self._impl.list_backups(position, success, error, progress, userdata, timeout)
 	
-	def delete_backup(self, password, backup_name, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def delete_backup(self, password, backup_name, position, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Cancella il backup identificato da *backup_name* dal server connesso.
 		Se *success* è ``None``, la chiamata è bloccante e viene lanciata l'eccezione :class:`~kongalib.Error` in caso di errore.
 		Se *success* è una funzione nella forma ``success(userdata)``, la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred`
@@ -351,7 +355,7 @@ class Client(object):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		return self._impl.delete_backup(password, backup_name, success, error, progress, userdata, timeout)
+		return self._impl.delete_backup(password, backup_name, position, success, error, progress, userdata, timeout)
 	
 	def optimize_database(self, password, driver, name, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una ottimizzazione del database specificato sul server attualmente connesso.

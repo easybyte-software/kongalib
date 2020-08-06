@@ -1163,12 +1163,12 @@ static PyObject *
 MGA_Client_restore_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static char *kwlist[] = { "password", "backupName", "driver", "name", "changeUUID", "overWrite", "position", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "backupName", "driver", "name", "changeUUID", "overWrite", "position", "restoreindex", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, backupName, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
-	uint32 changeUUID = 1, overWrite = 0, position=0, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
+	uint32 changeUUID = 1, overWrite = 0, position=0, restoreIndex=1, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&|O&O&iiiOOOOi:restore_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &backupName, MGA::ConvertString, &driver, MGA::ConvertString, &name, &changeUUID, &overWrite, &position, &success, &error, &progress, &userdata, &timeout))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&|O&O&iiiiOOOOi:restore_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &backupName, MGA::ConvertString, &driver, MGA::ConvertString, &name, &changeUUID, &overWrite, &position, &restoreIndex, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
@@ -1176,14 +1176,14 @@ MGA_Client_restore_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->RestoreDatabase(password, driver, name, backupName, changeUUID ? true : false, overWrite ? true : false, position, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->RestoreDatabase(password, driver, name, backupName, changeUUID ? true : false, overWrite ? true : false, position, restoreIndex ? true : false, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->RestoreDatabase(password, driver, name, backupName, changeUUID ? true : false, overWrite ? true : false, position);
+		result = self->fClient->RestoreDatabase(password, driver, name, backupName, changeUUID ? true : false, overWrite ? true : false, position, restoreIndex ? true : false);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
@@ -1235,13 +1235,13 @@ static PyObject *
 MGA_Client_delete_backup(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static char *kwlist[] = { "position", "password", "backupName", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "backupName", "position", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, backupName;
 	CLU_List backupNames;
 	PyObject *object, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 position, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iO&O|OOOOi:delete_backup", kwlist, &position, MGA::ConvertString, &password, &object, &success, &error, &progress, &userdata, &timeout))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&Oi|OOOOi:delete_backup", kwlist, MGA::ConvertString, &password, &object, &position, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
 	
 	if (!MGA::ConvertString(object, &backupName)) {

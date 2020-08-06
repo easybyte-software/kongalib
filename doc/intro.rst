@@ -95,3 +95,10 @@ Il modulo kongalib prevede le seguenti funzioni di uso comune:
 	in un thread separato. *callback* deve essere una funzione nella forma ``callback(userdata)``.
 
 
+
+Costanti
+--------
+
+
+.. automodule:: kongalib
+	:members: BACKUP_ON_COMPUTER, BACKUP_ON_CLOUD

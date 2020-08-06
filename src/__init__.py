@@ -48,8 +48,8 @@ ROUND						= 1
 FLOOR						= 2
 CEIL						= 3
 
-BACKUP_ON_COMPUTER			= 0x1
-BACKUP_ON_CLOUD				= 0x2
+BACKUP_ON_COMPUTER			= 0x1			#: Il backup è posizionato in locale sulla macchina corrente
+BACKUP_ON_CLOUD				= 0x2			#: Il backup è posizionato nel cloud
 
 
 
