@@ -43,7 +43,10 @@ class BadConnection(Exception):
 
 
 def debug_log(text):
-	logger.debug(text)
+	try:
+		logger.debug(text)
+	except:
+		sys.__stderr__.write('%s\n' % text)
 	# sys.__stderr__.write(text + '\n')
 
 
