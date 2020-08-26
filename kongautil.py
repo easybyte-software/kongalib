@@ -43,8 +43,13 @@ class PrintError(RuntimeError):
 	"""Eccezione lanciata se ci sono errori nell'esecuzione di una stampa con la funzione :func:`print_layout`."""
 	def __init__(self, log):
 		self._log = log
+	def __unicode__(self):
+		return u'Log:\n%s' % ('\n'.join([ ('  %s' % line) for line in kongalib.ensure_text(self._log.dumps()).split(u'\n') ]))
 	def __str__(self):
-		return self._log.dumps()
+		if kongalib.PY3:
+			return self.__unicode__()
+		else:
+			return self.__unicode__().encode('utf-8')
 	def get_log(self):
 		"""Ottiene un oggetto di classe :class:`kongalib.Log` contenente gli errori di stampa."""
 		return self._log
