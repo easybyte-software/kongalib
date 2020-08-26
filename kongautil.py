@@ -39,6 +39,18 @@ class KongaRequiredError(RuntimeError):
 
 
 
+class PrintError(RuntimeError):
+	"""Eccezione lanciata se ci sono errori nell'esecuzione di una stampa con la funzione :func:`print_layout`."""
+	def __init__(self, log):
+		self._log = log
+	def __str__(self):
+		return self._log.dumps()
+	def get_log(self):
+		"""Ottiene un oggetto di classe :class:`kongalib.Log` contenente gli errori di stampa."""
+		return self._log
+
+
+
 class ScriptContext(object):
 	"""	Classe per l'accesso al contesto di esecuzione delle azioni esterne lato client di Konga.
 	La classe prevede l'uso di proprietà per accedere alle informazioni in lettura e scrittura."""
@@ -301,7 +313,8 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 	*code_esercizio* identificano l'azienda e l'esercizio per cui eseguire la stampa, mentre *target* è una delle costanti ``PRINT_TARGET_*`` definite sopra, che
 	specificano la destinazione della stampa (se non specificata e la funzione è eseguita all'interno di Konga, verrà assunta ``PRINT_TARGET_PREVIEW``,
 	altrimenti ``PRINT_TARGET_PDF``); *filename* è il nome del file da salvare ed ha un senso solo quando si stampa su file.
-	La funzione restituisce un oggetto di classe :class:`kongalib.Log` con il resoconto dell'operazione di stampa.
+	La funzione restituisce un oggetto di classe :class:`kongalib.Log` con il resoconto dell'operazione di stampa, oppure lancia un'eccezione di classe
+	:class:`kongautil.PrintError` in caso di errori.
 	
 	.. warning::
 	   Se eseguita fuori da Konga, questa funzione richiede che sull'host sia stato installato Konga Client (o Konga), e non supporta come *target* i valori
@@ -310,7 +323,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 	if _proxy.is_valid():
 		if target is None:
 			target = PRINT_TARGET_PREVIEW
-		return _proxy.util.print_layout(command_or_layout, builtins or {}, code_azienda, code_esercizio, target, filename)
+		log = _proxy.util.print_layout(command_or_layout, builtins or {}, code_azienda, code_esercizio, target, filename)
 	else:
 		log = kongalib.Log()
 		if not filename:
@@ -341,7 +354,9 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 		finally:
 			if temp is not None:
 				os.unlink(temp)
-		return log
+	if log.has_errors():
+		raise PrintError(log)
+	return log
 
 
 
