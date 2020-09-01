@@ -312,12 +312,13 @@ def _run_script(script, log):
 
 
 
-def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=None, filename=None):
+def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=None, filename=None, progress=True):
 	"""Esegue una stampa su Konga. *command_or_layout* può essere un nome di comando di Konga, oppure un sorgente XML contenente la struttura stessa del layout da
 	stampare; *builtins* è un ``dict`` i cui valori verranno passati al motore di stampa e saranno disponibili all'interno degli script del layout; *code_azienda* e
 	*code_esercizio* identificano l'azienda e l'esercizio per cui eseguire la stampa, mentre *target* è una delle costanti ``PRINT_TARGET_*`` definite sopra, che
 	specificano la destinazione della stampa (se non specificata e la funzione è eseguita all'interno di Konga, verrà assunta ``PRINT_TARGET_PREVIEW``,
-	altrimenti ``PRINT_TARGET_PDF``); *filename* è il nome del file da salvare ed ha un senso solo quando si stampa su file.
+	altrimenti ``PRINT_TARGET_PDF``); *filename* è il nome del file da salvare ed ha un senso solo quando si stampa su file. Se *progress* è ``True`` verrà mostrata
+	a video una barra di progresso dell'operazione di stampa.
 	La funzione restituisce un oggetto di classe :class:`kongalib.Log` con il resoconto dell'operazione di stampa, oppure lancia un'eccezione di classe
 	:class:`kongautil.PrintError` in caso di errori.
 	
@@ -328,7 +329,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 	if _proxy.is_valid():
 		if target is None:
 			target = PRINT_TARGET_PREVIEW
-		log = _proxy.util.print_layout(command_or_layout, builtins or {}, code_azienda, code_esercizio, target, filename)
+		log = _proxy.util.print_layout(command_or_layout, builtins or {}, code_azienda, code_esercizio, target, filename, progress)
 	else:
 		log = kongalib.Log()
 		if not filename:
