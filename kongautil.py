@@ -29,6 +29,7 @@ PRINT_TARGET_XLS				= 4		#: Stampa su file Excel
 
 
 _last_client = None
+_konga_args = None
 
 
 
@@ -146,6 +147,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			return client
 	else:
 		global _last_client
+		global _konga_args
 		client = kongalib.Client()
 		if host is None:
 			import argparse
@@ -170,6 +172,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'tenant_key':	tenant_key or '',
 			})
 			config.add_section('kongautil.connect')
+			config.add_section('kongautil.print_layout')
 			for filename in files:
 				try:
 					config.read(filename)
@@ -185,6 +188,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			username = config.get('kongautil.connect', 'username') or None
 			password = config.get('kongautil.connect', 'password') or None
 			tenant_key = config.get('kongautil.connect', 'tenant_key') or None
+
+			_konga_args = config.get('kongautil.print_layout', 'konga_args') or None
 
 			class ArgumentParser(argparse.ArgumentParser):
 				def exit(self, status=0, message=None):
@@ -296,7 +301,7 @@ def _run_script(script, log):
 	with temp:
 		temp.write('\n'.join(lines + script))
 	try:
-		output = subprocess.check_output('%s --script "%s"' % (client_exe, temp.name), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
+		output = subprocess.check_output('%s %s --script "%s"' % (client_exe, _konga_args or '', temp.name), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
 		for line in output:
 			log.info(line)
 	except subprocess.CalledProcessError as e:
