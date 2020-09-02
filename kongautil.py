@@ -18,6 +18,11 @@ import sys
 import os, os.path
 import kongalib
 
+try:
+	from shlex import quote
+except:
+	from pipes import quote
+
 from kongalib.scripting import proxy as _proxy
 
 
@@ -358,7 +363,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 		if code_esercizio:
 			builtins['ACCOUNTING_YEAR_CODE'] = code_esercizio
 		script = [
-			'.print "%s" %s -o %s -f "%s"' % (command_or_layout, ' '.join([ '%s=%s' % (key, repr(value)) for key, value in builtins.items() ]), target, filename)
+			'.print "%s" %s -o %s -f "%s"' % (command_or_layout, ' '.join([ '%s=%s' % (key, quote(str(value))) for key, value in builtins.items() ]), target, filename)
 		]
 		try:
 			_run_script(script, log)
