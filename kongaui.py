@@ -25,6 +25,7 @@ import colorama
 
 import kongautil
 
+from kongalib.scripting import _TimeoutBlocker
 from kongalib.scripting import proxy as _proxy
 
 PY3 = (sys.version_info[0] >= 3)
@@ -123,7 +124,8 @@ def message_box(text, title='', buttons=BUTTON_OK, icon=ICON_INFORMATION):
 	da *buttons*, che può contenere uno o più costanti ``BUTTON_*`` in *or* tra loro, e ritornerà la costante relativa al bottone selezionato dall'utente per chiudere la
 	finestra."""
 	if _proxy.is_valid():
-		return _proxy.ui.message_box(text, title, buttons, icon)
+		with _TimeoutBlocker():
+			return _proxy.ui.message_box(text, title, buttons, icon)
 	else:
 		print()
 		if icon == ICON_WARNING:
@@ -196,7 +198,8 @@ def open_file(message=None, specs=None, path='', multi=False):
 	selezionati. Se eseguita al di fuori di Konga, questa funzione ignora i parametri *specs*, *path* e *multi*, e l'utente dovrà inserire il percorso completo del file da caricare;
 	se verrà inserito un percorso vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
-		return _proxy.ui.open_file(message, specs, path, multi)
+		with _TimeoutBlocker():
+			return _proxy.ui.open_file(message, specs, path, multi)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
@@ -220,7 +223,8 @@ def save_file(message=None, spec=None, path=''):
 	Se eseguita al di fuori di Konga, questa funzione ignora i parametri *specs* e *path*, e l'utente dovrà inserire il percorso completo del file da salvare;
 	se verrà inserito un percorso vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
-		return _proxy.ui.save_file(message, spec, path)
+		with _TimeoutBlocker():
+			return _proxy.ui.save_file(message, spec, path)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
@@ -239,7 +243,8 @@ def choose_directory(message=None, path=''):
 	Se eseguita al di fuori di Konga, questa funzione ignora il parametro *path*, e l'utente dovrà inserire il percorso completo della directory; se verrà inserito un percorso
 	vuoto, la funzione restituirà ``None``."""
 	if _proxy.is_valid():
-		return _proxy.ui.choose_directory(message, path)
+		with _TimeoutBlocker():
+			return _proxy.ui.choose_directory(message, path)
 	else:
 		if message:
 			print(colorama.Style.BRIGHT + textwrap.fill(message, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
@@ -268,7 +273,8 @@ def select_record(tablename, multi=False, size=None, where_expr=None, code_azien
 	   Questa funzione è disponibile solo all'interno di Konga; eseguendola da fuori verrà lanciata l'eccezione :class:`kongautil.KongaRequiredError`.
 	"""
 	if _proxy.is_valid():
-		return _proxy.ui.select_record(tablename, multi, size, where_expr, code_azienda=code_azienda, num_esercizio=num_esercizio)
+		with _TimeoutBlocker():
+			return _proxy.ui.select_record(tablename, multi, size, where_expr, code_azienda=code_azienda, num_esercizio=num_esercizio)
 	else:
 		raise kongautil.KongaRequiredError
 
@@ -396,7 +402,8 @@ def execute_form(form_data, title=None, message=None, condition=None):
 	specificati in *form_data* saranno disponibili come variabili nell'esecuzione di questa condizione, il cui esito determinerà se consentire o meno l'uscita
 	dal form con successo."""
 	if _proxy.is_valid():
-		return _proxy.ui.execute_form(form_data, title, message, condition)
+		with _TimeoutBlocker():
+			return _proxy.ui.execute_form(form_data, title, message, condition)
 	else:
 		import kongalib, decimal, datetime, getpass
 		class InvalidInput(RuntimeError):

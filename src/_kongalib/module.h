@@ -154,41 +154,6 @@ typedef struct JSONDecoderObject
 
 
 
-/**
- *
- */
-typedef struct InterpreterObject
-{
-	PyObject_HEAD
-	
-	InterpreterObject();
-	~InterpreterObject();
-
-	void Start(MODULE_STATE *state = NULL);
-	void Stop(MODULE_STATE *state = NULL);
-	void Destroy();
-	
-	CL_Job				*fJob;
-	volatile bool		fRunning;
-	volatile bool		fExecute;
-	bool				fHasCode;
-	string				fFileName;
-	string				fScript;
-	CL_Mutex			fLock;
-	CL_Condition		fCond;
-	CL_Condition		fReady;
-	volatile uint32		fStartTime;
-	uint32				fTimeOut;
-	PyThreadState		*fState;
-	unsigned long		fStateThreadID;
-	CL_Array<string>	fArgv;
-	CL_Array<string>	fPath;
-	volatile bool		fThreadAlive;
-	CL_ThreadID			fThreadID;
-} InterpreterObject;
-
-
-
 typedef struct MODULE_STATE
 {
 	PyObject						*fParentModule;
@@ -202,8 +167,9 @@ typedef struct MODULE_STATE
 	PyObject						*fTimerList;
 	std::list<MGA_Client *>			fClientList;
 	std::list<MGA_Client *>			fFreeClientsList;
-	CL_AESCipher					fCipher;
 	string							fLanguage;
+	uint32							fTimeOut;
+	uint32							fStartTime;
 	PyObject						*fJSONException;
 	PyObject						*fMethodRead;
 	PyObject						*fMethodReadKey;
@@ -226,7 +192,6 @@ extern PyTypeObject DeferredType;
 extern PyTypeObject DecimalType;
 extern PyTypeObject JSONEncoderType;
 extern PyTypeObject JSONDecoderType;
-extern PyTypeObject InterpreterType;
 
 
 extern string translate(MGA_Status error);
@@ -237,8 +202,6 @@ extern PyObject *setException(MGA::ClientObject *client, MGA_Status result);
 
 extern bool trackClient(MGA::ClientObject *client);
 extern void untrackClient(MGA::ClientObject *client);
-extern void trackInterpreter(MGA::InterpreterObject *interpreter, MGA::MODULE_STATE *state);
-extern void untrackInterpreter(MGA::InterpreterObject *interpreter, MGA::MODULE_STATE *state);
 
 extern int ConvertString(PyObject *object, string *string);
 extern int ConvertDecimal(PyObject *object, DecimalObject **decimal);
@@ -249,7 +212,6 @@ extern CLU_Table *Table_FromPy(PyObject *object);
 
 extern void InitUtilities();
 extern void InitJSON();
-extern void InitInterpreter();
 
 };
 

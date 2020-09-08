@@ -30,6 +30,10 @@
 #include <list>
 #include <algorithm>
 
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 
 #if PY3K
 PyModuleDef					*MGA::gModuleDefPtr = NULL;
@@ -37,7 +41,6 @@ PyModuleDef					*MGA::gModuleDefPtr = NULL;
 MGA::MODULE_STATE			MGA::gState;
 #endif
 
-std::list<MGA::InterpreterObject *> sInterpreterList;
 unsigned long						sMainThreadID = -1;
 
 
@@ -181,22 +184,6 @@ MGA::untrackClient(MGA::ClientObject *client)
 			state->fFreeClientsList.push_front(client->fClient);
 		}
 	}
-}
-
-
-void
-MGA::trackInterpreter(MGA::InterpreterObject *interpreter, MGA::MODULE_STATE *state)
-{
-	sInterpreterList.push_back(interpreter);
-}
-
-
-void
-MGA::untrackInterpreter(MGA::InterpreterObject *interpreter, MGA::MODULE_STATE *state)
-{
-	std::list<MGA::InterpreterObject *>::iterator it = find(sInterpreterList.begin(), sInterpreterList.end(), interpreter);
-	if (it != sInterpreterList.end())
-		sInterpreterList.erase(it);
 }
 
 
@@ -636,49 +623,6 @@ hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 
 
 static PyObject *
-set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	char *kwlist[] = { "timeout", NULL };
-	PyObject *object = NULL;
-	uint32 timeout, oldTimeout;
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &object))
-		return NULL;
-	
-	if ((!object) || (object == Py_None)) {
-		timeout = 0;
-	}
-	else {
-		timeout = PyInt_AsLong(object);
-		if (PyErr_Occurred())
-			return NULL;
-	}
-	MGA::MODULE_STATE *state = GET_STATE();
-	if (!state) {
-		PyErr_SetString(PyExc_RuntimeError, "no module state!");
-		return NULL;
-	}
-	PyThreadState *current_tstate = PyThreadState_Get();
-	for (std::list<MGA::InterpreterObject *>::iterator it = sInterpreterList.begin(); it != sInterpreterList.end(); it++) {
-		MGA::InterpreterObject *interpreter = *it;
-		if (interpreter->fState) {
-			PyThreadState *tstate = PyInterpreterState_ThreadHead(interpreter->fState->interp);
-			while (tstate) {
-				if (tstate == current_tstate) {
-					oldTimeout = interpreter->fTimeOut;
-					interpreter->fTimeOut = timeout;
-					interpreter->fStartTime = CL_GetTime();
-					return PyInt_FromLong(oldTimeout);
-				}
-				tstate = PyThreadState_Next(tstate);
-			}
-		}
-	}
-	PyErr_SetString(PyExc_RuntimeError, "No parent Interpreter object for current context!");
-	return NULL;
-}
-
-
-static PyObject *
 lock(PyObject *self, PyObject *args)
 {
 	MGA::MODULE_STATE *state = GET_STATE();
@@ -725,14 +669,6 @@ _cleanup(PyObject *self, PyObject *args)
 				MGA::DeferredObject *deferred = (MGA::DeferredObject *)PyList_GET_ITEM(state->fTimerList, i);
 				deferred->fAborted = true;
 				deferred->fCondition.Signal();
-			}
-
-			for (std::list<MGA::InterpreterObject *>::iterator it = sInterpreterList.begin(); it != sInterpreterList.end(); it++) {
-				MGA::InterpreterObject *interpreter = *it;
-				if (tstate != interpreter->fState) {
-					interpreter->Stop(state);
-					interpreter->Destroy();
-				}
 			}
 
 			Py_BEGIN_ALLOW_THREADS
@@ -860,63 +796,109 @@ get_application_log_path(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 
+static int
+interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *arg)
+{
+	int result = 0;
+	MGA::MODULE_STATE *state = GET_STATE();
+	if (!state)
+		return -1;
+
+	if (state->fTimeOut > 0) {
+		if ((CL_GetTime() - state->fStartTime) > state->fTimeOut) {
+			result = -1;
+			PyEval_SetTrace(NULL, NULL);
+			PyObject *module = PyImport_ImportModule("kongalib.scripting");
+			if (module) {
+				PyObject *dict = NULL;
+				PyObject *func = NULL;
+		
+				dict = PyModule_GetDict(module);
+				func = PyDict_GetItemString(dict, "timeout_handler");
+				if (func) {
+					PyObject *res = NULL;
+					Py_INCREF(func);
+					res = PyObject_CallFunctionObjArgs(func, NULL);
+					Py_DECREF(func);
+					
+					if (res) {
+						Py_DECREF(res);
+						result = 0;
+					}
+				}
+				Py_DECREF(module);
+			}
+			if (result < 0)
+				state->fTimeOut = 0;
+			state->fStartTime = CL_GetTime();
+			PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
+		}
+	}
+	return result;
+}
+
+
 static PyObject *
-_aes_set_key(PyObject *self, PyObject *args, PyObject *kwds)
+set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	char *kwlist[] = { "timeout", NULL };
+	PyObject *object = NULL;
+	uint32 timeout, oldTimeout;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &object))
+		return NULL;
+	
+	if ((!object) || (object == Py_None)) {
+		timeout = 0;
+	}
+	else {
+		timeout = PyInt_AsLong(object);
+		if (PyErr_Occurred())
+			return NULL;
+	}
+	MGA::MODULE_STATE *state = GET_STATE();
+	if (!state) {
+		PyErr_SetString(PyExc_RuntimeError, "no module state!");
+		return NULL;
+	}
+	oldTimeout = state->fTimeOut;
+
+	state->fTimeOut = timeout;
+	if (timeout) {
+		state->fStartTime = CL_GetTime();
+		PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
+	}
+	else {
+		PyEval_SetTrace(NULL, NULL);
+	}
+
+	if (!oldTimeout)
+		Py_RETURN_NONE;
+	else
+		return PyInt_FromLong((long)oldTimeout);
+}
+
+
+static PyObject *
+get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA::MODULE_STATE *state = GET_STATE();
-	char *kwlist[] = { "key", NULL };
-	char *keyBuffer;
-	Py_ssize_t keyLen;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &keyBuffer, &keyLen))
+	if (!state) {
+		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
+	}
 
-	CL_Blob key(keyBuffer, (int32)keyLen);
-	key.Rewind();
-	if (state)
-		state->fCipher.SetKey(key);
+	if (state->fTimeOut)
+		return PyInt_FromLong(CL_MAX(0, state->fTimeOut - (CL_GetTime() - state->fStartTime)));
+	else
+		Py_RETURN_NONE;
+}
 
+
+static PyObject *
+_set_process_foreground(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	CL_SetProcessForeground(true);
 	Py_RETURN_NONE;
-}
-
-
-static PyObject *
-_aes_encrypt(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	MGA::MODULE_STATE *state = GET_STATE();
-	char *kwlist[] = { "data", NULL };
-	char *dataBuffer;
-	Py_ssize_t dataLen;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &dataBuffer, &dataLen))
-		return NULL;
-
-	CL_Blob data(dataBuffer, dataLen);
-	data.Rewind();
-	if (state)
-		state->fCipher.Encrypt(data, dataLen);
-
-	return PyBytes_FromStringAndSize((const char *)data.GetData(), dataLen);
-}
-
-
-static PyObject *
-_aes_decrypt(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	MGA::MODULE_STATE *state = GET_STATE();
-	char *kwlist[] = { "data", NULL };
-	char *dataBuffer;
-	Py_ssize_t dataLen;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s#", kwlist, &dataBuffer, &dataLen))
-		return NULL;
-
-	CL_Blob data(dataBuffer, dataLen);
-	data.Rewind();
-	if (state)
-		state->fCipher.Decrypt(data, dataLen);
-
-	return PyBytes_FromStringAndSize((const char *)data.GetData(), dataLen);
 }
 
 
@@ -950,26 +932,25 @@ _apply_stylesheet(PyObject *self, PyObject *args, PyObject *kwds)
 
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
-	{	"host_lookup",					(PyCFunction)host_lookup,				METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
-	{	"get_network_interfaces",		(PyCFunction)get_network_interfaces,	METH_VARARGS | METH_KEYWORDS,	"get_network_interfaces() -> tuple\n\nReturns a list of dicts holding informations on all the available network interfaces." },
-	{	"get_machine_uuid",				(PyCFunction)get_machine_uuid,			METH_NOARGS,					"get_machine_uuid() -> str\n\nGets machine unique UUID." },
-	{	"get_system_info",				(PyCFunction)get_system_info,			METH_NOARGS,					"get_system_info() -> str\n\nGets informations on the operating system." },
-	{	"save_xml",						(PyCFunction)save_xml,					METH_VARARGS | METH_KEYWORDS,	"save_xml(dict) -> str\n\nConverts given dictionary object in XML form and returns it as an (unicode) string." },
-	{	"load_xml",						(PyCFunction)load_xml,					METH_VARARGS | METH_KEYWORDS,	"load_xml(str) -> dict\n\nLoads XML from given (unicode) string and returns a corresponding dictionary object." },
-	{	"start_timer",					(PyCFunction)start_timer,				METH_VARARGS | METH_KEYWORDS,	"start_timer(seconds, callback, userdata) -> Deferred\n\nStarts a timer, so that callback gets called after specified amount of seconds. Returns a cancellable Deferred object." },
-	{	"hash_password",				(PyCFunction)hash_password,				METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
-	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,	METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout)\n\nSets timeout for current interpreter." },
-	{	"lock",							(PyCFunction)lock,						METH_NOARGS,					"lock()\n\nAcquires the global MGA threads lock." },
-	{	"unlock",						(PyCFunction)unlock,					METH_NOARGS,					"unlock()\n\nReleases the global MGA threads lock." },
-	{	"_cleanup",						(PyCFunction)_cleanup,					METH_NOARGS,					"_cleanup()\n\nCleanup resources." },
-	{	"set_default_idle_callback",	(PyCFunction)set_default_idle_callback,	METH_VARARGS | METH_KEYWORDS,	"set_default_idle_callback(callback)\n\nSets the default callback to be issued during client sync operations." },
-	{	"checksum",						(PyCFunction)checksum,					METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
-	{	"get_application_log_path",		(PyCFunction)get_application_log_path,	METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
-	{	"_aes_set_key",					(PyCFunction)_aes_set_key,				METH_VARARGS | METH_KEYWORDS,	"_aes_set_key(key)\n\nSets AES cipher key." },
-	{	"_aes_encrypt",					(PyCFunction)_aes_encrypt,				METH_VARARGS | METH_KEYWORDS,	"_aes_encrypt(data) -> data\n\nPerforms AES encryption on a block of data" },
-	{	"_aes_decrypt",					(PyCFunction)_aes_decrypt,				METH_VARARGS | METH_KEYWORDS,	"_aes_decrypt(data) -> data\n\nPerforms AES decryption on a block of data." },
-	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,			METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
-	{	NULL,							NULL,									0,								NULL }
+	{	"host_lookup",					(PyCFunction)host_lookup,					METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
+	{	"get_network_interfaces",		(PyCFunction)get_network_interfaces,		METH_VARARGS | METH_KEYWORDS,	"get_network_interfaces() -> tuple\n\nReturns a list of dicts holding informations on all the available network interfaces." },
+	{	"get_machine_uuid",				(PyCFunction)get_machine_uuid,				METH_NOARGS,					"get_machine_uuid() -> str\n\nGets machine unique UUID." },
+	{	"get_system_info",				(PyCFunction)get_system_info,				METH_NOARGS,					"get_system_info() -> str\n\nGets informations on the operating system." },
+	{	"save_xml",						(PyCFunction)save_xml,						METH_VARARGS | METH_KEYWORDS,	"save_xml(dict) -> str\n\nConverts given dictionary object in XML form and returns it as an (unicode) string." },
+	{	"load_xml",						(PyCFunction)load_xml,						METH_VARARGS | METH_KEYWORDS,	"load_xml(str) -> dict\n\nLoads XML from given (unicode) string and returns a corresponding dictionary object." },
+	{	"start_timer",					(PyCFunction)start_timer,					METH_VARARGS | METH_KEYWORDS,	"start_timer(seconds, callback, userdata) -> Deferred\n\nStarts a timer, so that callback gets called after specified amount of seconds. Returns a cancellable Deferred object." },
+	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
+	{	"lock",							(PyCFunction)lock,							METH_NOARGS,					"lock()\n\nAcquires the global MGA threads lock." },
+	{	"unlock",						(PyCFunction)unlock,						METH_NOARGS,					"unlock()\n\nReleases the global MGA threads lock." },
+	{	"_cleanup",						(PyCFunction)_cleanup,						METH_NOARGS,					"_cleanup()\n\nCleanup resources." },
+	{	"set_default_idle_callback",	(PyCFunction)set_default_idle_callback,		METH_VARARGS | METH_KEYWORDS,	"set_default_idle_callback(callback)\n\nSets the default callback to be issued during client sync operations." },
+	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
+	{	"get_application_log_path",		(PyCFunction)get_application_log_path,		METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
+	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
+	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the current time left for interpreter timeout or None."},
+	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_NOARGS,					"_set_process_foreground()\n\nBrings process to the foreground." },
+	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
+	{	NULL,							NULL,										0,								NULL }
 };
 
 
@@ -1158,20 +1139,15 @@ MOD_INIT(_kongalib)
 	if (PyModule_AddObject(module, "JSONDecoder", (PyObject *)&MGA::JSONDecoderType) < 0)
 		return MOD_ERROR;
 	
-	if (PyType_Ready(&MGA::InterpreterType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::InterpreterType);
-	if (PyModule_AddObject(module, "Interpreter", (PyObject *)&MGA::InterpreterType) < 0)
-		return MOD_ERROR;
-	
 	MGA::InitJSON();
-	MGA::InitInterpreter();
 	MGA::InitUtilities();
 	
 	if ((signed)sMainThreadID == -1)
 		sMainThreadID = PyThreadState_Get()->thread_id;
 	state->fInitialized = true;
 	state->fIdleCB = NULL;
+	state->fTimeOut = 0;
+	state->fStartTime = 0;
 	state->fJSONException = PyDict_GetItemString(PyModule_GetDict(state->fParentModule), "JSONError");
 	state->fMethodRead = PyUnicode_FromString("read");
 	state->fMethodReadKey = PyUnicode_FromString("read_key");

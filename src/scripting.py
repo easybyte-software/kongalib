@@ -16,15 +16,17 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from kongalib import InterpreterTimeout, Error, start_timer, PY3
-from ._kongalib import Interpreter, get_application_log_path, set_interpreter_timeout
+from kongalib import Error, start_timer, PY3
+from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, _set_process_foreground
 
 import sys
 import os
 import atexit
 import io
 import threading
+import multiprocessing
 import multiprocessing.connection
+import signal
 import logging
 import time
 
@@ -34,6 +36,7 @@ DEBUG = False
 gConnFamily = None
 gConnFamilyOverride = False
 
+_DLL_PATHS = []
 
 
 class BadConnection(Exception):
@@ -41,17 +44,29 @@ class BadConnection(Exception):
 		self._bad_connection = True
 
 
+class InterpreterTimeout(Exception):
+	pass
+
+
+
+class InterpreterError(Exception):
+	def __init__(self, exc_info):
+		self._exc_info = exc_info
+	def get_exc_info(self):
+		return self._exc_info
+
+
 
 def debug_log(text):
 	try:
-		logger.debug(text)
+		_logger.debug(text)
 	except:
 		sys.__stderr__.write('%s\n' % text)
 	# sys.__stderr__.write(text + '\n')
 
 
 
-class ProxyLocker(object):
+class _TimeoutBlocker(object):
 	def __init__(self):
 		self.timeout = 0
 		self.lock = threading.RLock()
@@ -71,8 +86,8 @@ class ProxyLocker(object):
 
 class Proxy(object):
 	def __init__(self):
-		self.__conn = None
-		self.__lock = ProxyLocker()
+		self._conn = None
+		self._lock = _TimeoutBlocker()
 
 	def _initialize(self):
 		conn_type = str(sys.argv.pop(1))
@@ -82,30 +97,36 @@ class Proxy(object):
 			address = (address[:colon], int(address[colon+1:]))
 		debug_log("[Proxy] init: %s" % repr(address))
 		try:
-			self.__conn = multiprocessing.connection.Client(address, conn_type)
+			self._conn = multiprocessing.connection.Client(address, conn_type)
 		except:
 			import traceback
-			logger.error("[Proxy] init error: %s" % traceback.format_exc())
+			_logger.error("[Proxy] init error: %s" % traceback.format_exc())
 			raise
 		debug_log("[Proxy] connection established")
 
 	def is_valid(self):
-		return self.__conn is not None
+		return self._conn is not None
 	
 	def close(self):
-		if self.__conn is not None:
+		if self._conn is not None:
 			sys.stdout.flush()
 			sys.stderr.flush()
-			self.__conn.close()
-			self.__conn = None
+			self._conn.close()
+			self._conn = None
 		debug_log("[Proxy] connection closed")
 	
 	def __getattr__(self, name):
-		return MethodHandler(self.__conn, self.__lock, name)
+		return _MethodHandler(self._conn, self._lock, name)
+
+
+class _State(object):
+	handler = None
+	controller = None
+	io = []
 
 
 proxy = Proxy()
-logger = logging.getLogger("script")
+_logger = logging.getLogger("script")
 
 
 def timeout_handler():
@@ -113,51 +134,41 @@ def timeout_handler():
 		raise InterpreterTimeout
 
 
-
 def init_interpreter(init_logging=True):
-	if init_logging:
-		logger.setLevel(logging.DEBUG)
-		try:  os.makedirs(get_application_log_path())
-		except: pass
-		formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s", datefmt='%a, %d %b %Y %H:%M:%S')
-		handler = logging.FileHandler(os.path.join(get_application_log_path(), 'script.log'), 'w')
-		handler.setLevel(logging.DEBUG)
-		handler.setFormatter(formatter)
-		logger.addHandler(handler)
-		logger.propagate = False
-	debug_log('init_interpreter')
-
+	_State.io.append((sys.stdout, sys.stderr, sys.stdin))
 	try:
 		proxy._initialize()
-		sys.stdout = ProxyStdOut()
-		sys.stderr = ProxyStdErr()
-	#   sys.stdout = io.TextIOWrapper(ProxyStdOut(), 'utf-8', line_buffering=True)
-	#   sys.stderr = io.TextIOWrapper(ProxyStdErr(), 'utf-8', line_buffering=True)
-		sys.stdin = ProxyStdIn()
+		sys.stdout = _ProxyStdOut()
+		sys.stderr = _ProxyStdErr()
+	#   sys.stdout = io.TextIOWrapper(_ProxyStdOut(), 'utf-8', line_buffering=True)
+	#   sys.stderr = io.TextIOWrapper(_ProxyStdErr(), 'utf-8', line_buffering=True)
+		sys.stdin = _ProxyStdIn()
 		sys.prefix, sys.exec_prefix = proxy.builtin.get_prefixes()
 		sys.is_kongalib_interpreter = True
 	except:
 		raise BadConnection()
 
-	if not init_logging:
-		def excepthook(type, value, tb):
-			import traceback
-			debug_log('EXCEPTHOOK:\n%s' % '\n'.join(traceback.format_exception(type, value, tb)))
-			tb = traceback.extract_tb(tb)
-			def do_filter(entry):
-				filename = entry[0].replace('\\', '/')
-				if filename.endswith('kongalib/scripting.py') or filename.endswith('__script_host__.py'):
-					return False
-				return True
-			tb = list(filter(do_filter, tb))
-			try:
-				if PY3:
-					proxy.builtin.print_exception(type, value, tb)
-				else:
-					proxy.builtin.print_exception(type.__name__, str(value), tb)
-			except:
-				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
-		sys.excepthook = excepthook
+	import getpass
+	getpass.getpass = proxy.builtin.getpass
+
+	def excepthook(type, value, tb):
+		import traceback
+		# debug_log('EXCEPTHOOK:\n%s' % '\n'.join(traceback.format_exception(type, value, tb)))
+		tb = traceback.extract_tb(tb)
+		def do_filter(entry):
+			filename = entry[0].replace('\\', '/')
+			if filename.endswith('kongalib/scripting.py'):
+				return False
+			return True
+		tb = list(filter(do_filter, tb))
+		try:
+			if PY3:
+				proxy.builtin.print_exception(type, value, tb)
+			else:
+				proxy.builtin.print_exception(type.__name__, str(value), tb)
+		except:
+			debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
+	sys.excepthook = excepthook
 
 	def close_proxy():
 		try:
@@ -167,20 +178,220 @@ def init_interpreter(init_logging=True):
 	atexit.register(close_proxy)
 
 
-
 def exit_interpreter():
-	debug_log('exit_interpreter')
+	sys.stdout, sys.stderr, sys.stdin = _State.io.pop()
 	# proxy.close()
 
 
+class _Controller(threading.Thread):
+	def __init__(self, conn, sem):
+		self.conn = conn
+		self.sem = sem
+		self.lock = threading.RLock()
+		self.request_cond = threading.Condition(self.lock)
+		self.request = None
+		self.exc_info = None
+		super(_Controller, self).__init__()
 
-class ProxyStdIn(io.StringIO):
+	def get_execute_request(self):
+		with self.lock:
+			while not self.request_cond.wait(0.5):
+				if self.request is not None:
+					break
+			request = self.request
+			self.request = None
+			return request
+
+	def run(self):
+		name = None
+		while name != 'exit':
+			try:
+				if not self.conn.poll(0.5):
+					continue
+				data = self.conn.recv()
+				handler, name, args, kwargs = data
+				msg = repr(args)
+				if len(msg) > 80:
+					msg = msg[:80] + '[...]'
+			except IOError:
+				return
+			except EOFError:
+				return
+			except KeyboardInterrupt:
+				return
+			result = getattr(self, name)(*args, **kwargs)
+			try:
+				self.conn.send((None, result))
+			except IOError:
+				return
+			except EOFError:
+				return
+			except KeyboardInterrupt:
+				return
+			except:
+				import traceback
+				_logger.debug(traceback.format_exc())
+		sys.exit(0)
+
+	def set_timeout(self, timeout):
+		return set_interpreter_timeout(timeout)
+
+	def get_time_left(self):
+		return get_interpreter_timeout() or 0
+
+	def execute(self, args, path, timeout, script, cwd):
+		with self.lock:
+			self.request = (args, path, timeout, script, cwd)
+			self.request_cond.notify()
+
+	def set_exc_info(self, exc_info):
+		with self.lock:
+			self.exc_info = exc_info
+
+	def get_exc_info(self):
+		with self.lock:
+			return self.exc_info
+
+	def exit(self):
+		self.sem.release()
+
+
+
+def _trampoline(conn, sem, foreground, dll_paths):
+	if foreground:
+		_set_process_foreground()
+	for path in dll_paths:
+		try:
+			os.add_dll_directory(path)
+		except:
+			pass
+	signal.signal(signal.SIGTERM, signal.SIG_DFL)
+	_State.controller = _Controller(conn, sem)
+	_State.controller.start()
+
+	while True:
+		args, path, timeout, script, cwd = _State.controller.get_execute_request()
+		sys.argv = args
+		sys.path = path
+		if (not PY3) and isinstance(script, unicode):
+			script = script.encode('utf-8', 'replace')
+		filename = args[0]
+		if cwd:
+			os.chdir(cwd)
+		script = compile(script, filename, 'exec', dont_inherit=1)
+		exc = None
+		init_interpreter()
+		_State.controller.set_timeout(timeout)
+		try:
+			exec(script, { '__file__': filename, '__name__': '__main__' })
+		except Exception as e:
+			import traceback
+			exc_type, exc_value, exc_tb = sys.exc_info()
+			exc_tb = traceback.extract_tb(exc_tb)
+			exc_info = ( exc_type, exc_value, exc_tb )
+		else:
+			exc_info = None
+		_State.controller.set_timeout(0)
+		_State.controller.set_exc_info(exc_info)
+		exit_interpreter()
+		sem.release()
+	try:
+		conn.close()
+	except:
+		pass
+	_State.controller.join()
+	
+
+class _ControllerProxy(Proxy):
+	class NullLocker(object):
+		def __enter__(self):
+			pass
+		def __exit__(self, exc_type, exc_value, exc_traceback):
+			pass
+	def __init__(self, conn):
+		self._conn = conn
+		self._lock = _ControllerProxy.NullLocker()
+
+
+class Interpreter(object):
+	def __init__(self, foreground=True):
+		self.proc = None
+		self.exc_info = None
+		self.conn = None
+		self.lock = threading.RLock()
+		self.sem = multiprocessing.Semaphore(0)
+		self.proxy = None
+		self.foreground = foreground
+
+	def __del__(self):
+		with self.lock:
+			if self.proc:
+				self.proxy.exit()
+
+	def ensure_proc(self):
+		with self.lock:
+			if self.proc is None:
+				self.conn, self.client_conn = multiprocessing.Pipe()
+				self.proxy = _ControllerProxy(self.conn).controller
+				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, _DLL_PATHS), daemon=True)
+				self.proc.start()
+
+	def execute(self, script=None, filename=None, argv=None, path=None, timeout=None):
+		with self.lock:
+			self.ensure_proc()
+			self.exc_info = None
+			args = argv
+			if not args:
+				args = [ filename or '<script>' ]
+			if (script is None) and filename:
+				with open(filename, 'r') as f:
+					script = f.read()
+			try:
+				cwd = os.path.dirname(os.path.abspath(filename))
+			except:
+				cwd = None
+			self.proxy.execute(args, path, timeout, script or '', cwd )
+			self.lock.release()
+			while not self.sem.acquire(False):
+				with self.lock:
+					if (self.proc is None) or (not self.proc.is_alive()):
+						break
+				time.sleep(0.05)
+			self.lock.acquire()
+			if (self.proc is not None) and self.proc.is_alive():
+				self.exc_info = self.proxy.get_exc_info()
+			if self.exc_info is not None:
+				raise InterpreterError(self.exc_info)
+
+	def stop(self):
+		with self.lock:
+			if self.proc is not None:
+				self.proc.terminate()
+				self.proc = None
+
+	def is_running(self):
+		with self.lock:
+			return (self.conn is None) or ((self.proc is not None) and self.proc.is_alive())
+
+	def set_timeout(self, timeout=None):
+		with self.lock:
+			return self.proxy.set_timeout(timeout)
+
+	def get_time_left(self):
+		with self.lock:
+			return self.proxy.get_time_left()
+
+	def get_exc_info(self):
+		with self.lock:
+			return self.exc_info
+
+
+class _ProxyStdIn(io.StringIO):
 	def readline(self, size=-1):
 		return proxy.builtin.read_line()
 
 
-
-class ProxyStdOut(io.StringIO):
+class _ProxyStdOut(io.StringIO):
 	def write(self, text):
 		proxy.builtin.write_stdout(str(text))
 		return len(text)
@@ -192,8 +403,7 @@ class ProxyStdOut(io.StringIO):
 			pass
 
 
-
-class ProxyStdErr(io.StringIO):
+class _ProxyStdErr(io.StringIO):
 	def write(self, text):
 		sys.__stderr__.write(str(text))
 		try:
@@ -210,18 +420,18 @@ class ProxyStdErr(io.StringIO):
 
 
 
-class MethodHandler(object):
+class _MethodHandler(object):
 	def __init__(self, conn, lock, name):
 		self._conn = conn
 		self._lock = lock
 		self._name = name
 	
 	def __getattr__(self, name):
-		return Method(self, name)
+		return _Method(self, name)
 
 
 
-class Method(object):
+class _Method(object):
 	def __init__(self, handler, name):
 		self.handler = handler
 		self.name = name
@@ -247,8 +457,7 @@ class Method(object):
 				raise Error(errno, errmsg)
 
 
-
-class ServerProxy(object):
+class _ServerProxy(object):
 	CACHE = []
 	LOCK = threading.RLock()
 
@@ -280,8 +489,8 @@ class ServerProxy(object):
 			self.ready.wait()
 			self.listener.close()
 			self.handlers = {}
-			with ServerProxy.LOCK:
-				ServerProxy.CACHE.append(self)
+			with _ServerProxy.LOCK:
+				_ServerProxy.CACHE.append(self)
 
 	def run(self):
 		debug_log("[ServerProxy] run")
@@ -299,11 +508,11 @@ class ServerProxy(object):
 						func = None
 					try:
 						if func is None:
-							raise RuntimeError('Method unavailable in this context')
+							raise RuntimeError('Method "%s" unavailable in this context' % name)
 						result = (None, func(*args, **kwargs))
 					except Exception as e:
 						import traceback
-						logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
+						_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
 						# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
 						if isinstance(e, Error):
 							errno = e.errno
@@ -325,11 +534,10 @@ class ServerProxy(object):
 	def create(cls, handlers):
 		with cls.LOCK:
 			if len(cls.CACHE) == 0:
-				ServerProxy.CACHE.append(ServerProxy())
-			proxy = ServerProxy.CACHE.pop()
+				_ServerProxy.CACHE.append(_ServerProxy())
+			proxy = _ServerProxy.CACHE.pop()
 			proxy.handlers = handlers
 			return proxy
-
 
 
 class BuiltinHandler(object):
@@ -358,8 +566,8 @@ class BuiltinHandler(object):
 		sys.__stdin__.readline()
 
 	def getpass(self, prompt='Password: ', stream=None):
-		self.write_stdout(prompt)
-		return self.read_line()
+		import getpass
+		return getpass.getpass(prompt, stream)
 	
 	def get_prefixes(self):
 		return os.getcwd(), os.getcwd()
@@ -388,11 +596,14 @@ class BuiltinHandler(object):
 		pass
 
 
-
 def set_connection_family(family):
 	global gConnFamily
 	gConnFamily = family
 
+
+def add_dll_directory(path):
+	if path not in _DLL_PATHS:
+		_DLL_PATHS.append(path)
 
 
 def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None):
@@ -411,7 +622,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	_handlers['builtin']._set_interpreter(interpreter)
 	try:
 		while True:
-			p = ServerProxy.create(_handlers)
+			p = _ServerProxy.create(_handlers)
 			try:
 				p.start()
 				debug_log("[ServerProxy] listener address is: %s" % repr(p.listener.address))
@@ -436,10 +647,12 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 					set_connection_family(None)
 					argv[1:3] = []
 					continue
-				import traceback
-				debug_log("[ServerProxy] execute exception: %s" % traceback.format_exc())
-				type, value, tb = interpreter.get_exc_info()
-				tb = traceback.extract_tb(tb)
+				if isinstance(e, InterpreterError):
+					type, value, tb = e.get_exc_info()
+				else:
+					import traceback
+					debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
+					type, value, tb = sys.exc_info()
 				def do_filter(entry):
 					filename = entry[0].replace('\\', '/')
 					if filename.endswith('kongalib/scripting.py') or filename.endswith('__script_host__.py'):

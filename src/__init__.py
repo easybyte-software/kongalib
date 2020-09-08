@@ -323,11 +323,7 @@ class JSONError(Exception):
 			return self.__unicode__().encode('utf-8')
 
 
-class InterpreterTimeout(Exception):
-	pass
-
-
-from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, Interpreter, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, set_interpreter_timeout, _cleanup, lock, unlock, set_default_idle_callback, checksum, _aes_set_key, _aes_set_key, _aes_encrypt, _aes_decrypt, _apply_stylesheet
+from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, checksum, _apply_stylesheet
 from .constants import *
 from .client import *
 from .expression import *
@@ -352,16 +348,6 @@ class ErrorMessage(object):
 			return self.__unicode__()
 		else:
 			return self.__unicode__().encode('utf-8')
-
-
-class _AES(object):
-	def set_key(self, key):
-		_aes_set_key(key)
-	def encrypt(self, data):
-		return _aes_encrypt(data)
-	def decrypt(self, data):
-		return _aes_decrypt(data)
-aes = _AES()
 
 
 def _on_destroy_thread():

@@ -574,6 +574,3 @@ except:
 	_patch_etree()
 
 
-
-if __name__ == '__main__':
-	print(ensure_source_compatibility('print("Hello world!")'))
