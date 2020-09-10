@@ -162,8 +162,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				import ConfigParser as configparser
 			files = [
 				os.path.splitext(sys.argv[0])[0] + '.cfg',
-				os.path.join(os.path.abspath(os.path.dirname(__file__)), 'kongalib.cfg'),
-				os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib')),
+				os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'kongalib.cfg'),
+				os.path.abspath(os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib'))),
 			]
 			if config:
 				files.insert(0, config)
@@ -175,6 +175,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'username':		username or '',
 				'password':		password or '',
 				'tenant_key':	tenant_key or '',
+				'konga_args':	'',
 			})
 			config.add_section('kongautil.connect')
 			config.add_section('kongautil.print_layout')
