@@ -517,7 +517,7 @@ if PY3:
 			pass
 
 		from lib2to3.refactor import RefactoringTool
-		from io import BytesIO
+		from io import StringIO
 
 		class SilentRefactoringTool(RefactoringTool):
 			def __init__(self):
@@ -543,9 +543,9 @@ if PY3:
 		saved_stdin = sys.stdin
 		saved_stdout = sys.stdout
 		saved_stderr = sys.stderr
-		sys.stdin = BytesIO()
-		sys.stdout = BytesIO()
-		sys.stderr = BytesIO()
+		sys.stdin = StringIO()
+		sys.stdout = StringIO()
+		sys.stderr = StringIO()
 		try:
 			tool = getattr(ensure_source_compatibility, 'tool', None)
 			if tool is None:
