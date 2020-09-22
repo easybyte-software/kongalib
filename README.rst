@@ -3,10 +3,13 @@ Kongalib
 
 .. image:: https://img.shields.io/pypi/v/kongalib.svg
    :alt: Current version
+   :target: https://pypi.python.org/pypi/kongalib/
 .. image:: https://img.shields.io/pypi/pyversions/kongalib.svg
    :alt: Supported Python versions
+   :target: https://pypi.python.org/pypi/kongalib/
 .. image:: https://img.shields.io/badge/License-LGPL3-blue.svg
    :alt: LGPL v3 License
+   :target: https://www.gnu.org/licenses/lgpl-3.0.en.html
 .. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
    :alt: Build Status
 
