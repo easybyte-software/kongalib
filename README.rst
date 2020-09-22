@@ -12,6 +12,7 @@ Kongalib
    :target: https://www.gnu.org/licenses/lgpl-3.0.en.html
 .. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
    :alt: Build Status
+   :target: https://dev.azure.com/easybyte-software/kongalib
 
 Libreria Python di comunicazione con i server `EasyByte Konga`_. Tramite
 *kongalib* è possibile connettersi ad un server Konga (integrato in Konga Pro o
