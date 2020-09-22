@@ -1,6 +1,10 @@
 Kongalib
 ========
 
+.. image:: https://img.shields.io/pypi/v/kongalib.svg
+.. image:: https://img.shields.io/pypi/pyversions/kongalib.svg
+.. image:: https://img.shields.io/badge/License-LGPL3-blue.svg
+	:alt: LGPL v3 License
 .. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
 	:alt: Build Status
 
