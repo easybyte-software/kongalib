@@ -33,6 +33,7 @@ jobs:
       displayName: Publish sdist
     - template: ./azure-publish-dist.yml
     - script: |
+        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -53,6 +54,7 @@ jobs:
     - template: ./azure-manylinux-wheels.yml
     - template: ./azure-publish-dist.yml
     - script: |
+        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -77,6 +79,7 @@ jobs:
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
     - script: |
+        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -123,6 +126,7 @@ jobs:
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
     - script: |
+        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
