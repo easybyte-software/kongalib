@@ -33,6 +33,8 @@ jobs:
         python setup.py sdist
       displayName: Publish sdist
     - template: ./azure-publish-dist.yml
+      parameters:
+      	publish: ${{ variables.publish }}
 
 - job: ManyLinux
   strategy:
@@ -48,6 +50,8 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-manylinux-wheels.yml
     - template: ./azure-publish-dist.yml
+      parameters:
+      	publish: ${{ variables.publish }}
 
 - job: macOS
   variables:
@@ -68,6 +72,8 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
+      parameters:
+      	publish: ${{ variables.publish }}
 
 - job: Windows
   strategy:
@@ -110,3 +116,5 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
+      parameters:
+      	publish: ${{ variables.publish }}
