@@ -18,7 +18,6 @@ parameters:
 variables:
   konga_branch: ${{ parameters.konga_branch_param }}
   verbose: ${{ parameters.verbose_param }}
-  publish: ${{ parameters.publish_param }}
 
 jobs:
 
@@ -33,8 +32,11 @@ jobs:
         python setup.py sdist
       displayName: Publish sdist
     - template: ./azure-publish-dist.yml
-      parameters:
-      	publish: ${{ variables.publish }}
+	- script: |
+        twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
+      displayName: 'Upload wheels to PyPI'
+      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
+
 
 - job: ManyLinux
   strategy:
@@ -50,8 +52,10 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-manylinux-wheels.yml
     - template: ./azure-publish-dist.yml
-      parameters:
-      	publish: ${{ variables.publish }}
+	- script: |
+        twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
+      displayName: 'Upload wheels to PyPI'
+      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
 
 - job: macOS
   variables:
@@ -72,8 +76,10 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
-      parameters:
-      	publish: ${{ variables.publish }}
+	- script: |
+        twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
+      displayName: 'Upload wheels to PyPI'
+      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
 
 - job: Windows
   strategy:
@@ -116,5 +122,7 @@ jobs:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
-      parameters:
-      	publish: ${{ variables.publish }}
+	- script: |
+        twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
+      displayName: 'Upload wheels to PyPI'
+      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
