@@ -18,6 +18,7 @@ parameters:
 variables:
   konga_branch: ${{ parameters.konga_branch_param }}
   verbose: ${{ parameters.verbose_param }}
+  publish: ${{ parameters.publish_param }}
 
 jobs:
 
