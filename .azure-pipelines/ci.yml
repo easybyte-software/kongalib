@@ -28,12 +28,11 @@ jobs:
     python.architecture: 'none'
   steps:
     - script: |
-        python -m pip install setuptools
+        python -m pip install setuptools twine
         python setup.py sdist
       displayName: Publish sdist
     - template: ./azure-publish-dist.yml
     - script: |
-        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -50,11 +49,12 @@ jobs:
   pool:
     vmImage: 'ubuntu-18.04'
   steps:
+    - script: |
+        pip install twine
     - template: ./azure-setup.yml
     - template: ./azure-manylinux-wheels.yml
     - template: ./azure-publish-dist.yml
     - script: |
-        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -75,11 +75,12 @@ jobs:
   pool:
     vmImage: 'macOS-10.14'
   steps:
+    - script: |
+        pip install twine
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
     - script: |
-        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
@@ -122,11 +123,12 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
+    - script: |
+        pip install twine
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
     - template: ./azure-publish-dist.yml
     - script: |
-        pip install twine
         twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
       displayName: 'Upload wheels to PyPI'
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
