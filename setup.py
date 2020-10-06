@@ -80,7 +80,7 @@ if sys.platform == 'darwin':
 		path = '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%s.sdk' % version
 		if not os.path.exists(path):
 			return (None, None, None)
-		version_min = '10.8'
+		version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.10'
 		return (path, version_min, version)
 
 	if sdk is not None:
@@ -89,7 +89,7 @@ if sys.platform == 'darwin':
 			print('Error: unknown SDK:', sdk)
 			sys.exit(1)
 	else:
-		for version in ('10.8', '10.9', '10.10', '10.11', '10.12', '10.13', '10.14', '10.15'):
+		for version in ('10.10', '10.11', '10.12', '10.13', '10.14', '10.15'):
 			sdk, macosx_version_min, macosx_version = find_sdk(version)
 			if sdk is not None:
 				break
