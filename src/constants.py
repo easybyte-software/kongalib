@@ -125,7 +125,6 @@ INVALID_ALLEGATI_ACTION = 2060                                 #: Azione sugli a
 ENCRYPTED_BACKUP = 2061                                        #: Il backup è cifrato e richiede una password valida per la decifrazione
 ENCRYPTION_NOT_SUPPORTED = 2062                                #: Impossibile cifrare il database a causa della mancanza del supporto di Konga modulo X
 ENCRYPTION_NOT_ENABLED = 2063                                  #: Impossibile cifrare il database: il supporto per la crittografia dei dati è disabilitato
-ENCRYPTION_ERROR = 2064                                        #: Errore di crifratura del database
 ENCRYPTION_NOT_SUPPORTED_BY_RDBMS = 2065
 CANNOT_SET_ENCRYPTION_PASSWORD = 2066                          #: Impossibile impostare la password crittografica; la crittografia dei dati verrà disabilitata
 CANNOT_EXECUTE_TRIGGER = 2067
