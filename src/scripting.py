@@ -375,7 +375,8 @@ class Interpreter(object):
 
 	def set_timeout(self, timeout=None):
 		with self.lock:
-			return self.proxy.set_timeout(timeout)
+			if self.proxy is not None:
+				return self.proxy.set_timeout(timeout)
 
 	def get_time_left(self):
 		with self.lock:
