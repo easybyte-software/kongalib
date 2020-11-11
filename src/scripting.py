@@ -325,8 +325,11 @@ class Interpreter(object):
 
 	def __del__(self):
 		with self.lock:
-			if self.proc:
-				self.proxy.exit()
+			if self.proc is not None:
+				try:
+					self.proxy.exit()
+				except:
+					pass
 
 	def ensure_proc(self):
 		with self.lock:
