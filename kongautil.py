@@ -34,6 +34,7 @@ PRINT_TARGET_XLS				= 4		#: Stampa su file Excel
 
 
 _last_client = None
+_konga_exe = None
 _konga_args = None
 
 
@@ -152,6 +153,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			return client
 	else:
 		global _last_client
+		global _konga_exe
 		global _konga_args
 		client = kongalib.Client()
 		if host is None:
@@ -175,17 +177,12 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'username':		username or '',
 				'password':		password or '',
 				'tenant_key':	tenant_key or '',
+				'konga_exe':	'',
 				'konga_args':	'',
 			})
 			config.add_section('kongautil.connect')
 			config.add_section('kongautil.print_layout')
-			for filename in files:
-				try:
-					config.read(filename)
-				except:
-					pass
-				else:
-					break
+			config.read(files)
 			host = config.get('kongautil.connect', 'host') or None
 			try:	port = int(config.get('kongautil.connect', 'port'))
 			except:	pass
@@ -195,9 +192,12 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			password = config.get('kongautil.connect', 'password') or None
 			tenant_key = config.get('kongautil.connect', 'tenant_key') or None
 
+			_konga_exe = config.get('kongautil.print_layout', 'konga_exe') or None
 			_konga_args = config.get('kongautil.print_layout', 'konga_args') or None
 
 			class ArgumentParser(argparse.ArgumentParser):
+				def _print_message(self, message, file=None):
+					pass
 				def exit(self, status=0, message=None):
 					if status:
 						raise RuntimeError
@@ -267,31 +267,32 @@ def get_window_vars():
 
 def _run_script(script, log):
 	import tempfile, subprocess
-	client_exe = None
-	if sys.platform == 'win32':
-		files = ( 'kongaclient.com', 'konga.com' )
-	else:
-		files = ( 'easybyte-konga-client', 'easybyte-konga' )
-	path = os.environ.get("PATH", None)
-	if path is None:
-		try:
-			path = os.confstr("CS_PATH")
-		except (AttributeError, ValueError):
-			path = os.defpath
-	if path is not None:
-		path = path.split(os.pathsep)
-		for exe in files:
-			seen = set()
-			for dir in path:
-				normdir = os.path.normcase(dir)
-				if not normdir in seen:
-					seen.add(normdir)
-					name = os.path.join(dir, exe)
-					if os.path.exists(name) and os.access(name, os.F_OK | os.X_OK) and not os.path.isdir(name):
-						client_exe = exe
-						break
-			if client_exe is not None:
-				break
+	client_exe = _konga_exe
+	if client_exe is None:
+		if sys.platform == 'win32':
+			files = ( 'kongaclient.com', 'konga.com' )
+		else:
+			files = ( 'easybyte-konga-client', 'easybyte-konga' )
+		path = os.environ.get("PATH", None)
+		if path is None:
+			try:
+				path = os.confstr("CS_PATH")
+			except (AttributeError, ValueError):
+				path = os.defpath
+		if path is not None:
+			path = path.split(os.pathsep)
+			for exe in files:
+				seen = set()
+				for dir in path:
+					normdir = os.path.normcase(dir)
+					if not normdir in seen:
+						seen.add(normdir)
+						name = os.path.join(dir, exe)
+						if os.path.exists(name) and os.access(name, os.F_OK | os.X_OK) and not os.path.isdir(name):
+							client_exe = exe
+							break
+				if client_exe is not None:
+					break
 	if client_exe is None:
 		raise RuntimeError('Cannot find Konga executable')
 	if _last_client is not None:
