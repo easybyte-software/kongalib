@@ -76,26 +76,21 @@ if sys.platform == 'darwin':
 			del sys.argv[index]
 			break
 
-	def find_sdk(version):
-		path = '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%s.sdk' % version
-		if not os.path.exists(path):
-			return (None, None, None)
-		version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.10'
-		return (path, version_min, version)
-
+	if sdk is None:
+		try:
+			sdk = os.path.basename(sorted(glob.glob('/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX*.sdk'))[-1])[6:-4]
+		except:
+			pass
 	if sdk is not None:
-		sdk, macosx_version_min, macosx_version = find_sdk(sdk)
-		if sdk is None:
+		path = '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%s.sdk' % sdk
+		if not os.path.exists(path):
 			print('Error: unknown SDK:', sdk)
 			sys.exit(1)
+		sdk = path
 	else:
-		for version in ('10.10', '10.11', '10.12', '10.13', '10.14', '10.15'):
-			sdk, macosx_version_min, macosx_version = find_sdk(version)
-			if sdk is not None:
-				break
-		else:
-			print('Error: no valid SDK found!')
-			sys.exit(1)
+		print('Error: no valid SDK found!')
+		sys.exit(1)
+	macosx_version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.10'
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
