@@ -220,6 +220,7 @@ UPGRADE_DELETED_INDEX = 2507
 UPGRADE_FINISHED = 2508
 UPGRADE_NOT_NEEDED = 2509                                      #: Il database risulta già aggiornato correttamente all'ultima versione
 DATABASE_TOO_NEW = 2510                                        #: Il database ha una versione troppo nuova per essere aperto dal server
+UPGRADE_RENAMED_FIELD = 2511
 PROGRESS_CREATING_STRUCTURE = 2600                             #: Creo la struttura del database
 PROGRESS_POPULATING_STORAGE_TABLES = 2601                      #: Inizializzo le tabelle di struttura
 PROGRESS_CREATING_INDICES = 2602                               #: Creo gli indici
