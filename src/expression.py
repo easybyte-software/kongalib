@@ -26,8 +26,9 @@ from .compat import *
 
 
 class LRUCache(object):
-	def __init__(self, capacity):
+	def __init__(self, capacity, destructor=None):
 		self.capacity = capacity
+		self.destructor = destructor
 		self.cache = collections.OrderedDict()
 
 	def clear(self):
@@ -51,7 +52,9 @@ class LRUCache(object):
 			self.cache.pop(key)
 		except KeyError:
 			if len(self.cache) >= self.capacity:
-				self.cache.popitem(last=False)
+				item = self.cache.popitem(last=False)
+				if self.destructor is not None:
+					self.destructor(*item)
 		self.cache[key] = value
 
 	def __delitem__(self, key):

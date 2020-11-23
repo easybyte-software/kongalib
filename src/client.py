@@ -843,11 +843,11 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
-	def fetch_binary(self, fieldname, id, type, filename, storage_type=None, success=None, error=None, progress=None):
+	def fetch_binary(self, fieldname, id, type, filename, check_only=False, success=None, error=None, progress=None):
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
-					success(output[OUT_DATA])
+					success(output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM])
 				elif error is not None:
 					error(Error(output[OUT_ERRNO], output[OUT_ERROR]))
 			def errback(errno, errstr, dummy):
@@ -859,7 +859,7 @@ class Client(object):
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
-				IN_STORAGE_TYPE: storage_type,
+				IN_CHECK: check_only,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_FETCH_BINARY, {
@@ -867,17 +867,17 @@ class Client(object):
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
-				IN_STORAGE_TYPE: storage_type,
+				IN_CHECK: check_only,
 			})
 			if output[OUT_ERRNO] == OK:
-				return output[OUT_DATA]
+				return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, fieldname, id, type, filename, storage_type=None, data=None, success=None, error=None, progress=None):
+	def store_binary(self, fieldname, id, type, filename, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
-					success()
+					success(output[OUT_FILENAME])
 				elif error is not None:
 					error(Error(output[OUT_ERRNO], output[OUT_ERROR]))
 			def errback(errno, errstr, dummy):
@@ -889,8 +889,10 @@ class Client(object):
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
-				IN_STORAGE_TYPE: storage_type,
+				IN_ORIGINAL_FILENAME: original_filename,
+				IN_CODE_AZIENDA: code_azienda,
 				IN_DATA: data,
+				IN_DESC: desc,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_STORE_BINARY, {
@@ -898,11 +900,13 @@ class Client(object):
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
-				IN_STORAGE_TYPE: storage_type,
+				IN_ORIGINAL_FILENAME: original_filename,
+				IN_CODE_AZIENDA: code_azienda,
 				IN_DATA: data,
+				IN_DESC: desc,
 			})
 			if output[OUT_ERRNO] == OK:
-				return
+				return output[OUT_FILENAME]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
 	def translate(self, field, value, language):
