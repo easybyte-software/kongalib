@@ -818,6 +818,9 @@ class Client(object):
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
 	def fetch_image(self, fieldname, id, type, success=None, error=None, progress=None):
+		"""Piccolo wrapper alla funzione :meth:`.fetch_binary`, dedicato alle immagini, con l'unica differenza che il valore di ritorno sarà
+		direttamente il contenuto binario dell'immagine in caso di successo (e questo sarà anche l'unico parametro passato alla callback
+		*success*)"""
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
@@ -843,7 +846,17 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
-	def fetch_binary(self, fieldname, id, type, filename, check_only=False, success=None, error=None, progress=None):
+	def fetch_binary(self, field_or_tablename, id, type, filename, check_only=False, success=None, error=None, progress=None):
+		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
+		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
+		``Resources``, mentre *filename* ha senso solo per identificare le risorse di tipo documento.
+		La funzione ritorna una tupla di quattro elementi: ( *dati*, *filename*, *original_filename*, *checksum* ). Questi quattro elementi
+		sono anche i parametri passati alla callback *success* in caso di successo. *dati* sono i dati binari che sono stati caricati dal
+		server; *filename* è il nome file interno con cui è identificata la risorsa, *original_filename* è il nome del file originale che è
+		stato specificato all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati.
+		Se *check_only* è ``True``, i dati binari della risorsa non verranno effettivamente caricati dal dispositivo di archiviazione in cui
+		sono depositati, e *dati* sarà ``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il suo checksum senza
+		effettivamente caricarla da remoto (nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
@@ -855,7 +868,7 @@ class Client(object):
 					error(Error(errno, errstr))
 			
 			return self.execute(CMD_FETCH_BINARY, {
-				IN_FIELD_NAME: fieldname,
+				IN_FIELD_NAME: field_or_tablename,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
@@ -863,7 +876,7 @@ class Client(object):
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_FETCH_BINARY, {
-				IN_FIELD_NAME: fieldname,
+				IN_FIELD_NAME: field_or_tablename,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
@@ -873,7 +886,15 @@ class Client(object):
 				return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, fieldname, id, type, filename, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
+	def store_binary(self, field_or_tablename, id, type, filename, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
+		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
+		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
+		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
+		automaticamente); *original_filename* è il nome file originale i cui dati si stanno salvando sul server; *data* sono i dati binari
+		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando.
+		La funzione ritorna il nome del file interno usato dal server per identificare la risorsa, che come detto sopra è uguale a *filename* se
+		quest'ultimo è diverso da ``None``, altrimenti verrà ritornato il nome file generato dal server. La callback *success* se specificata
+		riceverà *filename* come unico parametro."""
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
@@ -885,7 +906,7 @@ class Client(object):
 					error(Error(errno, errstr))
 			
 			return self.execute(CMD_STORE_BINARY, {
-				IN_FIELD_NAME: fieldname,
+				IN_FIELD_NAME: field_or_tablename,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
@@ -896,7 +917,7 @@ class Client(object):
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_STORE_BINARY, {
-				IN_FIELD_NAME: fieldname,
+				IN_FIELD_NAME: field_or_tablename,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
 				IN_FILENAME: filename,
