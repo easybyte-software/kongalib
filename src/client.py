@@ -846,7 +846,7 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
-	def fetch_binary(self, field_or_tablename, id, type, filename, check_only=False, success=None, error=None, progress=None):
+	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, success=None, error=None, progress=None):
 		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
 		``Resources``, mentre *filename* ha senso solo per identificare le risorse di tipo documento.
@@ -857,6 +857,8 @@ class Client(object):
 		Se *check_only* è ``True``, i dati binari della risorsa non verranno effettivamente caricati dal dispositivo di archiviazione in cui
 		sono depositati, e *dati* sarà ``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il suo checksum senza
 		effettivamente caricarla da remoto (nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
+		if (type == 0) and (not filename):
+			raise ValueError('filename must be specified for document type resources')
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
@@ -886,7 +888,7 @@ class Client(object):
 				return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, field_or_tablename, id, type, filename, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
