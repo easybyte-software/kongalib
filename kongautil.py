@@ -470,49 +470,13 @@ def set_timeout(timeout):
 
 
 
-def _get_external_path(images, table_name, code_azienda):
-	import os, os.path
-	client = _last_client or connect()
-	paths = client.select_data('EB_Master', ['PathFileLocali'])[0][0].split(chr(0))
-	for path in paths:
-		path = os.path.normpath(path)
-		if os.access(path, os.F_OK|os.R_OK|os.W_OK):
-			if code_azienda:
-				business_path = os.path.join(path, 'aziende', client.select_data('EB_Aziende', ['RagioneSociale'], "Codice = '%s'" % code_azienda)[0][0])
-			else:
-				business_path = None
-			table_type = client.execute(kongalib.CMD_GET_TABLE_TYPES)[kongalib.OUT_TYPES].get(table_name, 1)
-			if (table_type == 2) and (business_path is None):
-				raise ValueError('Business code required for business tables')
-			if (table_type == 2) or ((table_type == 3) and (code_azienda is not None)):
-				path = business_path
-			else:
-				path = os.path.join(path, 'common')
-			return os.path.join(path, 'Immagini' if images else 'Allegati', table_name)
-	else:
-		raise RuntimeError('Unable to autodetect external data path')
-
-
-
 def get_external_images_path(table_name, code_azienda):
-	"""Restituisce il percorso per accedere ai file delle immagini associate ai record della tabella *table_name* per il database corrente e l'azienda specificata da *code_azienda* (passando ``None`` come
-	*code_azienda* verrà restituito il percorso dei file comuni a tutte le aziende); se nessun database è attualmente connesso, la funzione restituirà ``None``.
-	"""
-	if _proxy.is_valid():
-		return _proxy.util.get_external_path(True, table_name, code_azienda)
-	else:
-		return _get_external_path(True, table_name, code_azienda)
+	raise RuntimeError('Images storage is managed by the server since Konga 1.9; please use kongalib.Client.fetch_binary() and kongalib.Client.store_binary() to load/save images')
 
 
 
 def get_external_attachments_path(table_name, code_azienda):
-	"""Restituisce il percorso per accedere ai file degli allegati associati ai record della tabella *table_name* per il database corrente e l'azienda specificata da *code_azienda* (passando ``None`` come
-	*code_azienda* verrà restituito il percorso dei file comuni a tutte le aziende); se nessun database è attualmente connesso, la funzione restituirà ``None``.
-	"""
-	if _proxy.is_valid():
-		return _proxy.util.get_external_path(False, table_name, code_azienda)
-	else:
-		return _get_external_path(False, table_name, code_azienda)
+	raise RuntimeError('Attachments storage is managed by the server since Konga 1.9; please use kongalib.Client.fetch_binary() and kongalib.Client.store_binary() to load/save attachments')
 
 
 
