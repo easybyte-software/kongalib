@@ -694,7 +694,7 @@ class Expression(_HasLogic):
 		@rtype:					L{ColumnDescriptor}
 		"""
 		expr = Expression()
-		for child in node.getchildren():
+		for child in node:
 			if ET.iselement(child):
 				if child.tag == 'expression':
 					elem = Expression.unserialize_xml(child)
