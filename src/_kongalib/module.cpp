@@ -1082,7 +1082,9 @@ MOD_INIT(_kongalib)
 	
 	CL_Init();
 
+#if PY_VERSION_HEX < 0x03090000
 	PyEval_InitThreads();
+#endif
 
 #if PY3K
 	MGA::gModuleDefPtr = &sModuleDef;
