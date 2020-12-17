@@ -188,6 +188,7 @@ CANNOT_RENAME_OPEN_DATABASE = 2218                             #: Impossibile ri
 QUERY_ERRORV = 2228
 DRIVER_LOST_CONNECTION = 2229
 ENCRYPTED_DATABASE = 2230                                      #: Il database è cifrato e richiede una password valida per la decifrazione
+GENERIC_DATABASE_MESSAGE = 2231
 DATA_DICTIONARY_NOT_FOUND = 2400                               #: Dizionario dei dati non trovato
 CANNOT_LOAD_DATA_DICTIONARY = 2401
 MALFORMED_DATA_DICTIONARY = 2402                               #: Il data dictionary non è valido
