@@ -23,7 +23,7 @@ jobs:
 
 - job: LinuxSDist
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-latest'
   variables:
     python.architecture: 'none'
   steps:
@@ -47,7 +47,7 @@ jobs:
         image: quay.io/pypa/manylinux2010_x86_64
         python.architecture: x64
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-latest'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-manylinux-wheels.yml
@@ -74,7 +74,7 @@ jobs:
       Python39:
         python.version: '3.9'
   pool:
-    vmImage: 'macOS-10.14'
+    vmImage: 'macOS-latest'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
@@ -95,19 +95,19 @@ jobs:
       Python36:
         python.version: '3.6'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python37:
         python.version: '3.7'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python38:
         python.version: '3.8'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python39:
         python.version: '3.9'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python27_32:
         python.version: '2.7'
         python.architecture: 'x86'
@@ -115,21 +115,21 @@ jobs:
       Python36_32:
         python.version: '3.6'
         python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python37_32:
         python.version: '3.7'
         python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python38_32:
         python.version: '3.8'
         python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python39_32:
         python.version: '3.9'
         python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-latest'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
