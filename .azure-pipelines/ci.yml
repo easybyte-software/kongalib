@@ -13,7 +13,7 @@ parameters:
 - name: konga_branch_param
   displayName: Branch from which to fetch Konga sources
   type: string
-  default: stable-1.9.0
+  default: stable-1.9.1
 
 variables:
   konga_branch: ${{ parameters.konga_branch_param }}
@@ -71,6 +71,8 @@ jobs:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
+      Python39:
+        python.version: '3.9'
   pool:
     vmImage: 'macOS-10.14'
   steps:
