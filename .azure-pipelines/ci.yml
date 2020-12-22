@@ -13,7 +13,7 @@ parameters:
 - name: konga_branch_param
   displayName: Branch from which to fetch Konga sources
   type: string
-  default: stable-1.8.2
+  default: stable-1.9.0
 
 variables:
   konga_branch: ${{ parameters.konga_branch_param }}
@@ -102,6 +102,10 @@ jobs:
         python.version: '3.8'
         python.architecture: 'x64'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+      Python39:
+        python.version: '3.9'
+        python.architecture: 'x64'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python27_32:
         python.version: '2.7'
         python.architecture: 'x86'
@@ -116,6 +120,10 @@ jobs:
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python38_32:
         python.version: '3.8'
+        python.architecture: 'x86'
+        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
+      Python39_32:
+        python.version: '3.9'
         python.architecture: 'x86'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:

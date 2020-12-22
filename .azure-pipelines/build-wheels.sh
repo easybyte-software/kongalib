@@ -19,7 +19,7 @@ cd /io
 rm -fr build dist *.egg-info
 
 
-PYTHONS=(/opt/python/cp27-cp27mu /opt/python/cp36-cp36m /opt/python/cp37-cp37m /opt/python/cp38-cp38)
+PYTHONS=(/opt/python/cp27-cp27mu /opt/python/cp36-cp36m /opt/python/cp37-cp37m /opt/python/cp38-cp38 /opt/python/cp39-cp39)
 
 for PYBIN in "${PYTHONS[@]}"; do
     "${PYBIN}/bin/pip" wheel /io/ -w wheelhouse/
