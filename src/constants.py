@@ -977,6 +977,7 @@ ELAB_TRDF_RETTIFICA_ROW_NF = 7709                              #: ATTENZIONE: im
 ELAB_VERFAT_UPDATE_DACF_FAILED = 7725
 ELAB_VERFAT_INSERT_DACF_FAILED = 7726
 ELAB_DIFFCAMBIO_ESERCIZIO = 7727                               #: Non è possibile effettuare l'elaborazione sull'ultimo esercizio inserito!
+ELAB_BINARY_MAINTAINANCE_SUMMARY = 7750
 ACTIVITY_LOGIN = 8000                                          #: Iniziata sessione di lavoro
 ACTIVITY_LOGOUT = 8001                                         #: Terminata sessione di lavoro
 ACTIVITY_BAD_LOGIN = 8002                                      #: Tentativo di accesso non riuscito
