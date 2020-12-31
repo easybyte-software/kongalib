@@ -278,11 +278,11 @@ def _trampoline(conn, sem, foreground, dll_paths):
 		filename = args[0]
 		if cwd:
 			os.chdir(cwd)
-		script = compile(script, filename, 'exec', dont_inherit=1)
-		exc = None
 		init_interpreter()
-		_State.controller.set_timeout(timeout)
 		try:
+			script = compile(script, filename, 'exec', dont_inherit=1)
+			exc = None
+			_State.controller.set_timeout(timeout)
 			exec(script, { '__file__': filename, '__name__': '__main__' })
 		except Exception as e:
 			import traceback
