@@ -345,8 +345,10 @@ public:
 			MGA::MODULE_STATE *state = GET_STATE();
 			CL_Status status;
 
-			if (!state)
+			if (!state) {
+				PyGILState_Release(gstate);
 				return CL_OK;
+			}
 
 			Py_INCREF(fDeferred);
 
