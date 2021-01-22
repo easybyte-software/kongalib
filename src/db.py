@@ -13,7 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-import exceptions
 import time
 import datetime
 
@@ -27,14 +26,14 @@ threadsafety = 2			#: E' possibile usare le funzioni di modulo e gli oggetti :cl
 paramstyle = "format"		#: Il formato dei parametri nelle query deve essere nello stile printf (WHERE name=%s)
 
 
-class Error(exceptions.Exception):
+class Error(Exception):
 	"""Eccezione base, come da specifica."""
 	def __init__(self, msg):
 		self.msg = msg
 	def __str__(self):
 		return self.msg
 
-class Warning(exceptions.Exception):
+class Warning(Exception):
 	pass
 
 class InterfaceError(Error):
