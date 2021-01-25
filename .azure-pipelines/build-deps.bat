@@ -9,6 +9,9 @@ if "%PYTHON_VERSION%"=="2.7" (
 	call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 )
 
+echo Installing winflexbison
+choco install winflexbison
+
 echo Preparing third_party
 cd %BUILD_SOURCESDIRECTORY%
 md third_party
