@@ -23,7 +23,7 @@ steps:
   displayName: 'Show wheelhouse'
 
 - script: |
-    python -m pip install kongalib --no-index -f wheelhouse
+    python -m pip install --no-index wheelhouse/*.whl
   displayName: 'Install wheel'
 
 - script: |
