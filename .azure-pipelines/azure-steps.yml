@@ -8,19 +8,17 @@ steps:
     )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python setup.py bdist_wheel -d wheelhouse
+    dir wheelhouse
   displayName: 'Build wheel (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
     python -m pip wheel . -w wheelhouse/
-  displayName: 'Build wheel (macOS)'
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
-
-- script: |
     ls -lh wheelhouse
     mkdir -p dist
     cp wheelhouse/kongalib* dist/.
-  displayName: 'Show wheelhouse'
+  displayName: 'Build wheel (macOS)'
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: |
     cd wheelhouse
