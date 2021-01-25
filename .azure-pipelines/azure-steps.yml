@@ -9,7 +9,6 @@ steps:
       copy /Y $(Build.SourcesDirectory)\kongaui.py $(Build.SourcesDirectory)\doc\_static
     )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
-#    dir %KONGASDK%\include\ebpr
     python -m pip wheel . -w wheelhouse/
   displayName: 'Build wheel (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
