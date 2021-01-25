@@ -23,7 +23,8 @@ steps:
   displayName: 'Show wheelhouse'
 
 - script: |
-    python -m pip install --no-index wheelhouse/*.whl
+    cd wheelhouse
+    python -m pip install --no-index *.whl
   displayName: 'Install wheel'
 
 - script: |
