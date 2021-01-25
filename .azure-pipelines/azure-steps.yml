@@ -5,11 +5,9 @@ steps:
     if "$(python.version)"=="2.7" (
       set MSSdk=1
       set DISTUTILS_USE_SDK=1
-      copy /Y $(Build.SourcesDirectory)\kongautil.py $(Build.SourcesDirectory)\doc\_static
-      copy /Y $(Build.SourcesDirectory)\kongaui.py $(Build.SourcesDirectory)\doc\_static
     )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
-    python -m pip wheel . -w wheelhouse/
+    python setup.py bdist_wheel -d wheelhouse
   displayName: 'Build wheel (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
