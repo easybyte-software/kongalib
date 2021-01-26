@@ -8,21 +8,23 @@ steps:
     )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python setup.py bdist_wheel -d wheelhouse
-    dir wheelhouse
   displayName: 'Build wheel (Windows)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
     python -m pip wheel . -w wheelhouse/
-    ls -lh wheelhouse
-    mkdir -p dist
-    cp wheelhouse/kongalib* dist/.
   displayName: 'Build wheel (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: |
-    cd wheelhouse
-    python -m pip install --no-index *.whl
+    ls -lh wheelhouse
+    mkdir -p dist
+    cp wheelhouse/kongalib* dist/.
+  displayName: 'Show wheelhouse'
+
+- script: |
+    python -m pip download colorama -d wheelhouse
+    python -m pip install kongalib --no-index -f wheelhouse
   displayName: 'Install wheel'
 
 - script: |

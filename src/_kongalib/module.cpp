@@ -46,7 +46,7 @@ unsigned long						sMainThreadID = -1;
 
 
 static void
-onCreateWorker(CL_ThreadID tid)
+onCreateWorker(CL_ThreadID tid, void *context)
 {
 	if (Py_IsInitialized()) {
 		PyGILState_STATE gstate = PyGILState_Ensure();
@@ -56,7 +56,7 @@ onCreateWorker(CL_ThreadID tid)
 
 
 static void
-onDestroyWorker(CL_ThreadID tid)
+onDestroyWorker(CL_ThreadID tid, void *context)
 {
 	if (Py_IsInitialized()) {
 		PyGILState_STATE gstate = PyGILState_Ensure();
