@@ -239,7 +239,8 @@ class Client(object):
 		database nelle liste è un ``dict`` che contiene almeno le chiavi *name*, *desc*, *uuid*, *created_ts* e *modified_ts*. L'eccezione
 		:class:`~kongalib.Error` viene lanciata se si verifica un errore. Se *success* è una funzione nella forma ``success(databases, userdata)``,
 		``list_databases`` restituisce immediatamente un oggetto :class:`~kongalib.Deferred` e la chiamata viene eseguita in modo asincrono; la
-		callback *success* verrà invocata a tempo debito con la lista dei database ed il parametro *userdata*.
+		callback *success* verrà invocata a tempo debito con la lista dei database ed il parametro *userdata*. Se *quick* è ``True``, la funzione
+		ritorna il più velocemente possibile ma la scansione dei database disponibili potrebbe risultare ancora incompleta.
 		"""
 		return self._impl.list_databases(driver, quick, success, error, progress, userdata, timeout)
 	

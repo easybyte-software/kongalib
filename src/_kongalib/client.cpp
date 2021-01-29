@@ -844,7 +844,7 @@ MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 {
 	char *kwlist[] = { "driver", "quick", "success", "error", "progress", "userdata", "timeout", NULL };
 	string driver;
-	PyObject *driverObj = NULL, *quickObj = Py_False, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
+	PyObject *driverObj = NULL, *quickObj = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
 	CLU_Table *databases;
