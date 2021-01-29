@@ -9,6 +9,8 @@ if "%PYTHON_VERSION%"=="2.7" (
 	call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 )
 
+set PATH=%PATH%;%BUILD_SOURCESDIRECTORY%\win_flex_bison-2.5.24
+
 echo Preparing third_party
 cd %BUILD_SOURCESDIRECTORY%
 md third_party

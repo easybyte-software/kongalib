@@ -13,8 +13,9 @@ steps:
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
 - script: |
-    conda install -c conda-forge winflexbison
     if "$(python.version)"=="2.7" ( choco install vcpython27 --yes )
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://github.com/lexxmark/winflexbison/releases/download/v2.5.24/win_flex_bison-2.5.24.zip', 'win_flex_bison-2.5.24.zip')"
+    7x x win_flex_bison-2.5.24.zip
     python -c "from urllib.request import urlretrieve; urlretrieve('https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.zip', 'mpdecimal-2.4.2.zip')"
     7z x mpdecimal-2.4.2.zip
     python -c "from urllib.request import urlretrieve; urlretrieve('https://zlib.net/zlib-1.2.11.tar.gz', 'zlib-1.2.11.tar.gz')"
