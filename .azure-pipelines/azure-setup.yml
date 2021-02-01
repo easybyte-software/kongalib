@@ -8,7 +8,8 @@ steps:
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
-    brew install zlib pcre
+    wget https://ftp.pcre.org/pub/pcre/pcre-8.31.zip
+    unzip pcre-8.31.zip
   displayName: 'Download dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
@@ -33,10 +34,16 @@ steps:
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
+    export MACOSX_DEPLOYMENT_TARGET="10.10"
     export KONGALIB_ROOT=`pwd`
     tar -zxvf mpdecimal-2.4.2.tar.gz
     cd mpdecimal-2.4.2
     ./configure
+    CFLAGS=-fPIC make -j2
+    sudo make install
+    cd ..
+    cd pcre-8.31
+    sh ./configure --disable-shared --enable-static --enable-utf --disable-dependency-tracking
     CFLAGS=-fPIC make -j2
     sudo make install
     cd ..
