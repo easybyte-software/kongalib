@@ -12,6 +12,7 @@ steps:
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
+    export MACOSX_DEPLOYMENT_TARGET="10.10"
     python -m pip wheel . -w wheelhouse/
   displayName: 'Build wheel (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
