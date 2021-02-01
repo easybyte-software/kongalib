@@ -36,21 +36,21 @@ steps:
 - script: |
     export MACOSX_DEPLOYMENT_TARGET="10.10"
     export KONGALIB_ROOT=`pwd`
-    mkdir -p dependencies
+    mkdir -p third_party
     cd mpdecimal-2.4.2
-    ./configure --prefix=$BUILD_SOURCESDIRECTORY/dependencies
+    ./configure --prefix=$BUILD_SOURCESDIRECTORY/third_party
     CFLAGS=-fPIC make -j2
     sudo make install
     cd ..
     cd pcre-8.31
-    sh ./configure --disable-shared --enable-static --enable-utf --disable-dependency-tracking --prefix=$BUILD_SOURCESDIRECTORY/dependencies
+    sh ./configure --disable-shared --enable-static --enable-utf --disable-dependency-tracking --prefix=$BUILD_SOURCESDIRECTORY/third_party
     CFLAGS=-fPIC make -j2
     sudo make install
     cd ..
     cd konga
     mkdir -p out
     cd out
-    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DCMAKE_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/dependencies
+    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DCMAKE_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/third_party -DCMAKE_INSTALL_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/third_party
     if [ "$(verbose)" != "true" ]; then make -j2; fi
     if [ "$(verbose)" == "true" ]; then make VERBOSE=1; fi
     sudo make install

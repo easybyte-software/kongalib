@@ -13,6 +13,7 @@ steps:
 
 - script: |
     export MACOSX_DEPLOYMENT_TARGET="10.10"
+    export KONGASDK=$BUILD_SOURCESDIRECTORY/third_party
     python -m pip wheel -vvv . -w wheelhouse/
   displayName: 'Build wheel (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
