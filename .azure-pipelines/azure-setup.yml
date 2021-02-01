@@ -36,6 +36,7 @@ steps:
 - script: |
     export MACOSX_DEPLOYMENT_TARGET="10.10"
     export KONGALIB_ROOT=`pwd`
+    ls -l /usr/local/lib
     tar -zxvf mpdecimal-2.4.2.tar.gz
     cd mpdecimal-2.4.2
     ./configure
@@ -47,6 +48,7 @@ steps:
     CFLAGS=-fPIC make -j2
     sudo make install
     cd ..
+    ls -l /usr/local/lib
     cd konga
     mkdir -p out
     cd out
