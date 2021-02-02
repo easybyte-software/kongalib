@@ -50,7 +50,7 @@ steps:
     cd konga
     mkdir -p out
     cd out
-    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DCMAKE_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/third_party -DCMAKE_INSTALL_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/third_party
+    cmake .. -DOPT_USE_CPP11=1 -DOPT_NO_SSL=1 -DOPT_KONGALIB_WHEEL=1 -DCMAKE_PREFIX_PATH=$BUILD_SOURCESDIRECTORY/third_party
     if [ "$(verbose)" != "true" ]; then make -j2; fi
     if [ "$(verbose)" == "true" ]; then make VERBOSE=1; fi
     sudo make install
