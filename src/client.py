@@ -818,6 +818,37 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
+	def list_binaries(self, field_or_tablename, id, success=None, error=None, progress=None):
+		"""Ottiene la lista dei dati binari associati ad una scheda del database, identificata da *field_or_tablename* (che può essere un nome
+		tabella o un campo da cui risolvere il nome tabella) e *id*. La funzione ritorna una lista di tuple, in cui la n-esima tupla ha la
+		forma ``( Tipo, NomeAllegato, NomeOriginale )``; *Tipo* è un intero ed è uno dei valori della *Choice* ``Resources``, *NomeAllegato* è
+		il nome assegnato internamente a Konga per identificare univocamente il contenuto binario, mentre *NomeOriginale* è il nome del file
+		originale da cui è stato caricato il contenuto. Se *success* è diverso da ``None``, la callback verrà invocata in caso di successo
+		con la lista di tuple di cui sopra.
+		"""
+		if success is not None:
+			def callback(output, dummy):
+				if output[OUT_ERRNO] == OK:
+					success(output[OUT_LIST])
+				elif error is not None:
+					error(Error(output[OUT_ERRNO], output[OUT_ERROR]))
+			def errback(errno, errstr, dummy):
+				if error is not None:
+					error(Error(errno, errstr))
+			
+			return self.execute(CMD_LIST_BINARIES, {
+				IN_FIELD_NAME: field_or_tablename,
+				IN_ROW_ID: id,
+			}, success=callback, error=errback, progress=progress)
+		else:
+			output = self.execute(CMD_LIST_BINARIES, {
+				IN_FIELD_NAME: field_or_tablename,
+				IN_ROW_ID: id,
+			})
+			if output[OUT_ERRNO] == OK:
+				return output[OUT_LIST]
+			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
+
 	def fetch_image(self, fieldname, id, type, success=None, error=None, progress=None):
 		"""Piccolo wrapper alla funzione :meth:`.fetch_binary`, dedicato alle immagini, con l'unica differenza che il valore di ritorno sarà
 		direttamente il contenuto binario dell'immagine in caso di successo (e questo sarà anche l'unico parametro passato alla callback
