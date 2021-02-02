@@ -818,18 +818,19 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
-	def list_binaries(self, field_or_tablename, id, success=None, error=None, progress=None):
+	def list_binaries(self, field_or_tablename, id, type=None, success=None, error=None, progress=None):
 		"""Ottiene la lista dei dati binari associati ad una scheda del database, identificata da *field_or_tablename* (che può essere un nome
 		tabella o un campo da cui risolvere il nome tabella) e *id*. La funzione ritorna una lista di tuple, in cui la n-esima tupla ha la
 		forma ``( Tipo, NomeAllegato, NomeOriginale )``; *Tipo* è un intero ed è uno dei valori della *Choice* ``Resources``, *NomeAllegato* è
 		il nome assegnato internamente a Konga per identificare univocamente il contenuto binario, mentre *NomeOriginale* è il nome del file
-		originale da cui è stato caricato il contenuto. Se *success* è diverso da ``None``, la callback verrà invocata in caso di successo
-		con la lista di tuple di cui sopra.
+		originale da cui è stato caricato il contenuto. Se *type* è specificato, la funzione filtrerà i risultati in baso ad esso, ritornando
+		solo le tuple con il *Tipo* corretto.
+		Se *success* è diverso da ``None``, la callback verrà invocata in caso di successo con la lista di tuple di cui sopra.
 		"""
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
-					success(output[OUT_LIST])
+					success([ tuple(row) for row in output[OUT_LIST] if ((type is None) or (row[0] == type)) ])
 				elif error is not None:
 					error(Error(output[OUT_ERRNO], output[OUT_ERROR]))
 			def errback(errno, errstr, dummy):
@@ -846,7 +847,7 @@ class Client(object):
 				IN_ROW_ID: id,
 			})
 			if output[OUT_ERRNO] == OK:
-				return output[OUT_LIST]
+				return [ tuple(row) for row in output[OUT_LIST] if ((type is None) or (row[0] == type)) ]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
 	def fetch_image(self, fieldname, id, type, success=None, error=None, progress=None):
