@@ -265,7 +265,7 @@ def get_window_vars():
 
 
 
-def _run_script(script, log):
+def _run_script(script, log, client):
 	import tempfile, subprocess
 	client_exe = _konga_exe
 	if client_exe is None:
@@ -295,8 +295,9 @@ def _run_script(script, log):
 					break
 	if client_exe is None:
 		raise RuntimeError('Cannot find Konga executable')
-	if _last_client is not None:
-		info = _last_client.get_connection_info()
+	client = client or _last_client
+	if client is not None:
+		info = client.get_connection_info()
 		lines = [
 			'.connect "%s" -p %d' % (info['host'], info['port']),
 			'.user "%s" -p "%s"' % (info['user']['name'], info['user']['password']),
@@ -324,7 +325,7 @@ def _run_script(script, log):
 
 
 
-def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=None, filename=None, progress=True):
+def print_layout(command_or_layout, builtins=None, code_azienda=None, code_esercizio=None, target=None, filename=None, progress=True, client=None):
 	"""Esegue una stampa su Konga. *command_or_layout* può essere un nome di comando di Konga, oppure un sorgente XML contenente la struttura stessa del layout da
 	stampare; *builtins* è un ``dict`` i cui valori verranno passati al motore di stampa e saranno disponibili all'interno degli script del layout; *code_azienda* e
 	*code_esercizio* identificano l'azienda e l'esercizio per cui eseguire la stampa, mentre *target* è una delle costanti ``PRINT_TARGET_*`` definite sopra, che
@@ -336,7 +337,9 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 	
 	.. warning::
 	   Se eseguita fuori da Konga, questa funzione richiede che sull'host sia stato installato Konga Client (o Konga), e non supporta come *target* i valori
-	   ``PRINT_TARGET_PREVIEW`` e ``PRINT_TARGET_PAPER``.
+	   ``PRINT_TARGET_PREVIEW`` e ``PRINT_TARGET_PAPER``. Konga Client (o Konga) verrà invocato e provvederà a connettersi al client corrente e stampare il
+	   documento richiesto; i parametri di connessione saranno ricavati automaticamente dal client ottenuto dall'ultima chiamata alla funzione :func:`kongautil.connect`
+	   oppure, se specificato, dal parametro ``client``.
 	"""
 	if _proxy.is_valid():
 		if target is None:
@@ -368,7 +371,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 			'.print "%s" %s -o %s -f "%s"' % (command_or_layout, ' '.join([ '%s=%s' % (key, quote(str(value))) for key, value in builtins.items() ]), target, filename)
 		]
 		try:
-			_run_script(script, log)
+			_run_script(script, log, client)
 		finally:
 			if temp is not None:
 				os.unlink(temp)
