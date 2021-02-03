@@ -287,15 +287,17 @@ class Client(object):
 		"""
 		return self._impl.upgrade_database(password, driver, name, success, error, progress, userdata, timeout)
 	
-	def delete_database(self, password, driver, name, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
-		"""Cancella il database specificato.
+	def delete_database(self, password, driver, name, delete_cloud_data=None, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+		"""Cancella il database specificato. Se *delete_cloud_data* è ``None`` (valore predefinito) la cancellazione sarà negata nel caso ci siano
+		dati binari legati al database al momento presenti nel cloud; in caso contrario i dati binari saranno o meno cancellati dal cloud in base
+		al valore del parametro.
 		Se *success* è ``None``, la chiamata è bloccante e viene lanciata l'eccezione :class:`~kongalib.Error` in caso di errore.
 		Se *success* è una funzione nella forma ``success(userdata)``, la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred`
 		e l'operazione viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito con il parametro *userdata*.
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		return self._impl.delete_database(password, driver, name, success, error, progress, userdata, timeout)
+		return self._impl.delete_database(password, driver, name, delete_cloud_data, success, error, progress, userdata, timeout)
 	
 	def query(self, query, native=False, full_column_names=False, collapse_blobs=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una query SQL sul database attivo nella connessione corrente. Se *native* è ``True``, la query viene passata al driver

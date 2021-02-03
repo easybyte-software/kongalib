@@ -1038,27 +1038,32 @@ static PyObject *
 MGA_Client_delete_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static char *kwlist[] = { "password", "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "delete_cloud_data", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name;
-	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
+	PyObject *deleteCloudData = Py_None, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
+	bool deleteCloudDataValue, *deleteCloudDataPtr = NULL;
 	
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&O&|OOOOi:delete_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &driver, MGA::ConvertString, &name, &success, &error, &progress, &userdata, &timeout))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&O&|OOOOOi:delete_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &driver, MGA::ConvertString, &name, &deleteCloudData, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
+	if (deleteCloudData != Py_None) {
+		deleteCloudDataValue = PyObject_IsTrue(deleteCloudData) ? true : false;
+		deleteCloudDataPtr = &deleteCloudDataValue;
+	}
 	
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->DeleteDatabase(password, driver, name, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->DeleteDatabase(password, driver, name, deleteCloudDataPtr, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->DeleteDatabase(password, driver, name);
+		result = self->fClient->DeleteDatabase(password, driver, name, deleteCloudDataPtr);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
