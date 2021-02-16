@@ -760,6 +760,7 @@ ERROR_DATI_DETT_SCAD = 5434
 DATI_INTRA_DELETE_PROGRESSIVO = 5435                           #: Non è possibile eliminare i dati intrast contenuti nella registrazione di prima nota perchè sono stati inviati!
 PN_CLIFO_INCASSO_MISS = 5436                                   #: Manca il Cliente/Fornitore per l'incasso automatico!
 CARSCA_LOTTO_NOT_FOUND = 5437
+DATI_ANN_CF_NOT_FOUND = 5438                                   #: Nessun Dato Annuale Cliente Fornitore trovato in corrispondenza dei dati cliente fornitore per azienda
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
