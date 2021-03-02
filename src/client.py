@@ -923,7 +923,7 @@ class Client(object):
 				return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, code_azienda=None, success=None, error=None, progress=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, success=None, error=None, progress=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
@@ -931,7 +931,9 @@ class Client(object):
 		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando.
 		La funzione ritorna il nome del file interno usato dal server per identificare la risorsa, che come detto sopra è uguale a *filename* se
 		quest'ultimo è diverso da ``None``, altrimenti verrà ritornato il nome file generato dal server. La callback *success* se specificata
-		riceverà *filename* come unico parametro."""
+		riceverà *filename* come unico parametro.
+		Se *data* è ``None``, la funzione cancella i dati binari associati alla scheda; *force_delete* in questo caso può essere ``True`` se
+		si desidera cancellare il riferimento ai dati anche se i dati non sono raggiungibili dal server."""
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
@@ -951,6 +953,7 @@ class Client(object):
 				IN_CODE_AZIENDA: code_azienda,
 				IN_DATA: data,
 				IN_DESC: desc,
+				IN_FORCE_DELETE: force_delete,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_STORE_BINARY, {
@@ -962,6 +965,7 @@ class Client(object):
 				IN_CODE_AZIENDA: code_azienda,
 				IN_DATA: data,
 				IN_DESC: desc,
+				IN_FORCE_DELETE: force_delete,
 			})
 			if output[OUT_ERRNO] == OK:
 				return output[OUT_FILENAME]
