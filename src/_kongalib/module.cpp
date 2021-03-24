@@ -889,8 +889,27 @@ get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	if (state->fTimeOut)
-		return PyInt_FromLong(CL_MAX(0, state->fTimeOut - (CL_GetTime() - state->fStartTime)));
+	if (state->fTimeOut) {
+		return PyInt_FromLong((long)state->fTimeOut);
+	}
+	else
+		Py_RETURN_NONE;
+}
+
+
+static PyObject *
+get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	MGA::MODULE_STATE *state = GET_STATE();
+	if (!state) {
+		PyErr_SetString(PyExc_RuntimeError, "no module state!");
+		return NULL;
+	}
+
+	if (state->fTimeOut) {
+		uint32 now = CL_GetTime();
+		return PyInt_FromLong(state->fTimeOut - CL_MIN(state->fTimeOut, (now - state->fStartTime)));
+	}
 	else
 		Py_RETURN_NONE;
 }
@@ -949,7 +968,8 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
 	{	"get_application_log_path",		(PyCFunction)get_application_log_path,		METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
 	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
-	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the current time left for interpreter timeout or None."},
+	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
+	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
 	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_NOARGS,					"_set_process_foreground()\n\nBrings process to the foreground." },
 	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
 	{	NULL,							NULL,										0,								NULL }

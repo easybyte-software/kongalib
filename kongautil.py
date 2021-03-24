@@ -455,21 +455,21 @@ def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 def suspend_timeout():
 	"""Sospende il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		return _proxy.builtin.set_timeout()
+		return _proxy.builtin.set_timeout(restore=False)
 
 
 
 def resume_timeout(timeout):
 	"""Ripristina il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		_proxy.builtin.set_timeout(timeout)
+		_proxy.builtin.set_timeout(timeout, restore=False)
 
 
 
 def set_timeout(timeout):
 	"""Imposta il timeout di esecuzione dello script in secondi, passati i quali verrà mostrata una finestra di avviso. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		_proxy.builtin.set_timeout(timeout * 1000)
+		_proxy.builtin.set_timeout(timeout * 1000, restore=False)
 
 
 

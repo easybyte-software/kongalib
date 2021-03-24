@@ -17,7 +17,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from kongalib import Error, start_timer, PY3
-from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, _set_process_foreground
+from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
 
 import sys
 import os
@@ -72,16 +72,20 @@ class _TimeoutBlocker(object):
 		self.lock = threading.RLock()
 	def __enter__(self):
 		try:
-			self.timeout = set_interpreter_timeout(0)
+			self.timeout = get_interpreter_time_left() or 0
+			set_interpreter_timeout(0)
 		except:
 			self.timeout = 0
 		self.lock.acquire()
 	def __exit__(self, exc_type, exc_value, exc_traceback):
 		self.lock.release()
-		try:
-			set_interpreter_timeout(self.timeout)
-		except:
-			pass
+		if _State.restore_timeout:
+			try:
+				set_interpreter_timeout(self.timeout)
+			except:
+				pass
+		else:
+			_State.restore_timeout = True
 
 
 class Proxy(object):
@@ -123,6 +127,7 @@ class _State(object):
 	handler = None
 	controller = None
 	io = []
+	restore_timeout = True
 
 
 proxy = Proxy()
@@ -132,6 +137,10 @@ _logger = logging.getLogger("script")
 def timeout_handler():
 	if proxy.builtin.handle_timeout():
 		raise InterpreterTimeout
+	else:
+		timeout = _State.controller.timeout
+		set_interpreter_timeout(timeout)
+
 
 
 def init_interpreter(init_logging=True):
@@ -191,6 +200,7 @@ class _Controller(threading.Thread):
 		self.request_cond = threading.Condition(self.lock)
 		self.request = None
 		self.exc_info = None
+		self.timeout = None
 		super(_Controller, self).__init__()
 
 	def get_execute_request(self):
@@ -233,11 +243,13 @@ class _Controller(threading.Thread):
 				_logger.debug(traceback.format_exc())
 		sys.exit(0)
 
-	def set_timeout(self, timeout):
+	def set_timeout(self, timeout, restore=True):
+		_State.restore_timeout = restore
+		self.timeout = timeout
 		return set_interpreter_timeout(timeout)
 
 	def get_time_left(self):
-		return get_interpreter_timeout() or 0
+		return get_interpreter_time_left() or 0
 
 	def execute(self, args, path, timeout, script, cwd):
 		with self.lock:
@@ -376,10 +388,10 @@ class Interpreter(object):
 		with self.lock:
 			return (self.conn is None) or ((self.proc is not None) and self.proc.is_alive())
 
-	def set_timeout(self, timeout=None):
+	def set_timeout(self, timeout=None, restore=False):
 		with self.lock:
 			if self.proxy is not None:
-				return self.proxy.set_timeout(timeout)
+				return self.proxy.set_timeout(timeout, restore)
 
 	def get_time_left(self):
 		with self.lock:
@@ -589,9 +601,9 @@ class BuiltinHandler(object):
 			return self.__interpreter.get_time_left()
 		return 0
 	
-	def set_timeout(self, timeout=0):
+	def set_timeout(self, timeout=0, restore=False):
 		if self.__interpreter is not None:
-			return self.__interpreter.set_timeout(timeout)
+			return self.__interpreter.set_timeout(timeout, restore)
 	
 	def handle_timeout(self):
 		raise InterpreterTimeout
