@@ -144,6 +144,7 @@ BINARY_DATA_PURGED = 2082
 BINARY_DATA_ERROR_PURGING = 2083
 PATCHED_CONFIG_VERSION = 2084                                  #: Le preferenze del server sono state aggiornate
 BINARY_STORAGE_FS_CANNOT_RESOLVE_PATH = 2085                   #: Il server non è in grado di risolvere il percorso su filesystem per l'accesso ai dati binari
+BINARY_DATA_DESC = 2086
 DRIVER_LOAD_FAILED = 2100
 MALFORMED_DRIVER = 2101
 INCOMPATIBLE_DRIVER_VERSION = 2102
