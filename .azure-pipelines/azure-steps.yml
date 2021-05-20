@@ -2,10 +2,6 @@ steps:
 
 - script: |
     call "$(vcvarsall)" $(python.architecture)
-    if "$(python.version)"=="2.7" (
-      set MSSdk=1
-      set DISTUTILS_USE_SDK=1
-    )
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python setup.py bdist_wheel -d wheelhouse
   displayName: 'Build wheel (Windows)'

@@ -88,10 +88,6 @@ jobs:
 - job: Windows
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
-        python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat'
       Python36:
         python.version: '3.6'
         python.architecture: 'x64'
@@ -108,10 +104,6 @@ jobs:
         python.version: '3.9'
         python.architecture: 'x64'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
-      Python27_32:
-        python.version: '2.7'
-        python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat'
       Python36_32:
         python.version: '3.6'
         python.architecture: 'x86'

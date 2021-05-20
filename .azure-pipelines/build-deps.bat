@@ -1,13 +1,8 @@
 @setlocal enableextensions enabledelayedexpansion
 @echo off
 
-if "%PYTHON_VERSION%"=="2.7" (
-    echo Calling VS 2008 vcvarsall for Python 2.7 %PYTHON_ARCHITECTURE%
-    call "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat" %PYTHON_ARCHITECTURE%
-) else (
-	echo Calling VS 2019 vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
-	call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
-)
+echo Calling VS 2019 vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
+call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 
 set PATH=%PATH%;%BUILD_SOURCESDIRECTORY%\win_flex_bison
 
