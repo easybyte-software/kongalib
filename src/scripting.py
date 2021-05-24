@@ -375,6 +375,9 @@ class Interpreter(object):
 				self.logger_listener.start()
 				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, _DLL_PATHS, self.queue), daemon=True)
 				self.proc.start()
+				exitcode = self.proc.exitcode
+				if exitcode is not None:
+					raise RuntimeError('Unable to start interpreter process: exit code %d' % exitcode)
 
 	def execute(self, script=None, filename=None, argv=None, path=None, timeout=None):
 		with self.lock:
