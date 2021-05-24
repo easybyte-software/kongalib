@@ -28,6 +28,7 @@ import multiprocessing
 import multiprocessing.connection
 import signal
 import logging
+import logging.handlers
 import time
 
 
@@ -269,49 +270,66 @@ class _Controller(threading.Thread):
 
 
 
-def _trampoline(conn, sem, foreground, dll_paths):
-	if foreground:
-		_set_process_foreground()
-	for path in dll_paths:
+def _trampoline(conn, sem, foreground, dll_paths, queue):
+	logger = logging.getLogger('script._trampoline')
+	handler = logging.handlers.QueueHandler(queue)
+	handler.setLevel(logging.DEBUG)
+	logger.addHandler(handler)
+	logger.setLevel(logging.DEBUG)
+	logger.debug('entering interpreter process')
+	try:
+		if foreground:
+			_set_process_foreground()
+		for path in dll_paths:
+			try:
+				os.add_dll_directory(path)
+			except:
+				pass
+
+		def terminate(self, signo=None, stack_frame=None):
+			logger.debug('exiting interpreter process')
+			sys.exit(0)
+
+		signal.signal(signal.SIGTERM, terminate)
+		_State.controller = _Controller(conn, sem)
+		_State.controller.start()
+
+		while True:
+			args, path, timeout, script, cwd = _State.controller.get_execute_request()
+			sys.argv = args
+			sys.path = path
+			if (not PY3) and isinstance(script, unicode):
+				script = script.encode('utf-8', 'replace')
+			filename = args[0]
+			if cwd:
+				os.chdir(cwd)
+			init_interpreter()
+			try:
+				script = compile(script, filename, 'exec', dont_inherit=1)
+				exc = None
+				_State.controller.set_timeout(timeout)
+				exec(script, { '__file__': filename, '__name__': '__main__' })
+			except Exception as e:
+				import traceback
+				exc_type, exc_value, exc_tb = sys.exc_info()
+				exc_tb = traceback.extract_tb(exc_tb)
+				exc_info = ( exc_type, exc_value, exc_tb )
+			else:
+				exc_info = None
+			_State.controller.set_timeout(0)
+			_State.controller.set_exc_info(exc_info)
+			exit_interpreter()
+			sem.release()
 		try:
-			os.add_dll_directory(path)
+			conn.close()
 		except:
 			pass
-	signal.signal(signal.SIGTERM, signal.SIG_DFL)
-	_State.controller = _Controller(conn, sem)
-	_State.controller.start()
-
-	while True:
-		args, path, timeout, script, cwd = _State.controller.get_execute_request()
-		sys.argv = args
-		sys.path = path
-		if (not PY3) and isinstance(script, unicode):
-			script = script.encode('utf-8', 'replace')
-		filename = args[0]
-		if cwd:
-			os.chdir(cwd)
-		init_interpreter()
-		try:
-			script = compile(script, filename, 'exec', dont_inherit=1)
-			exc = None
-			_State.controller.set_timeout(timeout)
-			exec(script, { '__file__': filename, '__name__': '__main__' })
-		except Exception as e:
-			import traceback
-			exc_type, exc_value, exc_tb = sys.exc_info()
-			exc_tb = traceback.extract_tb(exc_tb)
-			exc_info = ( exc_type, exc_value, exc_tb )
-		else:
-			exc_info = None
-		_State.controller.set_timeout(0)
-		_State.controller.set_exc_info(exc_info)
-		exit_interpreter()
-		sem.release()
-	try:
-		conn.close()
-	except:
-		pass
-	_State.controller.join()
+		_State.controller.join()
+	except Exception as e:
+		import traceback
+		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
+	else:
+		logger.debug('unexpected exit from interpreter process')
 	
 
 class _ControllerProxy(Proxy):
@@ -332,8 +350,10 @@ class Interpreter(object):
 		self.conn = None
 		self.lock = threading.RLock()
 		self.sem = multiprocessing.Semaphore(0)
+		self.queue = multiprocessing.Queue()
 		self.proxy = None
 		self.foreground = foreground
+		self.logger_listener = logging.handlers.QueueListener(self.queue, *logging.getLogger().handlers)
 
 	def __del__(self):
 		with self.lock:
@@ -342,13 +362,18 @@ class Interpreter(object):
 					self.proxy.exit()
 				except:
 					pass
+				try:
+					self.logger_listener.stop()
+				except:
+					pass
 
 	def ensure_proc(self):
 		with self.lock:
 			if self.proc is None:
 				self.conn, self.client_conn = multiprocessing.Pipe()
 				self.proxy = _ControllerProxy(self.conn).controller
-				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, _DLL_PATHS), daemon=True)
+				self.logger_listener.start()
+				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, _DLL_PATHS, self.queue), daemon=True)
 				self.proc.start()
 
 	def execute(self, script=None, filename=None, argv=None, path=None, timeout=None):
