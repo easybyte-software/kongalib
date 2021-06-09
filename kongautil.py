@@ -309,12 +309,12 @@ def _run_script(script, log, client):
 	with temp:
 		temp.write('\n'.join(lines + script))
 	try:
-		output = subprocess.check_output('%s %s --script "%s"' % (client_exe, _konga_args or '', temp.name), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
+		output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
 		for line in output:
 			log.info(line)
 	except subprocess.CalledProcessError as e:
 		log.warning("Errors running script:")
-		output = e.output.splitlines()
+		output = kongalib.ensure_text(e.output).splitlines()
 		for line in output:
 			log.error(line)
 		log.info("Original script was:")
