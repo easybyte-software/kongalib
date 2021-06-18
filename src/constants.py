@@ -278,6 +278,7 @@ SCHEDULER_INDEX_RESET_STARTED = 2714
 SCHEDULER_INDEX_RESET_FINISHED = 2715
 SCHEDULER_CLEARING_INDEX = 2715
 SCHEDULER_EDI_CANNOT_RUN_ON_ARCHIVE = 2716
+SCHEDULER_FREEING_MEMORY = 2717                                #: [Scheduler] La memoria disponibile del sistema è bassa; provo a rilasciare risorse
 WEB_SERVICE_STARTED = 3000
 WEB_SERVICE_STOPPED = 3001                                     #: Servizio web fermato
 WEB_SERVICE_NO_SERVICES = 3002                                 #: nessuno
