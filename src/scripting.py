@@ -204,6 +204,9 @@ class _Controller(threading.Thread):
 		self.request = None
 		self.exc_info = None
 		self.timeout = None
+		def terminate(signo=None, stack_frame=None):
+			self.execute(*_Controller.QUIT_REQUEST)
+		signal.signal(signal.SIGTERM, terminate)
 		super(_Controller, self).__init__()
 
 	def get_execute_request(self):
@@ -214,9 +217,6 @@ class _Controller(threading.Thread):
 			request = self.request
 			self.request = None
 			return request
-
-	def quit_execute(self):
-		self.execute(*_Controller.QUIT_REQUEST)
 
 	def run(self):
 		name = None
@@ -293,10 +293,6 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 			except:
 				pass
 
-		def terminate(self, signo=None, stack_frame=None):
-			_State.controller.quit_execute()
-
-		signal.signal(signal.SIGTERM, terminate)
 		_State.controller = _Controller(conn, sem)
 		_State.controller.start()
 
