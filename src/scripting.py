@@ -194,6 +194,8 @@ def exit_interpreter():
 
 
 class _Controller(threading.Thread):
+	QUIT_REQUEST =  (None, None, None, None, None)
+
 	def __init__(self, conn, sem):
 		self.conn = conn
 		self.sem = sem
@@ -213,11 +215,16 @@ class _Controller(threading.Thread):
 			self.request = None
 			return request
 
+	def quit_execute(self):
+		self.execute(*_Controller.QUIT_REQUEST)
+
 	def run(self):
 		name = None
 		while name != 'exit':
 			try:
 				if not self.conn.poll(0.5):
+					if self.request == _Controller.QUIT_REQUEST:
+						break
 					continue
 				data = self.conn.recv()
 				handler, name, args, kwargs = data
@@ -287,15 +294,17 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 				pass
 
 		def terminate(self, signo=None, stack_frame=None):
-			logger.debug('exiting interpreter process')
-			sys.exit(0)
+			_State.controller.quit_execute()
 
 		signal.signal(signal.SIGTERM, terminate)
 		_State.controller = _Controller(conn, sem)
 		_State.controller.start()
 
 		while True:
-			args, path, timeout, script, cwd = _State.controller.get_execute_request()
+			request = _State.controller.get_execute_request()
+			if request == _Controller.QUIT_REQUEST:
+				break
+			args, path, timeout, script, cwd = request
 			sys.argv = args
 			sys.path = path
 			if (not PY3) and isinstance(script, unicode):
@@ -328,8 +337,8 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 	except Exception as e:
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
-	else:
-		logger.debug('unexpected exit from interpreter process')
+	finally:
+		logger.debug('exiting interpreter process')
 	
 
 class _ControllerProxy(Proxy):
@@ -408,9 +417,15 @@ class Interpreter(object):
 
 	def stop(self):
 		with self.lock:
-			if self.proc is not None:
-				self.proc.terminate()
+			proc = self.proc
+			if proc is not None:
 				self.proc = None
+				self.lock.release()
+				proc.terminate()
+				proc.join(3)
+				if proc.is_alive():
+					proc.kill()
+				self.lock.acquire()
 
 	def is_running(self):
 		with self.lock:
