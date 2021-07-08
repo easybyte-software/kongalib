@@ -764,6 +764,7 @@ DATI_ANN_CF_NOT_FOUND = 5438                                   #: Nessun Dato An
 EB_DDI_RDACF_INV = 5439                                        #: Impossibile registrare il Dettaglio dichiarazione d'intento senza specificare un riferimento valido per i dati annuali
 EB_DDI_ANNO_INV = 5440                                         #: Impossibile registrare il Dettaglio dichiarazione d'intento senza specificare un anno valido!
 EB_DDI_DUP_KEY = 5441                                          #: Nella tabella e' gia' presente un record per la chiave (ref_DatiAnnualiCliFor, Anno, NumeroRiga)!
+DETT_DI_NOT_FOUND = 5442
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
