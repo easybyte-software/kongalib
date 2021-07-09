@@ -64,14 +64,24 @@ jobs:
   strategy:
     matrix:
       Python27:
+      	arch: -arch x86_64
+      	cmake_arch: x86_64
         python.version: '2.7'
       Python36:
+      	arch: -arch x86_64
+      	cmake_arch: x86_64
         python.version: '3.6'
       Python37:
+      	arch: -arch x86_64
+      	cmake_arch: x86_64
         python.version: '3.7'
       Python38:
+      	arch: -arch x86_64
+      	cmake_arch: x86_64
         python.version: '3.8'
       Python39:
+      	arch: -arch x86_64 -arch arm64
+		cmake_arch: arm64;x86_64      	
         python.version: '3.9'
   pool:
     vmImage: 'macOS-latest'
