@@ -38,6 +38,7 @@ steps:
     mkdir -p third_party
     cd mpdecimal-2.4.2
     ./configure --prefix=$BUILD_SOURCESDIRECTORY/third_party CFLAGS="-fPIC $(arch)" LDFLAGS="$(arch)"
+    cat config.log
     make -j2
     sudo make install
     cd ..
