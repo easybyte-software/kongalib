@@ -85,7 +85,7 @@ jobs:
         cmake_arch: arm64;x86_64
         python.version: '3.9'
   pool:
-    vmImage: 'macOS-latest'
+    vmImage: 'macOS-11'
   steps:
     - template: ./azure-setup.yml
     - template: ./azure-steps.yml
