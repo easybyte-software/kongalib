@@ -37,7 +37,7 @@ steps:
     export KONGALIB_ROOT=`pwd`
     mkdir -p third_party
     cd mpdecimal-2.4.2
-    ./configure --disable-shared --enable-static --prefix=$BUILD_SOURCESDIRECTORY/third_party CFLAGS="-fPIC $(arch) -isysroot `xcrun --sdk $(sdk) --show-sdk-path`" LDFLAGS="$(arch) -Wl,-syslibroot,`xcrun --sdk $(sdk) --show-sdk-path`"
+    ./configure --prefix=$BUILD_SOURCESDIRECTORY/third_party CFLAGS="-fPIC $(arch) -isysroot `xcrun --sdk $(sdk) --show-sdk-path`" LDFLAGS="$(arch) -Wl,-syslibroot,`xcrun --sdk $(sdk) --show-sdk-path`"
     cat config.log
     make -j2
     sudo make install
