@@ -34,9 +34,12 @@ curl $URL > $INSTALLER_NAME
 sudo installer -pkg $INSTALLER_NAME -target /
 
 sudo rm /usr/local/bin/python
-sudo ln -s /Library/Frameworks/Python.framework/Versions/$PYTHON_VERSION/bin/python3 /usr/local/bin/python
+sudo ln -s $PY_PREFIX/$PYTHON_VERSION/bin/python3 /usr/local/bin/python
 
 which python
 python --version
-python -m ensurepip
+if [ "$PYTHON_VERSION" == "2.7" ]; then
+	python -m ensurepip
+fi
+
 python -m pip install setuptools twine wheel
