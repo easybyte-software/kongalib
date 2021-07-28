@@ -286,6 +286,7 @@ WEB_SERVICE_DESC_JSON = 3050                                   #: Gestore di ric
 WEB_SERVICE_DESC_CONSOLE = 3051                                #: Console ridotta di amministrazione remota
 WEB_SERVICE_DESC_BARCODES = 3052                               #: Gestore lettori di codici a barre remoti
 WEB_SERVICE_DESC_BINARY = 3053                                 #: Accesso diretto a immagini e allegati
+WEB_SERVICE_DESC_STATS = 3054                                  #: Lettura statistiche del servizio
 WEB_JSON_RPC_INVALID_REQUEST = 3100                            #: La richiesta non è una richiesta JSON-RPC valida
 WEB_JSON_RPC_METHOD_NOT_FOUND = 3101                           #: La procedura remota richiesta non esiste o non è disponibile
 WEB_CONSOLE_TITLE = 3200                                       #: Console di amministrazione remota di Konga
