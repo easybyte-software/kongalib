@@ -163,12 +163,12 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			except:
 				import ConfigParser as configparser
 			files = [
-				os.path.splitext(sys.argv[0])[0] + '.cfg',
-				os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'kongalib.cfg'),
 				os.path.abspath(os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib'))),
+				os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'kongalib.cfg'),
+				os.path.splitext(sys.argv[0])[0] + '.cfg',
 			]
 			if config:
-				files.insert(0, config)
+				files.append(config)
 			config = configparser.RawConfigParser({
 				'host':			host or '',
 				'port':			str(port or ''),
