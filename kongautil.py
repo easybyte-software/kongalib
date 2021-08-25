@@ -36,6 +36,8 @@ PRINT_TARGET_XLS				= 4		#: Stampa su file Excel
 _last_client = None
 _konga_exe = None
 _konga_args = None
+_konga_reuse_client = False
+_konga_proc = None
 
 
 
@@ -155,6 +157,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 		global _last_client
 		global _konga_exe
 		global _konga_args
+		global _konga_reuse_client
 		client = kongalib.Client()
 		if host is None:
 			import argparse
@@ -179,6 +182,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'tenant_key':	tenant_key or '',
 				'konga_exe':	'',
 				'konga_args':	'',
+				'reuse_client':	'',
 			})
 			config.add_section('kongautil.connect')
 			config.add_section('kongautil.print_layout')
@@ -194,6 +198,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 
 			_konga_exe = config.get('kongautil.print_layout', 'konga_exe') or None
 			_konga_args = config.get('kongautil.print_layout', 'konga_args') or None
+			_konga_reuse_client = config.get('kongautil.print_layout', 'reuse_client') or False
 
 			class ArgumentParser(argparse.ArgumentParser):
 				def _print_message(self, message, file=None):
@@ -265,8 +270,21 @@ def get_window_vars():
 
 
 
+def _terminate_script_proc():
+	try:
+		_konga_proc.stdin.write('.quit\n')
+		_konga_proc.stdin.flush()
+		try:
+			_konga_proc.wait(5)
+		except:
+			_konga_proc.terminate()
+	except:
+		pass
+
+
+
 def _run_script(script, log, client):
-	import tempfile, subprocess
+	import tempfile, subprocess, string, random, atexit
 	client_exe = _konga_exe
 	if client_exe is None:
 		if sys.platform == 'win32':
@@ -305,13 +323,39 @@ def _run_script(script, log, client):
 		]
 	else:
 		lines = []
-	temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
-	with temp:
-		temp.write('\n'.join(lines + script))
+	lines += script
 	try:
-		output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
-		for line in output:
-			log.info(line)
+		if _konga_reuse_client:
+			global _konga_proc
+			if (_konga_proc is None) or (_konga_proc.poll() is not None):
+				try:
+					_konga_proc = subprocess.Popen('%s %s --script -' % (client_exe, _konga_args or ''), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+				except Exception as e:
+					raise subprocess.CalledProcessError(-1, '', e)
+				atexit.unregister(_terminate_script_proc)
+				atexit.register(_terminate_script_proc)
+			marker = ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(32))
+			lines += [ '.disconnect', '.echo %s' % marker, '' ]
+			_konga_proc.stdin.write('\n'.join(lines))
+			_konga_proc.stdin.flush()
+			while True:
+				line = _konga_proc.stdout.readline()
+				if not line:
+					break
+				line = line[:-1]
+				if line == marker:
+					break
+				log.info(line)
+		else:
+			temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+			try:
+				with temp:
+					temp.write('\n'.join(lines))
+				output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
+				for line in output:
+					log.info(line)
+			finally:
+				os.unlink(temp.name)
 	except subprocess.CalledProcessError as e:
 		log.warning("Errors running script:")
 		output = kongalib.ensure_text(e.output).splitlines()
@@ -320,8 +364,6 @@ def _run_script(script, log, client):
 		log.info("Original script was:")
 		for line in script:
 			log.info("    %s" % line)
-	finally:
-		os.unlink(temp.name)
 
 
 
