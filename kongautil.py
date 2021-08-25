@@ -335,7 +335,9 @@ def _run_script(script, log, client):
 				atexit.unregister(_terminate_script_proc)
 				atexit.register(_terminate_script_proc)
 			marker = ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(32))
-			lines += [ '.disconnect', '.echo %s' % marker, '' ]
+			if client is not None:
+				lines += [ '.disconnect' ]
+			lines += [ '.echo %s' % marker, '' ]
 			_konga_proc.stdin.write('\n'.join(lines))
 			_konga_proc.stdin.flush()
 			while True:
