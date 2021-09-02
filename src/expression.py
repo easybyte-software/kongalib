@@ -142,6 +142,17 @@ def parse(sql):
 			node = OperandNE('1', '1')
 		p[0] = AND(p[1], node)
 	
+	def p_value_and_expression(p):
+		'expression : value AND expression'
+		try:
+			if eval(p[1]):
+				node = OperandEQ('1', '1')
+			else:
+				node = OperandNE('1', '1')
+		except:
+			node = OperandNE('1', '1')
+		p[0] = AND(node, p[3])
+	
 	def p_expression_or(p):
 		'expression : expression OR expression'
 		p[0] = OR(p[1], p[3])
@@ -156,6 +167,17 @@ def parse(sql):
 		except:
 			node = OperandNE('1', '1')
 		p[0] = OR(p[1], node)
+	
+	def p_value_or_expression(p):
+		'expression : value OR expression'
+		try:
+			if eval(p[1]):
+				node = OperandEQ('1', '1')
+			else:
+				node = OperandNE('1', '1')
+		except:
+			node = OperandNE('1', '1')
+		p[0] = OR(node, p[3])
 	
 	def p_expression_fieldop(p):
 		'expression : ID OPERAND ID'
