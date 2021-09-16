@@ -62,7 +62,10 @@ def debug_log(text):
 	try:
 		_logger.debug(text)
 	except:
-		sys.__stderr__.write('%s\n' % text)
+		try:
+			sys.__stderr__.write('%s\n' % text)
+		except:
+			pass
 	# sys.__stderr__.write(text + '\n')
 
 
