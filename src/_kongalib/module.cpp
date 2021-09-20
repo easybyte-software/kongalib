@@ -951,6 +951,48 @@ _apply_stylesheet(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 
+static PyObject *
+regexp_find_all(PyObject *self, PyObject *args)
+{
+	CL_Status status;
+	PyObject *result = NULL, *mo;
+	string pattern, text;
+
+	if (!PyArg_ParseTuple(args, "O&O&", MGA::ConvertString, &pattern, MGA::ConvertString, &text))
+		return NULL;
+
+	CL_RegEx re(pattern);
+	CL_Match match, *prev = NULL;
+	if (!re.IsOk()) {
+		PyErr_Format(PyExc_ValueError, re.GetError().c_str());
+		return NULL;
+	}
+	result = PyList_New(0);
+	for (;;) {
+		Py_BEGIN_ALLOW_THREADS
+		status = re.Find(text, &match, prev);
+		Py_END_ALLOW_THREADS
+		if (status != CL_OK)
+			break;
+		if (match.Count() == 1) {
+			mo = PyUnicode_DecodeUTF8(match.GetText(0).c_str(), (Py_ssize_t)match.GetText(0).size(), NULL);
+		}
+		else if (match.Count() == 2) {
+			mo = PyUnicode_DecodeUTF8(match.GetText(1).c_str(), (Py_ssize_t)match.GetText(1).size(), NULL);
+		}
+		else {
+			mo = PyTuple_New(match.Count() - 1);
+			for (int i = 1; i < match.Count(); i++)
+				PyTuple_SET_ITEM(mo, i - 1, PyUnicode_DecodeUTF8(match.GetText(i).c_str(), (Py_ssize_t)match.GetText(i).size(), NULL));
+		}
+		PyList_Append(result, mo);
+		Py_DECREF(mo);
+		prev = &match;
+	}
+	return result;
+}
+
+
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
 	{	"host_lookup",					(PyCFunction)host_lookup,					METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
@@ -972,6 +1014,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
 	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_NOARGS,					"_set_process_foreground()\n\nBrings process to the foreground." },
 	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
+	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
 	{	NULL,							NULL,										0,								NULL }
 };
 

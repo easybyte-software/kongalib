@@ -42,6 +42,7 @@
 #include <ebpr/socket.h>
 #include <ebpr/dispatcher.h>
 #include <ebpr/cipher.h>
+#include <ebpr/regex.h>
 
 #include <konga_client/client.h>
 #include <konga_client/common.h>
