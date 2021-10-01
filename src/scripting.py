@@ -293,8 +293,10 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 		for path in dll_paths:
 			try:
 				os.add_dll_directory(path)
+				logger.debug('added DLL directory: %s' % path)
 			except:
-				pass
+				if sys.platform == 'win32':
+					logger.error('error adding DLL directory: %s' % path)
 
 		_State.controller = _Controller(conn, sem)
 		_State.controller.start()
