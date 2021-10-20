@@ -61,17 +61,13 @@ jobs:
 - job: macOS
   variables:
     python.architecture: 'x64'
-    deps_sdk: macosx11.1
+    deps_sdk: macosx12.0
   strategy:
     matrix:
       Python27:
         arch: '-arch x86_64'
         cmake_arch: x86_64
         python.version: '2.7'
-      Python36:
-        arch: '-arch x86_64'
-        cmake_arch: x86_64
-        python.version: '3.6'
       Python37:
         arch: '-arch x86_64'
         cmake_arch: x86_64
@@ -84,6 +80,10 @@ jobs:
         arch: '-arch x86_64 -arch arm64'
         cmake_arch: arm64;x86_64
         python.version: '3.9'
+      Python310:
+        arch: '-arch x86_64 -arch arm64'
+        cmake_arch: arm64;x86_64
+        python.version: '3.10'
   pool:
     vmImage: 'macOS-latest'
   steps:
@@ -99,10 +99,6 @@ jobs:
 - job: Windows
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
-        python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python37:
         python.version: '3.7'
         python.architecture: 'x64'
@@ -115,21 +111,9 @@ jobs:
         python.version: '3.9'
         python.architecture: 'x64'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
-      Python36_32:
-        python.version: '3.6'
-        python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
-      Python37_32:
-        python.version: '3.7'
-        python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
-      Python38_32:
-        python.version: '3.8'
-        python.architecture: 'x86'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
-      Python39_32:
-        python.version: '3.9'
-        python.architecture: 'x86'
+      Python310:
+        python.version: '3.10'
+        python.architecture: 'x64'
         vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
     vmImage: 'windows-latest'

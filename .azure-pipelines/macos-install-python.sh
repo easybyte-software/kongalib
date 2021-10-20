@@ -5,10 +5,6 @@ case $PYTHON_VERSION in
   FULL_VERSION=2.7.16
   INSTALLER_NAME=python-$FULL_VERSION-macosx10.9.pkg
   ;;
-3.6)
-  FULL_VERSION=3.6.8
-  INSTALLER_NAME=python-$FULL_VERSION-macosx10.9.pkg
-  ;;
 3.7)
   FULL_VERSION=3.7.6
   INSTALLER_NAME=python-$FULL_VERSION-macosx10.9.pkg
@@ -18,7 +14,11 @@ case $PYTHON_VERSION in
   INSTALLER_NAME=python-$FULL_VERSION-macosx10.9.pkg
   ;;
 3.9)
-  FULL_VERSION=3.9.6
+  FULL_VERSION=3.9.7
+  INSTALLER_NAME=python-$FULL_VERSION-macos11.pkg
+  ;;
+3.10)
+  FULL_VERSION=3.10.0
   INSTALLER_NAME=python-$FULL_VERSION-macos11.pkg
   ;;
 esac
