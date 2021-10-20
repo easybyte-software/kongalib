@@ -61,7 +61,7 @@ jobs:
 - job: macOS
   variables:
     python.architecture: 'x64'
-    deps_sdk: macosx12.0
+    deps_sdk: macosx11.3
   strategy:
     matrix:
       Python27:
