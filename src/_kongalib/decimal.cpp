@@ -509,7 +509,11 @@ MGA_Decimal_div(PyObject *_self, PyObject *_other)
 static long
 MGA_Decimal_hash(MGA::DecimalObject *self)
 {
+#if (PY_VERSION_HEX >= 0x030a00f0)		// Python 3.10.0 and newer
+	return _Py_HashDouble((PyObject *)self, self->fValue);
+#else
 	return _Py_HashDouble(self->fValue);
+#endif
 }
 
 
