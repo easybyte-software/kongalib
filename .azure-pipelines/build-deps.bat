@@ -46,7 +46,7 @@ echo Compiling tidy-html5
 cd "%BUILD_SOURCESDIRECTORY%\tidy-html5-5.8.0"
 md out
 cd out
-cmake -G "NMake Makefiles" -DBUILD_SHARED_LIB=OFF -DINCLUDE_INSTALL_DIR=include\tidy -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%BUILD_SOURCESDIRECTORY%\third_party -DCMAKE_INSTALL_PREFIX=%BUILD_SOURCESDIRECTORY%\third_party ..
+cmake -G "NMake Makefiles" -DBUILD_SHARED_LIB=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%BUILD_SOURCESDIRECTORY%\third_party -DCMAKE_INSTALL_PREFIX=%BUILD_SOURCESDIRECTORY%\third_party ..
 nmake
 nmake install
 
