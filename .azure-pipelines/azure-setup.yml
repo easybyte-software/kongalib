@@ -25,6 +25,8 @@ steps:
     7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
     python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.31.zip', 'pcre-8.31.zip')"
     7z x pcre-8.31.zip
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://github.com/htacg/tidy-html5/archive/refs/tags/5.8.0.zip', 'tidy-html5-5.8.0.zip')"
+    7z x tidy-html5-5.8.0.zip
     git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
     del /q konga\doc\technical\kongalib
     del /q konga\doc\_static\kongalib

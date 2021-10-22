@@ -2,7 +2,7 @@
 
 set -e -x
 
-yum install -y zlib-devel pcre-devel libxml2-devel libxslt-devel dbus-devel dbus-libs cmake
+yum install -y zlib-devel pcre-devel libxml2-devel libxslt-devel libtidy-devel dbus-devel dbus-libs cmake
 
 cd /io/mpdecimal-2.4.2
 ./configure

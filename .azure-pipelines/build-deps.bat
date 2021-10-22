@@ -42,6 +42,14 @@ cmake -G "NMake Makefiles" -DPCRE_SUPPORT_UTF=ON -DPCRE_BUILD_PCREGREP=OFF -DPCR
 nmake
 nmake install
 
+echo Compiling tidy-html5
+cd "%BUILD_SOURCESDIRECTORY%\tidy-html5-5.8.0"
+md out
+cd out
+cmake -G "NMake Makefiles" -DBUILD_SHARED_LIB=OFF -DINCLUDE_INSTALL_DIR=include\tidy -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%BUILD_SOURCESDIRECTORY%\third_party -DCMAKE_INSTALL_PREFIX=%BUILD_SOURCESDIRECTORY%\third_party ..
+nmake
+nmake install
+
 echo Compiling ebpr and konga_client
 cd "%BUILD_SOURCESDIRECTORY%\konga"
 md out
