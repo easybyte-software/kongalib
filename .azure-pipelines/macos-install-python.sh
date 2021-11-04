@@ -19,7 +19,7 @@ case $PYTHON_VERSION in
   ;;
 3.10)
   FULL_VERSION=3.10.0
-  INSTALLER_NAME=python-$FULL_VERSIONpost2-macos11.pkg
+  INSTALLER_NAME=python-${FULL_VERSION}post2-macos11.pkg
   ;;
 esac
 
