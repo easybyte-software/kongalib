@@ -291,6 +291,7 @@ WEB_SERVICE_DESC_BINARY = 3053                                 #: Accesso dirett
 WEB_SERVICE_DESC_STATS = 3054                                  #: Lettura statistiche del servizio
 WEB_JSON_RPC_INVALID_REQUEST = 3100                            #: La richiesta non è una richiesta JSON-RPC valida
 WEB_JSON_RPC_METHOD_NOT_FOUND = 3101                           #: La procedura remota richiesta non esiste o non è disponibile
+WEB_JSON_RPC_INVALID_SESSION = 3102                            #: La richiesta ha un session ID errato o mancante
 WEB_CONSOLE_TITLE = 3200                                       #: Console di amministrazione remota di Konga
 WEB_CONSOLE_LOADING = 3201                                     #: Avvio della console in corso...
 WEB_CONSOLE_RELOAD = 3202                                      #: Il processo della console è terminato, si prega di ricaricare la pagina.
