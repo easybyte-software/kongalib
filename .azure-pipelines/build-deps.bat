@@ -35,7 +35,7 @@ copy /Y zlib.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 copy /Y zconf.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 
 echo Compiling pcre
-cd "%BUILD_SOURCESDIRECTORY%\pcre-8.31"
+cd "%BUILD_SOURCESDIRECTORY%\pcre-8.45"
 md out
 cd out
 cmake -G "NMake Makefiles" -DPCRE_SUPPORT_UTF=ON -DPCRE_BUILD_PCREGREP=OFF -DPCRE_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%BUILD_SOURCESDIRECTORY%\third_party -DCMAKE_INSTALL_PREFIX=%BUILD_SOURCESDIRECTORY%\third_party ..
