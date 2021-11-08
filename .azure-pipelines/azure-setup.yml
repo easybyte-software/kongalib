@@ -8,8 +8,8 @@ steps:
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
 
 - script: |
-    wget https://ftp.pcre.org/pub/pcre/pcre-8.31.zip
-    unzip pcre-8.31.zip
+    wget https://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip
+    unzip pcre-8.45.zip
   displayName: 'Download dependencies (macOS)'
   condition: and(succeeded(), eq(variables['Agent.OS'], 'Darwin'))
 
@@ -23,8 +23,8 @@ steps:
     7z x mpdecimal-2.4.2.zip
     python -c "from urllib.request import urlretrieve; urlretrieve('https://zlib.net/zlib-1.2.11.tar.gz', 'zlib-1.2.11.tar.gz')"
     7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
-    python -c "from urllib.request import urlretrieve; urlretrieve('https://ftp.pcre.org/pub/pcre/pcre-8.31.zip', 'pcre-8.31.zip')"
-    7z x pcre-8.31.zip
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip', 'pcre-8.45.zip')"
+    7z x pcre-8.45.zip
     python -c "from urllib.request import urlretrieve; urlretrieve('https://github.com/htacg/tidy-html5/archive/refs/tags/5.8.0.zip', 'tidy-html5-5.8.0.zip')"
     7z x tidy-html5-5.8.0.zip
     git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
@@ -44,7 +44,7 @@ steps:
     make -j2
     sudo make install
     cd ..
-    cd pcre-8.31
+    cd pcre-8.45
     sh ./configure --disable-shared --enable-static --enable-utf --disable-dependency-tracking --prefix=$BUILD_SOURCESDIRECTORY/third_party CFLAGS="-fPIC $(arch) -isysroot `xcrun --sdk $(deps_sdk) --show-sdk-path`" CXXFLAGS="-fPIC $(arch) -isysroot `xcrun --sdk $(deps_sdk) --show-sdk-path`" LDFLAGS="$(arch) -Wl,-syslibroot,`xcrun --show-sdk-path`"
     make -j2
     sudo make install
