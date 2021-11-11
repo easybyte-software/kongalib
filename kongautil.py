@@ -31,6 +31,7 @@ PRINT_TARGET_PAPER				= 1		#: Stampa su carta
 PRINT_TARGET_PDF				= 2		#: Stampa su file PDF
 PRINT_TARGET_CSV				= 3		#: Stampa su file CSV
 PRINT_TARGET_XLS				= 4		#: Stampa su file Excel
+PRINT_TARGET_LABEL				= 5		#: Stampa su etichette
 
 
 _last_client = None
