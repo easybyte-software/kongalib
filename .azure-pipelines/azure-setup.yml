@@ -3,6 +3,8 @@ steps:
 - script: |
     wget https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.tar.gz
     tar -zxvf mpdecimal-2.4.2.tar.gz
+    wget https://github.com/htacg/tidy-html5/archive/refs/tags/5.8.0.tar.gz
+    tar -zxvf 5.8.0.tar.gz
     git clone -b $(konga_branch) https://$(user):$(password)@github.com/easybyte-software/konga.git
   displayName: 'Download dependencies (Unix)'
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))

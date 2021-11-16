@@ -9,6 +9,11 @@ cd /io/mpdecimal-2.4.2
 CFLAGS=-fPIC make -j2
 make install
 
+cd /io/tidy-html5-5.8.0
+CFLAGS=-fPIC cmake -DBUILD_SHARED_LIB=OFF -DINCLUDE_INSTALL_DIR=include/tidy
+CFLAGS=-fPIC make -j2
+make install
+
 cd /io/konga
 mkdir -p out
 cd out
