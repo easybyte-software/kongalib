@@ -964,7 +964,7 @@ regexp_find_all(PyObject *self, PyObject *args)
 	CL_RegEx re(pattern);
 	CL_Match match, *prev = NULL;
 	if (!re.IsOk()) {
-		PyErr_Format(PyExc_ValueError, re.GetError().c_str());
+		PyErr_SetString(PyExc_ValueError, re.GetError().c_str());
 		return NULL;
 	}
 	result = PyList_New(0);
