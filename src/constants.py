@@ -286,6 +286,7 @@ WEB_SERVICE_STOPPED = 3001                                     #: Servizio web f
 WEB_SERVICE_NO_SERVICES = 3002                                 #: nessuno
 WEB_SERVICE_SSL_INVALID_CERT = 3003                            #: Inizializzazione SSL non riuscita per il servizio web a causa di certificato non valido
 WEB_SERVICE_SSL_INVALID_PKEY = 3004                            #: Inizializzazione SSL non riuscita per il servizio web a causa di chiave privata mancante o non valida
+WEB_SERVICE_SSL_INVALID_CERT_CHAIN = 3005                      #: Impossibile caricare la catena di certificati dal file di certificato specificato
 WEB_SERVICE_DESC_JSON = 3050                                   #: Gestore di richieste JSON-RPC
 WEB_SERVICE_DESC_CONSOLE = 3051                                #: Console di amministrazione remota
 WEB_SERVICE_DESC_BARCODES = 3052                               #: Gestore lettori di codici a barre remoti
