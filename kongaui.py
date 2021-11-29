@@ -396,8 +396,9 @@ def execute_form(form_data, title=None, message=None, condition=None):
 	* ``accounting_year_code``: simile a ``code``, specifica l'esercizio su cui gli altri campi ``code`` possono essere ricercati;
 
 	Se presente, la chiave ``default`` permette di specificare il valore predefinito per un dato campo; inoltre se è presente la chiave ``focus`` (con qualsiasi
-	valore), il campo corrispondente prenderà il focus all'avvio della finestra. Se l'utente annulla il form la funzione restituisce ``None``, altrimenti un
-	``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
+	valore), il campo corrispondente prenderà il focus all'avvio della finestra. La chiave ``enabled`` permette di specificare anche se abilitare o meno un campo;
+	il suo valore può essere un booleano oppure una stringa il cui contenuto viene valutato allo stesso modo del parametro *condition* (vedi sotto).
+	Se l'utente annulla il form la funzione restituisce ``None``, altrimenti un ``dict`` le cui chiavi sono i nome dei campi e i valori i dati immessi dall'utente.
 	Il parametro *condition*, se presente, permette di specificare una condizione di validazione per il form sotto forma di espressione Python; i nomi dei campi
 	specificati in *form_data* saranno disponibili come variabili nell'esecuzione di questa condizione, il cui esito determinerà se consentire o meno l'uscita
 	dal form con successo."""
@@ -421,6 +422,12 @@ def execute_form(form_data, title=None, message=None, condition=None):
 			name = str(entry['name'])
 			label = str(entry.get('label', name))
 			prompt = input
+			enabled = entry.get('enabled') or True
+			try:
+				enabled = eval(str(enabled), result.copy())
+			except Exception as e:
+				raise RuntimeError("Exception in enable condition: %s" % str(e))
+
 			wtype = entry.get('type', str)
 			if wtype in ('integer', 'int'):
 				try:
@@ -522,21 +529,24 @@ def execute_form(form_data, title=None, message=None, condition=None):
 					if length and (len(text) > length):
 						raise InvalidInput('String lengths exceeds maximum size of %d characters' % length)
 					return text
-			if default is not None:
-				label += ' [%s]' % default
-			while True:
-				try:
-					value = prompt(label + ': ')
-				except KeyboardInterrupt:
-					print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
-					return None
-				if (not value) and (default is not None):
-					value = default
-				try:
-					value = validate(value)
-					break
-				except InvalidInput as e:
-					print(colorama.Fore.RED + str(e) + colorama.Fore.RESET)
+			if not enabled:
+				value = default
+			else:
+				if default is not None:
+					label += ' [%s]' % default
+				while True:
+					try:
+						value = prompt(label + ': ')
+					except KeyboardInterrupt:
+						print(colorama.Fore.YELLOW + "aborted" + colorama.Fore.RESET)
+						return None
+					if (not value) and (default is not None):
+						value = default
+					try:
+						value = validate(value)
+						break
+					except InvalidInput as e:
+						print(colorama.Fore.RED + str(e) + colorama.Fore.RESET)
 			result[name] = value
 		if condition is not None:
 			if not eval(condition, result.copy()):
