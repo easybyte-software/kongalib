@@ -333,6 +333,9 @@ from .client import *
 from .expression import *
 from .data_dictionary import *
 
+if sys.version >= (3, 6):
+	from async_client import AsyncClient
+
 
 class ErrorMessage(object):
 	def __init__(self, errno, error):
