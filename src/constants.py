@@ -957,6 +957,7 @@ ELAB_COIR_NO_CLIENTE = 7537
 ELAB_BENI_AMM_NUMPAG_INVALID = 7540                            #: Stampa definitiva registro beni ammortizzabili - l'ultimo numero di pagina stampato in definitivo è mancante o non valido
 ELAB_ASS_EFF_BANCA_INVALID = 7541                              #: Assegnazione effetti - la banca da assegnare agli effetti è mancante o non valida
 ELAB_FATT_DIFF_MG_DESCRITT_NF = 7542                           #: L'elaborazione non può procedere perché non è presente l'articolo descrittivo con codice '#'!
+ELAB_FATT_DIFF_NO_DF = 7543                                    #: Impossibile procedere alla conferma! Non sono stati trovati documenti.
 ELAB_NUM_FATT_CAR_ROWS_MISS = 7550                             #: L'elaborazione non può procedere perché non sono stati indicati i movimenti di magazzino da aggiornare!
 ELAB_NUM_FATT_CAR_NUMERO_MISS = 7551                           #: L'elaborazione non può procedere perché non e' stato specificato il numero fattura da assegnare!
 ELAB_VERORD_LISTA_MAG_ERROR = 7575                             #: L'elaborazione non può procedere perché non sono stati recuperati i dati sui magazzini dell'azienda!
