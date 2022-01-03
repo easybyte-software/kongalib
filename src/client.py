@@ -15,6 +15,7 @@
 
 from __future__ import absolute_import
 
+import sys
 import threading
 
 from kongalib import Error, ErrorList
@@ -22,6 +23,9 @@ from .constants import *
 from .expression import *
 from .data_dictionary import *
 from .compat import *
+
+if sys.version_info >= (3, 6):
+	from .async_client import AsyncClient
 
 from ._kongalib import Client as ClientImpl
 from ._kongalib import start_timer
@@ -123,8 +127,10 @@ class Client(object):
 	DATA_DICTIONARY_CACHE = {}
 	DATA_DICTIONARY_LOCK = threading.RLock()
 	
-	def __init__(self):
-		self._impl = ClientImpl()
+	def __init__(self, impl=None):
+		if impl is None:
+			impl = ClientImpl()
+		self._impl = impl
 	
 	def __enter__(self):
 		self.begin_transaction()
@@ -135,6 +141,11 @@ class Client(object):
 			self.commit_transaction()
 		else:
 			self.rollback_transaction()
+	
+	def as_async(self):
+		"""Ritorna un oggetto :class:`~kongalib.AsyncClient` equivalente a questo client, preservando le connessioni già presenti.
+		"""
+		return AsyncClient(self._impl)
 	
 	def list_servers(self, timeout=DEFAULT_DISCOVER_TIMEOUT, port=0, success=None, progress=None, userdata=None):
 		"""Esegue una scansione della rete locale alla ricerca dei server Konga disponibili, attendendo al massimo *timeout* millisecondi
@@ -245,7 +256,7 @@ class Client(object):
 		return self._impl.list_databases(driver, quick, success, error, progress, userdata, timeout)
 	
 	def create_database(self, password, driver, name, desc='', success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
-		"""Crea un nuovo database sul server attalmente connesso; il database avrà nome *name* e descrizione *desc*.
+		"""Crea un nuovo database sul server attualmente connesso; il database avrà nome *name* e descrizione *desc*.
 		Se *success* è ``None`` la chiamata è bloccante e se il database viene creato con successo viene restituito l'UUID del nuovo database;
 		se si verifica un errore viene lanciata l'eccezione :class:`~kongalib.Error`.
 		Se *success* è una funzione nella forma ``success(databases, userdata)``, ``create_database`` restituisce immediatamente un oggetto
@@ -728,7 +739,7 @@ class Client(object):
 		:class:`~kongalib.ErrorList`.
 		Se *success* è una funzione nella forma ``success()``, la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred` e
 		l'operazione viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito. In modalità asincrona se *log* è un
-		oggetto di classe :class:`OperationLog`, esso riceverà ogni eventuale messaggio di log prodotto dal server durante l'aggiornamento.
+		oggetto di classe :class:`OperationLog`, esso riceverà ogni eventuale messaggio di log prodotto dal server durante la cancellazione.
 		"""
 		if success is not None:
 			callback, errback = make_callbacks(lambda output: success(), error, log)
