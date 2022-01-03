@@ -13,6 +13,9 @@ class JSONDecoder(object):
 class Client(object):
 	pass
 
+class AsyncClient(Client):
+	pass
+
 class Interpreter(object):
 	pass
 

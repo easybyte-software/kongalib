@@ -19,6 +19,7 @@ Contenuti:
    
    intro
    base
+   async
    datadict
    dbapi
    error
