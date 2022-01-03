@@ -24,9 +24,6 @@ from .expression import *
 from .data_dictionary import *
 from .compat import *
 
-if sys.version_info >= (3, 6):
-	from .async_client import AsyncClient
-
 from ._kongalib import Client as ClientImpl
 from ._kongalib import start_timer
 
@@ -145,7 +142,8 @@ class Client(object):
 	def as_async(self):
 		"""Ritorna un oggetto :class:`~kongalib.AsyncClient` equivalente a questo client, preservando le connessioni già presenti.
 		"""
-		return AsyncClient(self._impl)
+		import kongalib
+		return kongalib.AsyncClient(self._impl)
 	
 	def list_servers(self, timeout=DEFAULT_DISCOVER_TIMEOUT, port=0, success=None, progress=None, userdata=None):
 		"""Esegue una scansione della rete locale alla ricerca dei server Konga disponibili, attendendo al massimo *timeout* millisecondi
