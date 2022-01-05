@@ -17,6 +17,7 @@ RESOURCE_UNAVAILABLE = 12                                      #: La risorsa non
 DISK_FULL = 13                                                 #: Disco pieno
 WOULD_BLOCK = 14                                               #: L'operazione sarebbe bloccante
 INVALID_RESOURCE = 15                                          #: Risorsa non valida
+BROKEN_PIPE = 16                                               #: Pipe terminata
 CANNOT_CREATE_SOCKET = 100                                     #: Impossibile creare il socket
 PROTOCOL_NOT_SUPPORTED = 101                                   #: Protocollo non supportato
 BAD_ADDRESS = 102                                              #: Indirizzo dell'host non valido
