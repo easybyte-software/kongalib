@@ -30,14 +30,15 @@ class AsyncClient(Client):
 	*success*, *error* e *progress*) che sincrona (generalmente omettendo di specificare la callback di *success*), nella classe AsyncClient
 	accettano eventualmente la sola callback di *progress*, in quanto vengono sempre eseguiti in maniera asincrona tramite l'event loop di
 	asyncio, che si assume sia in esecuzione. La *progress* viene eseguita in un thread separato, ed ha la forma ``progress(completeness, state, userdata)``;
-	i parametri interessanti di questa callback sono *completeness* (percentuale di completamento, ossia un numero che varia da 0.0 a 100.0;
-	se -1.0 indica una percentuale di completamento indefinita), *state* (stringa che specifica l'eventuale stato corrente dell'operazione)
+	i parametri di questa callback sono *completeness* (percentuale di completamento, ossia un numero che varia da 0.0 a 100.0; se -1.0
+	indica una percentuale di completamento indefinita), *state* (stringa che specifica l'eventuale stato corrente dell'operazione)
 	e *userdata*, che è un parametro aggiuntivo che viene normalmente passato alla chiamata asincrona dall'utente per tenere traccia di un
 	eventuale stato.
 
 	Come per la classe Client, oggetti di classe AsyncClient possono essere usati come contesti per il costrutto ``with``: all'ingresso del
 	blocco verrà iniziata una transazione, mentre in uscita verrà eseguita una commit o una rollback della stessa a seconda che ci sia stata
-	o meno un'eccezione all'interno del blocco di istruzioni.
+	o meno un'eccezione all'interno del blocco di istruzioni. Da notare che dal momento che siamo in ambito asincrono, andrà usato il
+	costrutto ``async with`` al posto del semplice ``with``.
 	"""
 
 	def _make_progress(self, future, progress, userdata):
