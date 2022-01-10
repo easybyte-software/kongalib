@@ -28,7 +28,7 @@ class AsyncClient(Client):
 
 	Tutti i metodi che esistono nella classe Client e che possono essere invocati sia in maniera asincrona (specificando le callback di
 	*success*, *error* e *progress*) che sincrona (generalmente omettendo di specificare la callback di *success*), nella classe AsyncClient
-	accettano eventualmente la sola callback di *progress*, in quando vengono sempre eseguiti in maniera asincrona tramite l'event loop di
+	accettano eventualmente la sola callback di *progress*, in quanto vengono sempre eseguiti in maniera asincrona tramite l'event loop di
 	asyncio, che si assume sia in esecuzione. La *progress* viene eseguita in un thread separato, ed ha la forma ``progress(completeness, state, userdata)``;
 	i parametri interessanti di questa callback sono *completeness* (percentuale di completamento, ossia un numero che varia da 0.0 a 100.0;
 	se -1.0 indica una percentuale di completamento indefinita), *state* (stringa che specifica l'eventuale stato corrente dell'operazione)

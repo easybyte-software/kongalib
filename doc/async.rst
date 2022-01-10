@@ -8,6 +8,10 @@ questo è stata introdotta la classe :class:`~.kongalib.AsyncClient`.
 
 .. note:: La classe :class:`~.kongalib.AsyncClient` è disponibile solo se si usa Python versione 3.6 o successive.
 
+E' possibile convertire oggetti di classe :class:`~.kongalib.Client` a oggetti di classe :class:`~.kongalib.AsyncClient` e viceversa
+tramite i metodi :meth:`.kongalib.Client.as_async` e :meth:`.kongalib.AsyncClient.as_sync`; eventuali connessioni a server e
+database verranno preservate.
+
 
 Classe AsyncClient
 ------------------
@@ -29,7 +33,7 @@ Esempio di connessione e lista dell'archivio clienti presenti sul database::
 	import kongalib
 	
 	async def main():
-		c = kongalib.Client()
+		c = kongalib.AsyncClient()
 		await c.connect(host='localhost')
 		await c.open_database('sqlite', 'demo')
 		await c.authenticate('admin', '')
