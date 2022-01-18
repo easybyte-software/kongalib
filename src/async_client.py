@@ -41,27 +41,34 @@ class AsyncClient(Client):
 	costrutto ``async with`` al posto del semplice ``with``.
 	"""
 
+	def _safe_set_result(self, future, result):
+		if not future.cancelled():
+			future.set_result(result)
+	
+	def _safe_set_exception(self, future, e):
+		if not future.cancelled():
+			future.set_exception(e)
+	
 	def _make_progress(self, future, progress, userdata):
-		if progress is None:
-			return None
-		else:
-			def callback(ptype, completeness, state, data, dummy):
-				loop = future.get_loop()
-				if ptype == PROGRESS_EXECUTE:
-					try:
-						if inspect.iscoroutinefunction(progress):
-							result = asyncio.run_coroutine_threadsafe(progress(completeness, state, userdata), loop).result()
-						else:
-							result = progress(completeness, state, userdata)
-						if result is False:
-							raise Error(ABORTED, 'Operation aborted by user')
-					except Exception as e:
-						result = False
-						loop.call_soon_threadsafe(future.set_exception, e)
-				else:
-					result = True
-				return result
-			return callback
+		def callback(ptype, completeness, state, data, dummy):
+			loop = future.get_loop()
+			if ptype == PROGRESS_EXECUTE:
+				try:
+					if progress is None:
+						result = not future.cancelled()
+					elif inspect.iscoroutinefunction(progress):
+						result = asyncio.run_coroutine_threadsafe(progress(completeness, state, userdata), loop).result()
+					else:
+						result = progress(completeness, state, userdata)
+					if result is False:
+						raise Error(ABORTED, 'Operation aborted by user')
+				except Exception as e:
+					result = False
+					loop.call_soon_threadsafe(self._safe_set_exception, future, e)
+			else:
+				result = True
+			return result
+		return callback
 
 	def _make_error(self, future):
 		def error(errno, *args):
@@ -70,26 +77,26 @@ class AsyncClient(Client):
 				if errno.errno in (ABORTED, EXECUTE_ABORTED):
 					loop.call_soon_threadsafe(future.cancel)
 				else:
-					loop.call_soon_threadsafe(future.set_exception, errno)
+					loop.call_soon_threadsafe(self._safe_set_exception, future, errno)
 			elif isinstance(errno, Exception):
-				loop.call_soon_threadsafe(future.set_exception, errno)
+				loop.call_soon_threadsafe(self._safe_set_exception, future, errno)
 			else:
 				if len(args) > 0:
 					errstr = ensure_text(args[0])
 				else:
 					errstr = '<unknown>'
-				loop.call_soon_threadsafe(future.set_exception, Error(errno, errstr))
+				loop.call_soon_threadsafe(self._safe_set_exception, future, Error(errno, errstr))
 		return error
 	
 	def _make_success_tuple(self, future, count):
 		def success(*args):
 			loop = future.get_loop()
 			if count == 0:
-				loop.call_soon_threadsafe(future.set_result, None)
+				loop.call_soon_threadsafe(self._safe_set_result, future, None)
 			elif count == 1:
-				loop.call_soon_threadsafe(future.set_result, args[0])
+				loop.call_soon_threadsafe(self._safe_set_result, future, args[0])
 			else:
-				loop.call_soon_threadsafe(future.set_result, args[:count])
+				loop.call_soon_threadsafe(self._safe_set_result, future, args[:count])
 		return success
 
 	def _make_success(self, future, log=None, finalize_output=None):
@@ -100,21 +107,21 @@ class AsyncClient(Client):
 			if output[OUT_ERRNO] == OK:
 				if len(answer) > 0:
 					if log is None:
-						loop.call_soon_threadsafe(future.set_exception, error_list)
+						loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
 					else:
 						error_list.prepare_log(log)
 						if log.has_errors():
-							loop.call_soon_threadsafe(future.set_exception, error_list)
+							loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
 						else:
 							if finalize_output is not None:
 								output = finalize_output(output)
-							loop.call_soon_threadsafe(future.set_result, output)
+							loop.call_soon_threadsafe(self._safe_set_result, future, output)
 				else:
 					if finalize_output is not None:
 						output = finalize_output(output)
-					loop.call_soon_threadsafe(future.set_result, output)
+					loop.call_soon_threadsafe(self._safe_set_result, future, output)
 			else:
-				loop.call_soon_threadsafe(future.set_exception, ErrorList.from_error(output[OUT_ERRNO], output[OUT_ERROR]))
+				loop.call_soon_threadsafe(self._safe_set_exception, future, ErrorList.from_error(output[OUT_ERRNO], output[OUT_ERROR]))
 		return success
 	
 	def _execute(self, cmd, in_params, out_params=None, progress=None, log=None):
@@ -222,7 +229,7 @@ class AsyncClient(Client):
 					with Client.DATA_DICTIONARY_LOCK:
 						d = DataDictionary(d)
 						Client.DATA_DICTIONARY_CACHE[uuid] = d
-						fut.get_loop().call_soon_threadsafe(fut.set_result, d)
+						fut.get_loop().call_soon_threadsafe(self._safe_set_result, fut, d)
 				self._impl.get_data_dictionary(success, self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
 			else:
 				fut.set_result(data)
