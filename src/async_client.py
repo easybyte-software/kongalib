@@ -61,7 +61,7 @@ class AsyncClient(Client):
 					else:
 						result = progress(completeness, state, userdata)
 					if result is False:
-						raise Error(ABORTED, 'Operation aborted by user')
+						return False
 				except Exception as e:
 					result = False
 					loop.call_soon_threadsafe(self._safe_set_exception, future, e)
