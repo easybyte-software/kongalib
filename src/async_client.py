@@ -29,9 +29,9 @@ class AsyncClient(Client):
 	Tutti i metodi che esistono nella classe Client e che possono essere invocati sia in maniera asincrona (specificando le callback di
 	*success*, *error* e *progress*) che sincrona (generalmente omettendo di specificare la callback di *success*), nella classe AsyncClient
 	accettano eventualmente la sola callback di *progress*, in quanto vengono sempre eseguiti in maniera asincrona tramite l'event loop di
-	asyncio, che si assume sia in esecuzione. La *progress* viene eseguita in un thread separato, ed ha la forma ``progress(completeness, state, userdata)``;
-	i parametri di questa callback sono *completeness* (percentuale di completamento, ossia un numero che varia da 0.0 a 100.0; se -1.0
-	indica una percentuale di completamento indefinita), *state* (stringa che specifica l'eventuale stato corrente dell'operazione)
+	asyncio, che si assume sia in esecuzione. La *progress* viene eseguita in un thread separato, ed ha la forma ``progress(type, completeness, state, userdata)``;
+	i parametri interessanti di questa callback sono *completeness* (percentuale di completamento, ossia un numero che varia da 0.0 a 100.0;
+	se -1.0 indica una percentuale di completamento indefinita), *state* (stringa che specifica l'eventuale stato corrente dell'operazione)
 	e *userdata*, che è un parametro aggiuntivo che viene normalmente passato alla chiamata asincrona dall'utente per tenere traccia di un
 	eventuale stato.
 
@@ -52,21 +52,18 @@ class AsyncClient(Client):
 	def _make_progress(self, future, progress, userdata):
 		def callback(ptype, completeness, state, data, dummy):
 			loop = future.get_loop()
-			if ptype == PROGRESS_EXECUTE:
-				try:
-					if progress is None:
-						result = not future.cancelled()
-					elif inspect.iscoroutinefunction(progress):
-						result = asyncio.run_coroutine_threadsafe(progress(completeness, state, userdata), loop).result()
-					else:
-						result = progress(completeness, state, userdata)
-					if result is False:
-						return False
-				except Exception as e:
-					result = False
-					loop.call_soon_threadsafe(self._safe_set_exception, future, e)
-			else:
-				result = True
+			try:
+				if progress is None:
+					result = not future.cancelled()
+				elif asyncio.iscoroutinefunction(progress):
+					result = asyncio.run_coroutine_threadsafe(progress(ptype, completeness, state, userdata), loop).result()
+				else:
+					result = progress(ptype, completeness, state, userdata)
+				if result is False:
+					return False
+			except Exception as e:
+				result = False
+				loop.call_soon_threadsafe(self._safe_set_exception, future, e)
 			return result
 		return callback
 
@@ -161,7 +158,7 @@ class AsyncClient(Client):
 		sono *host*, *port*, *name* e *description*.
 		"""
 		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_servers(timeout, port, self._make_success_tuple(fut, 1), self._make_progress(fut, progress, userdata))
+		self._impl.list_servers(timeout, port, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata))
 		return fut
 	
 	def connect(self, server=None, host=None, port=0, options=None, timeout=DEFAULT_CONNECT_TIMEOUT, progress=None, userdata=None):
