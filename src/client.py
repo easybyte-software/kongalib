@@ -391,17 +391,17 @@ class Client(object):
 		"""
 		return self._impl.repair_database(password, driver, name, output, success, error, progress, userdata, timeout)
 
-	def index_database(self, password, driver, name, reset=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def index_database(self, password, driver, name, reset=False, run=True, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una indicizzazione del database specificato sul server attualmente connesso. Se *reset* è ``False``, l'indicizzazione è
 		incrementale, ovvero l'indice viene modificato per tenere conto solo dei record inseriti, modificati o cancellati dall'ultima
-		indicizzazione; se invece *reset* è ``True``, l'indice viene prima cancellato e poi ricreato completamente.
+		indicizzazione; se invece *reset* è ``True`` l'indice viene prima cancellato e poi, se *run* è anch'esso ``True``, viene ricreato completamente.
 		Se *success* è ``None``, la chiamata è bloccante e viene lanciata l'eccezione :class:`~kongalib.Error` in caso di errore.
 		Se *success* è una funzione nella forma ``success(userdata)``, la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred`
 		e l'operazione viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito con il parametro *userdata*.
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		return self._impl.index_database(password, driver, name, reset, success, error, progress, userdata, timeout)
+		return self._impl.index_database(password, driver, name, reset, run, success, error, progress, userdata, timeout)
 	
 	def list_clients(self, full=True, any=False, success=None, error=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		return self._impl.list_clients(full, any, success, error, progress, userdata, timeout)

@@ -401,17 +401,17 @@ class AsyncClient(Client):
 		self._impl.repair_database(password, driver, name, output, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
 		return fut
 
-	def index_database(self, password, driver, name, reset=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
+	def index_database(self, password, driver, name, reset=False, run=True, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una indicizzazione del database specificato sul server attualmente connesso. Se *reset* è ``False``, l'indicizzazione è
 		incrementale, ovvero l'indice viene modificato per tenere conto solo dei record inseriti, modificati o cancellati dall'ultima
-		indicizzazione; se invece *reset* è ``True``, l'indice viene prima cancellato e poi ricreato completamente.
+		indicizzazione; se invece *reset* è ``True`` l'indice viene prima cancellato e poi, se *run* è anch'esso ``True``, viene ricreato completamente.
 		La funzione restituisce un oggetto ``asyncio.Future`` per l'esecuzione asincrona, e verrà lanciata l'eccezione :class:`~kongalib.Error` in
 		caso di errore.
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
 		fut = asyncio.get_running_loop().create_future()
-		self._impl.index_database(password, driver, name, reset, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
+		self._impl.index_database(password, driver, name, reset, run, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
 		return fut
 	
 	def list_clients(self, full=True, any=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
