@@ -53,7 +53,7 @@ class AsyncClient(Client):
 		def callback(ptype, completeness, state, data, dummy):
 			loop = future.get_loop()
 			try:
-				if progress is None:
+				if future.cancelled() or (progress is None):
 					result = not future.cancelled()
 				elif asyncio.iscoroutinefunction(progress):
 					result = asyncio.run_coroutine_threadsafe(progress(ptype, completeness, state, userdata), loop).result()
