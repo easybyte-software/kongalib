@@ -779,6 +779,7 @@ EB_DDI_DUP_KEY = 5441                                          #: Nella tabella 
 DETT_DI_NOT_FOUND = 5442
 PN_ROW_COMMESSA_MISSING = 5443
 PN_ROW_COMMESSA_NOT_REQUESTED = 5444
+EB_COD_INTRA_INVALID = 5445                                    #: Il codice non deve contenere spazi!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
