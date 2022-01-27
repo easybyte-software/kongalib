@@ -136,14 +136,15 @@ class AsyncClient(Client):
 		self._impl.execute(cmd, in_params or {}, DEFAULT_EXECUTE_TIMEOUT, self._make_success(fut, log, finalize), self._make_error(fut), self._make_progress(fut, progress, None))
 		return fut
 
-	def __aenter__(self):
-		return self.begin_transaction()
+	async def __aenter__(self):
+		await self.begin_transaction()
+		return self
 	
-	def __aexit__(self, exc_type, exc_value, exc_traceback):
+	async def __aexit__(self, exc_type, exc_value, exc_traceback):
 		if exc_type is None:
-			return self.commit_transaction()
+			await self.commit_transaction()
 		else:
-			return self.rollback_transaction()
+			await self.rollback_transaction()
 		
 	def as_sync(self):
 		"""Ritorna un oggetto :class:`~kongalib.Client` equivalente a questo client, preservando le connessioni già presenti.
