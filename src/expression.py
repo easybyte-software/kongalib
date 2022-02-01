@@ -347,7 +347,7 @@ class Operand(_HasLogic):
 		elif re.match(r'^(\-)?[0-9]+$', self.value):
 			value = self.value
 		else:
-			if self.operator == 'IN':
+			if self.operator in ('IN', 'NOT IN'):
 				value = self.value
 			else:
 				if self.flags & _HasLogic.FLAG_VALUE_IS_FIELD:
