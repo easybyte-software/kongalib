@@ -690,10 +690,21 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 			bad = true;
 		
 		if (bad) {
-			if (overflow)
+			if (overflow) {
 				PyErr_SetString(PyExc_OverflowError, "Arithmetic overflow");
-			else
-				PyErr_SetString(PyExc_ValueError, "Bad Decimal initializer");
+			}
+			else {
+				const char *v;
+				PyObject *str = PyObject_Repr(value);
+				if (str)
+					v = PyUnicode_AsUTF8(str);
+				else {
+					PyErr_Clear();
+					v = "<unknown>";
+				}
+				PyErr_Format(PyExc_ValueError, "Bad Decimal initializer: %s", v);
+				Py_XDECREF(str);
+			}
 			return -1;
 		}
 	}
