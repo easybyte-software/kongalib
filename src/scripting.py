@@ -422,11 +422,13 @@ class Interpreter(object):
 			if proc is not None:
 				self.proc = None
 				self.lock.release()
-				proc.terminate()
-				proc.join(3)
-				if proc.is_alive():
-					proc.kill()
-				self.lock.acquire()
+				try:
+					proc.terminate()
+					proc.join(3)
+					if proc.is_alive():
+						proc.kill()
+				finally:
+					self.lock.acquire()
 
 	def is_running(self):
 		with self.lock:
