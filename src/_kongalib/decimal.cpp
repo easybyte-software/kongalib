@@ -700,7 +700,7 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 					PyErr_Clear();
 					v = "<unknown>";
 				}
-				PyErr_Format(PyExc_ValueError, "Bad Decimal initializer: %s", v);
+				PyErr_Format(PyExc_ValueError, "Bad Decimal initializer: %s", v.c_str());
 				Py_XDECREF(str);
 			}
 			return -1;
