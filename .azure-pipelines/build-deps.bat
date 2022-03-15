@@ -1,8 +1,8 @@
 @setlocal enableextensions enabledelayedexpansion
 @echo off
 
-echo Calling VS 2019 vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
-call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
+echo Calling VS 2022 vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
+call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 
 set PATH=%PATH%;%BUILD_SOURCESDIRECTORY%\win_flex_bison
 
