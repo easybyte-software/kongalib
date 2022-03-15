@@ -694,11 +694,9 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 				PyErr_SetString(PyExc_OverflowError, "Arithmetic overflow");
 			}
 			else {
-				const char *v;
+				std::string v;
 				PyObject *str = PyObject_Repr(value);
-				if (str)
-					v = PyUnicode_AsUTF8(str);
-				else {
+				if ((!str) || (!MGA::ConvertString(str, &v))) {
 					PyErr_Clear();
 					v = "<unknown>";
 				}
