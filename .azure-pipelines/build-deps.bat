@@ -17,7 +17,9 @@ md include
 md bin
 md lib
 
+echo ------------------------------------------------------------------------------------------
 echo Compiling libmpdec
+echo ------------------------------------------------------------------------------------------
 cd "%BUILD_SOURCESDIRECTORY%\mpdecimal-2.4.2\vcbuild"
 if "%PYTHON_ARCHITECTURE%"=="x86" (
 	set "MPDEC_BITS=32"
@@ -30,14 +32,18 @@ copy /Y dist%MPDEC_BITS%\*.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 copy /Y ..\libmpdec\vc*.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 dir /s "%BUILD_SOURCESDIRECTORY%\third_party"
 
+echo ------------------------------------------------------------------------------------------
 echo Compiling zlib
+echo ------------------------------------------------------------------------------------------
 cd "%BUILD_SOURCESDIRECTORY%\zlib-1.2.11"
 nmake -f win32\Makefile.msc zlib.lib
 copy /Y zlib.lib "%BUILD_SOURCESDIRECTORY%\third_party\lib"
 copy /Y zlib.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 copy /Y zconf.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
 
+echo ------------------------------------------------------------------------------------------
 echo Compiling pcre
+echo ------------------------------------------------------------------------------------------
 cd "%BUILD_SOURCESDIRECTORY%\pcre-8.45"
 md out
 cd out
@@ -45,7 +51,9 @@ cmake -G "NMake Makefiles" -DPCRE_SUPPORT_UTF=ON -DPCRE_BUILD_PCREGREP=OFF -DPCR
 nmake
 nmake install
 
+echo ------------------------------------------------------------------------------------------
 echo Compiling tidy-html5
+echo ------------------------------------------------------------------------------------------
 cd "%BUILD_SOURCESDIRECTORY%\tidy-html5-5.8.0"
 md out
 cd out
@@ -53,7 +61,9 @@ cmake -G "NMake Makefiles" -DBUILD_SHARED_LIB=OFF -DINCLUDE_INSTALL_DIR=include\
 nmake
 nmake install
 
+echo ------------------------------------------------------------------------------------------
 echo Compiling ebpr and konga_client
+echo ------------------------------------------------------------------------------------------
 cd "%BUILD_SOURCESDIRECTORY%\konga"
 md out
 cd out
