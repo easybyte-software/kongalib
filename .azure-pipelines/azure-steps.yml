@@ -1,7 +1,8 @@
 steps:
 
 - script: |
-    for /f %%i in ('vswhere -version $(vs_version) -find VC\**\vcvarsall.bat') do set VCVARSALL=%%i
+    vswhere -version %VS_VERSION% -find VC\**\vcvarsall.bat > temp.txt
+    set /p VCVARSALL=<temp.txt
     call "%VCVARSALL%" $(python.architecture)
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python setup.py bdist_wheel -d wheelhouse

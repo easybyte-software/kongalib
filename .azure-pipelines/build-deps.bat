@@ -2,7 +2,8 @@
 @echo off
 
 echo Calling VS %VS_VERSION% vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
-for /f %%i in ('vswhere -version %VS_VERSION% -find VC\**\vcvarsall.bat') do set VCVARSALL=%%i
+vswhere -version %VS_VERSION% -find VC\**\vcvarsall.bat > temp.txt
+set /p VCVARSALL=<temp.txt
 echo "%VCVARSALL%" %PYTHON_ARCHITECTURE%
 call "%VCVARSALL%" %PYTHON_ARCHITECTURE%
 
