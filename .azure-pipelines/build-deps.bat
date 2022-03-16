@@ -3,10 +3,8 @@
 
 echo Calling VS %VS_VERSION% vcvarsall for Python %PYTHON_VERSION% %PYTHON_ARCHITECTURE%
 for /f %%i in ('vswhere -version %VS_VERSION% -find VC\**\vcvarsall.bat') do set VCVARSALL=%%i
+echo "%VCVARSALL%" %PYTHON_ARCHITECTURE%
 call "%VCVARSALL%" %PYTHON_ARCHITECTURE%
-
-
-call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %PYTHON_ARCHITECTURE%
 
 set PATH=%PATH%;%BUILD_SOURCESDIRECTORY%\win_flex_bison
 
