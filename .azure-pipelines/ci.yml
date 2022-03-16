@@ -97,24 +97,22 @@ jobs:
       condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
 
 - job: Windows
+  variables:
+    vs_version: 17
   strategy:
     matrix:
       Python37:
         python.version: '3.7'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python38:
         python.version: '3.8'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python39:
         python.version: '3.9'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
       Python310:
         python.version: '3.10'
         python.architecture: 'x64'
-        vcvarsall: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat'
   pool:
     vmImage: 'windows-latest'
   steps:

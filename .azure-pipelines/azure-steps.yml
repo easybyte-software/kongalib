@@ -1,7 +1,8 @@
 steps:
 
 - script: |
-    call "$(vcvarsall)" $(python.architecture)
+    for /f %%i in ('vswhere -version $(vs_version) -find VC\**\vcvarsall.bat') do set VCVARSALL=%%i
+    call "%VCVARSALL%" $(python.architecture)
     set KONGASDK=$(Build.SourcesDirectory)\third_party
     python setup.py bdist_wheel -d wheelhouse
   displayName: 'Build wheel (Windows)'
