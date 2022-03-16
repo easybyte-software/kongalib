@@ -1,7 +1,7 @@
 steps:
 
 - script: |
-    vswhere -version %VS_VERSION% -find VC\**\vcvarsall.bat > temp.txt
+    vswhere -version $(vs_version) -find VC\**\vcvarsall.bat > temp.txt
     set /p VCVARSALL=<temp.txt
     call "%VCVARSALL%" $(python.architecture)
     set KONGASDK=$(Build.SourcesDirectory)\third_party
