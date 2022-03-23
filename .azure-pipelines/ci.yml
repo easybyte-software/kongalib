@@ -41,15 +41,10 @@ jobs:
 - job: ManyLinux
   strategy:
     matrix:
-      x86_64:
+      64Bit:
         arch: x86_64
         plat: manylinux2014_x86_64
         image: quay.io/pypa/manylinux2014_x86_64
-        python.architecture: x64
-      aarch64:
-        arch: aarch64
-        plat: manylinux2014_aarch64
-        image: quay.io/pypa/manylinux2014_aarch64
         python.architecture: x64
   pool:
     vmImage: 'ubuntu-latest'
