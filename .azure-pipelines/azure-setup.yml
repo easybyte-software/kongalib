@@ -23,8 +23,8 @@ steps:
     cd ..
     python -c "from urllib.request import urlretrieve; urlretrieve('https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.4.2.zip', 'mpdecimal-2.4.2.zip')"
     7z x mpdecimal-2.4.2.zip
-    python -c "from urllib.request import urlretrieve; urlretrieve('https://zlib.net/zlib-1.2.11.tar.gz', 'zlib-1.2.11.tar.gz')"
-    7z x zlib-1.2.11.tar.gz -so | 7z x -aoa -si -ttar
+    python -c "from urllib.request import urlretrieve; urlretrieve('https://zlib.net/zlib-1.2.12.tar.gz', 'zlib-1.2.12.tar.gz')"
+    7z x zlib-1.2.12.tar.gz -so | 7z x -aoa -si -ttar
     python -c "from urllib.request import urlretrieve; urlretrieve('https://downloads.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip', 'pcre-8.45.zip')"
     7z x pcre-8.45.zip
     python -c "from urllib.request import urlretrieve; urlretrieve('https://github.com/htacg/tidy-html5/archive/refs/tags/5.8.0.zip', 'tidy-html5-5.8.0.zip')"
