@@ -30,11 +30,6 @@
 #include "yajl/yajl_parse.h"
 #include "yajl/yajl_gen.h"
 
-#if (defined(_WIN32) && (_MSC_VER < 1900))
-#define CL_USE_TINYXML
-#define TIXML_USE_STL
-#endif
-
 #include <ebpr/types.h>
 #include <ebpr/system.h>
 #include <ebpr/decimal.h>
