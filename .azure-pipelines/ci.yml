@@ -13,7 +13,7 @@ parameters:
 - name: konga_branch_param
   displayName: Branch from which to fetch Konga sources
   type: string
-  default: stable-1.10.1
+  default: stable-1.11.0
 
 variables:
   konga_branch: ${{ parameters.konga_branch_param }}
