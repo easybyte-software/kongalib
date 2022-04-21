@@ -166,6 +166,7 @@ DRIVER_RELOADED = 2116
 DRIVER_CANNOT_REPAIR = 2117
 DRIVER_CANNOT_ENCRYPT = 2118
 DRIVER_CANNOT_CLONE = 2119
+DRIVER_DISABLED = 2120
 RESULT_ROW = 2200                                              #: Riga ottenuta con successo dal risultato della query
 RESULT_DONE = 2201                                             #: Il risultato della query non ha più righe disponibili
 RESULT_ERROR = 2202                                            #: Errore del driver durante l'ottenimento del risultato della query
