@@ -782,6 +782,7 @@ PN_ROW_COMMESSA_MISSING = 5443
 PN_ROW_COMMESSA_NOT_REQUESTED = 5444
 EB_COD_INTRA_INVALID = 5445                                    #: Il codice non deve contenere spazi!
 EB_DDI_DATI_MALFORMATI = 5446                                  #: Dati dettaglio dichiarazione intento malformati: manca il riferimento ai dati annuali cliente fornitore!
+EB_PN_REG_SIMULATA_IVA = 5447                                  #: Non è possibile salvare la registrazione: le registrazioni simulate non possono essere di tipo IVA!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
