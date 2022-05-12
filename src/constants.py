@@ -1036,6 +1036,7 @@ ACTIVITY_ERROR_PATCHING = 8022
 ACTIVITY_UPDATE_UNIQUE = 8023
 ACTIVITY_UPDATE_UNIQUE_COMMON = 8024
 ACTIVITY_DELETED_DE_WITH_SDI = 8025
+ACTIVITY_CANNOT_ARCHIVE = 8099
 CLOUD_CANNOT_INIT = 9000                                       #: Impossibile inizializzare i servizi cloud
 CLOUD_INIT_ERROR = 9001
 CLOUD_NOT_ACTIVE = 9002                                        #: I servizi cloud non sono attivi
