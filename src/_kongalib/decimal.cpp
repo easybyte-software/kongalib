@@ -411,6 +411,24 @@ MGA_Decimal_int(MGA::DecimalObject *self)
 }
 
 
+
+static PyObject *
+MGA_Decimal_index(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
+{
+	bool error;
+	int64 value = self->fValue.ToInt64(&error);
+
+	if ((self->fValue.Fractional() != 0) || (error)) {
+		Py_INCREF(self);
+		return (PyObject *)self;
+	}
+	if ((value >= -2147483647L - 1) && (value <= 2147483647L))
+		return PyInt_FromLong((long)value);
+	else
+		return PyLong_FromLongLong(value);
+}
+
+
 #if !PY3K
 
 /**
@@ -1125,6 +1143,7 @@ static PyNumberMethods MGA_Decimal_as_number = {
 	(binaryfunc)MGA_Decimal_div,			/* nb_true_divide */
 	0,										/* nb_inplace_floor_divide */
 	0,										/* nb_inplace_true_divide */
+	(unaryfunc)MGA_Decimal_index,			/* nb_index */
 };
 
 
