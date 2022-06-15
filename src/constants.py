@@ -785,6 +785,7 @@ EB_DDI_DATI_MALFORMATI = 5446                                  #: Dati dettaglio
 EB_PN_REG_SIMULATA_IVA = 5447                                  #: Non è possibile salvare la registrazione: le registrazioni simulate non possono essere di tipo IVA!
 EB_PN_REG_INT_IMPORTO = 5448                                   #: Non è possibile modificare la registrazione perchè l'importo differisce dal documento integrativo definivito!
 EB_PN_REG_INT_DEFINITIVO = 5449                                #: Non è possibile modificare la scheda perchè il documento integrativo associato è stato stampato in definitivo!
+EB_CAUS_CONT_REG_IVA_MISS = 5450                               #: La causale è di tipo IVA, deve quindi essere indicato il del registro IVA corrispondente!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
