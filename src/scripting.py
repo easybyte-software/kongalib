@@ -426,7 +426,10 @@ class Interpreter(object):
 					proc.terminate()
 					proc.join(3)
 					if proc.is_alive():
-						proc.kill()
+						try:
+							proc.kill()
+						except Exception as e:
+							debug_log('Interpreter.stop() failed with error: %s' % str(e))
 				finally:
 					self.lock.acquire()
 
