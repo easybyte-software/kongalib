@@ -32,6 +32,9 @@ class LRUCache(object):
 		self.cache = collections.OrderedDict()
 
 	def clear(self):
+		if self.destructor is not None:
+			for item in self.cache.items():
+				self.destructor(*item)
 		self.cache.clear()
 
 	def get(self, key, default=None):
