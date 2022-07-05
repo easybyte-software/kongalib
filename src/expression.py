@@ -58,7 +58,9 @@ class LRUCache(object):
 		self.cache[key] = value
 
 	def __delitem__(self, key):
-		self.cache.pop(key)
+		value = self.cache.pop(key)
+		if self.destructor is not None:
+			self.destructor(key, value)
 
 	def __contains__(self, key):
 		return key in self.cache
