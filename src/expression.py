@@ -44,6 +44,15 @@ class LRUCache(object):
 			return value
 		except KeyError:
 			return default
+	
+	def items(self):
+		return self.cache.items()
+	
+	def values(self):
+		return self.cache.values()
+	
+	def keys(self):
+		return self.cache.keys()
 
 	def __getitem__(self, key):
 		value = self.cache.pop(key)

@@ -736,7 +736,7 @@ class AsyncClient(Client):
 			IN_TYPE: type,
 			IN_FILENAME: filename,
 			IN_CHECK: check_only,
-		}, ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME ), progress=progress)
+		}, ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM ), progress=progress)
 
 	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
