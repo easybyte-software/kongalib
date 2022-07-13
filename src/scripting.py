@@ -26,6 +26,7 @@ import io
 import threading
 import multiprocessing
 import multiprocessing.connection
+import asyncio
 import signal
 import logging
 import logging.handlers
@@ -566,7 +567,11 @@ class _ServerProxy(threading.Thread):
 				try:
 					if func is None:
 						raise RuntimeError('Method "%s" unavailable in this context' % name)
-					result = (None, func(*args, **kwargs))
+					result = func(*args, **kwargs)
+					if asyncio.iscoroutine(result):
+						loop = asyncio.get_event_loop()
+						result = asyncio.run_coroutine_threadsafe(result, loop).result()
+					result = (None, result)
 				except Exception as e:
 					import traceback
 					_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
