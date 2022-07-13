@@ -16,7 +16,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from kongalib import Error, start_timer, PY3
+from kongalib import Error, PY3
 from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
 
 import sys
@@ -522,22 +522,14 @@ class _Method(object):
 				raise Error(errno, errmsg)
 
 
-class _ServerProxy(object):
-	CACHE = []
-	LOCK = threading.RLock()
-
-	def __init__(self):
-		self.ready = threading.Event()
-		self.quit = False
-		self.handlers = {}
+class _ServerProxy(threading.Thread):
+	def __init__(self, handlers=None):
+		self.handlers = handlers or {}
 		self.listener = None
-		# try:
-		#   self.listener = multiprocessing.connection.Listener(family='AF_INET')
-		# except:
+		self.conn = None
+		super(_ServerProxy, self).__init__()
 	
 	def start(self):
-		self.quit = False
-		self.ready.clear()
 		if gConnFamilyOverride:
 			family = None
 		else:
@@ -546,63 +538,54 @@ class _ServerProxy(object):
 			self.listener = multiprocessing.connection.Listener(family=family)
 		except:
 			raise BadConnection()
-		start_timer(0, lambda dummy: self.run())
+		super(_ServerProxy, self).start()
 
 	def stop(self):
-		self.quit = True
 		if self.listener is not None:
-			self.ready.wait()
 			self.listener.close()
-			self.handlers = {}
-			with _ServerProxy.LOCK:
-				_ServerProxy.CACHE.append(self)
+			self.listener = None
+		if self.conn is not None:
+			self.conn.close()
+		self.handlers = {}
+		if self.is_alive():
+			self.join()
 
 	def run(self):
 		debug_log("[ServerProxy] run")
 		try:
-			conn = self.listener.accept()
+			self.conn = self.listener.accept()
 			debug_log("[ServerProxy] got proxy")
-			while not self.quit:
-				if conn.poll(0.1):
-					data = conn.recv()
-					handler, name, args, kwargs = data
-					if handler in self.handlers:
-						# debug_log("[kongaprint:%s] %s(%s)" % (handler, name, ', '.join([ repr(arg) for arg in args ] + [ '%s=%s' % (key, repr(value)) for key, value in kwargs.iteritems() ])))
-						func = getattr(self.handlers[handler], name, None)
+			while True:
+				data = self.conn.recv()
+				handler, name, args, kwargs = data
+				if handler in self.handlers:
+					# debug_log("[kongaprint:%s] %s(%s)" % (handler, name, ', '.join([ repr(arg) for arg in args ] + [ '%s=%s' % (key, repr(value)) for key, value in kwargs.iteritems() ])))
+					func = getattr(self.handlers[handler], name, None)
+				else:
+					func = None
+				try:
+					if func is None:
+						raise RuntimeError('Method "%s" unavailable in this context' % name)
+					result = (None, func(*args, **kwargs))
+				except Exception as e:
+					import traceback
+					_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
+					# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
+					if isinstance(e, Error):
+						errno = e.errno
 					else:
-						func = None
-					try:
-						if func is None:
-							raise RuntimeError('Method "%s" unavailable in this context' % name)
-						result = (None, func(*args, **kwargs))
-					except Exception as e:
-						import traceback
-						_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
-						# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
-						if isinstance(e, Error):
-							errno = e.errno
-						else:
-							errno = None
-						result = ((str(e), errno), None)
-					finally:
-						conn.send(result)
+						errno = None
+					result = ((str(e), errno), None)
+				finally:
+					self.conn.send(result)
 		except IOError:
-			import traceback
-			debug_log("[ServerProxy] IOError: %s" % traceback.format_exc())
+			if self.listener is not None:
+				import traceback
+				debug_log("[ServerProxy] IOError: %s" % traceback.format_exc())
 		except EOFError:
 			pass
 		finally:
 			debug_log("[ServerProxy] exiting")
-			self.ready.set()
-
-	@classmethod
-	def create(cls, handlers):
-		with cls.LOCK:
-			if len(cls.CACHE) == 0:
-				_ServerProxy.CACHE.append(_ServerProxy())
-			proxy = _ServerProxy.CACHE.pop()
-			proxy.handlers = handlers
-			return proxy
 
 
 class BuiltinHandler(object):
@@ -685,61 +668,59 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	_handlers = { 'builtin': BuiltinHandler() }
 	_handlers.update(handlers or {})
 	_handlers['builtin']._set_interpreter(interpreter)
-	try:
-		while True:
-			p = _ServerProxy.create(_handlers)
-			try:
-				p.start()
-				debug_log("[ServerProxy] listener address is: %s" % repr(p.listener.address))
-				conn_type = multiprocessing.connection.address_type(p.listener.address)
-				if conn_type == 'AF_INET':
-					address = '%s:%d' % tuple(p.listener.address)
-				else:
-					address = p.listener.address
-				argv.insert(1, conn_type)
-				argv.insert(2, address)
-				debug_log("[ServerProxy] waiting proxy: %s" % repr(argv))
+	while True:
+		p = _ServerProxy(_handlers)
+		try:
+			p.start()
+			debug_log("[ServerProxy] listener address is: %s" % repr(p.listener.address))
+			conn_type = multiprocessing.connection.address_type(p.listener.address)
+			if conn_type == 'AF_INET':
+				address = '%s:%d' % tuple(p.listener.address)
+			else:
+				address = p.listener.address
+			argv.insert(1, conn_type)
+			argv.insert(2, address)
+			debug_log("[ServerProxy] waiting proxy: %s" % repr(argv))
 
-		#     import time
-		#     start = time.time()
-				interpreter.execute(script, filename, argv, path or [], timeout)
-		#     print("Script execution time:", time.time() - start)
-			except Exception as e:
-				if getattr(e, '_bad_connection', False) and (gConnFamily is not None):
-					debug_log("[ServerProxy] bad connection, trying default connection family")
-					global gConnFamilyOverride
-					gConnFamilyOverride = True
-					set_connection_family(None)
-					argv[1:3] = []
-					continue
-				if isinstance(e, InterpreterError):
-					type, value, tb = e.get_exc_info()
+	#     import time
+	#     start = time.time()
+			interpreter.execute(script, filename, argv, path or [], timeout)
+	#     print("Script execution time:", time.time() - start)
+		except Exception as e:
+			if getattr(e, '_bad_connection', False) and (gConnFamily is not None):
+				debug_log("[ServerProxy] bad connection, trying default connection family")
+				global gConnFamilyOverride
+				gConnFamilyOverride = True
+				set_connection_family(None)
+				argv[1:3] = []
+				continue
+			if isinstance(e, InterpreterError):
+				type, value, tb = e.get_exc_info()
+			else:
+				import traceback
+				debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
+				type, value, tb = sys.exc_info()
+			def do_filter(entry):
+				filename = entry[0].replace('\\', '/')
+				if filename.endswith('kongalib/scripting.py') or filename.endswith('__script_host__.py'):
+					return False
+				return True
+			tb = list(filter(do_filter, tb))
+			try:
+				if PY3:
+					_handlers['builtin'].print_exception(type, value, tb)
 				else:
-					import traceback
-					debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
-					type, value, tb = sys.exc_info()
-				def do_filter(entry):
-					filename = entry[0].replace('\\', '/')
-					if filename.endswith('kongalib/scripting.py') or filename.endswith('__script_host__.py'):
-						return False
-					return True
-				tb = list(filter(do_filter, tb))
-				try:
-					if PY3:
-						_handlers['builtin'].print_exception(type, value, tb)
-					else:
-						_handlers['builtin'].print_exception(type.__name__, str(value), tb)
-				except:
-					debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
+					_handlers['builtin'].print_exception(type.__name__, str(value), tb)
+			except:
+				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
+		finally:
+			_handlers['builtin']._set_interpreter(None)
+			del interpreter
+			try:
+				debug_log("[ServerProxy] done")
 			finally:
-				try:
-					debug_log("[ServerProxy] done")
-				finally:
-					p.stop()
-			break
-	finally:
-		_handlers['builtin']._set_interpreter(None)
-		del interpreter
+				p.stop()
+		break
 
 
 
