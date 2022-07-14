@@ -660,6 +660,7 @@ def add_dll_directory(path):
 
 
 def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None):
+	import traceback
 	if (script is None) and (filename is None):
 		raise ValueError('Either script or filename must be specified')
 	debug_log("[ServerProxy] launching...")
@@ -702,7 +703,6 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			if isinstance(e, InterpreterError):
 				type, value, tb = e.get_exc_info()
 			else:
-				import traceback
 				debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
 				type, value, tb = sys.exc_info()
 			def do_filter(entry):
