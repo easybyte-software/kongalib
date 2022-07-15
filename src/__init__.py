@@ -131,7 +131,11 @@ class Log(object):
 	def get_exception(self, klass=RuntimeError):
 		error = self.get_messages(Log.ERROR)[0][1]
 		return klass(error)
-	
+
+	def extend(self, log):
+		for msg in log.get_messages():
+			self.add_message(*msg)
+
 	def strip_html(self, html):
 		"""Elimina tutto il codice HTML dalla stringa in *html*, lasciando solo le parti testuali."""
 		try:
