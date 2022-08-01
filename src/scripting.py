@@ -333,6 +333,7 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 			sem.release()
 		try:
 			conn.close()
+			conn = None
 		except:
 			pass
 		_State.controller.join()
@@ -340,6 +341,11 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
 	finally:
+		if conn is not None:
+			try:
+				conn.close()
+			except:
+				pass
 		logger.debug('exiting interpreter process')
 	
 
