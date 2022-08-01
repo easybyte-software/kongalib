@@ -661,11 +661,11 @@ MGA_Client_get_connection_info(MGA::ClientObject *self, PyObject *args)
 {
 	CLU_Table info;
 	self->fClient->GetConnectionInfo(&info);
-	CLU_UUID uuid(0);
+	CLU_UUID uuid = CLU_UUID::Null();
 	
 	if (info.Exists("uuid"))
 		uuid = CLU_UUID(info.GetString("uuid"));
-	if (uuid == CLU_UUID(0))
+	if (uuid.IsNull())
 		Py_RETURN_NONE;
 	
 	CLU_Table& database = self->fClient->GetDatabase();
