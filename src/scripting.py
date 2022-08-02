@@ -563,32 +563,33 @@ class _ServerProxy(threading.Thread):
 			self.conn = self.listener.accept()
 			debug_log("[ServerProxy] got proxy")
 			while True:
-				data = self.conn.recv()
-				handler, name, args, kwargs = data
-				if handler in self.handlers:
-					# debug_log("[kongaprint:%s] %s(%s)" % (handler, name, ', '.join([ repr(arg) for arg in args ] + [ '%s=%s' % (key, repr(value)) for key, value in kwargs.iteritems() ])))
-					func = getattr(self.handlers[handler], name, None)
-				else:
-					func = None
-				try:
-					if func is None:
-						raise RuntimeError('Method "%s" unavailable in this context' % name)
-					result = func(*args, **kwargs)
-					if asyncio.iscoroutine(result):
-						loop = asyncio.get_event_loop()
-						result = asyncio.run_coroutine_threadsafe(result, loop).result()
-					result = (None, result)
-				except Exception as e:
-					import traceback
-					_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
-					# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
-					if isinstance(e, Error):
-						errno = e.errno
+				if self.conn.poll(0.1):
+					data = self.conn.recv()
+					handler, name, args, kwargs = data
+					if handler in self.handlers:
+						# debug_log("[kongaprint:%s] %s(%s)" % (handler, name, ', '.join([ repr(arg) for arg in args ] + [ '%s=%s' % (key, repr(value)) for key, value in kwargs.iteritems() ])))
+						func = getattr(self.handlers[handler], name, None)
 					else:
-						errno = None
-					result = ((str(e), errno), None)
-				finally:
-					self.conn.send(result)
+						func = None
+					try:
+						if func is None:
+							raise RuntimeError('Method "%s" unavailable in this context' % name)
+						result = func(*args, **kwargs)
+						if asyncio.iscoroutine(result):
+							loop = asyncio.get_event_loop()
+							result = asyncio.run_coroutine_threadsafe(result, loop).result()
+						result = (None, result)
+					except Exception as e:
+						import traceback
+						_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
+						# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
+						if isinstance(e, Error):
+							errno = e.errno
+						else:
+							errno = None
+						result = ((str(e), errno), None)
+					finally:
+						self.conn.send(result)
 		except IOError:
 			if self.listener is not None:
 				import traceback
