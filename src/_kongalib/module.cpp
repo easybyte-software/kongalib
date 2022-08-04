@@ -706,21 +706,43 @@ _cleanup(PyObject *self, PyObject *args)
 static CL_Status
 _power_callback(int state, void *param)
 {
-#ifdef WIN32
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 
 	MGA::MODULE_STATE *s = GET_STATE();
-	if ((state == CL_POWER_SLEEP) && (s)) {
-		CL_AutoLocker locker(&s->fThreadsLock);
-		for (std::list<MGA_Client *>::iterator it = s->fClientList.begin(); it != s->fClientList.end(); it++) {
-			MGA_Client *client = *it;
-			client->Disconnect();
+	if (s) {
+		if (state == CL_POWER_SLEEP) {
+			s->fThreadsLock.Lock();
+			for (std::list<MGA_Client *>::iterator it = s->fClientList.begin(); it != s->fClientList.end(); it++) {
+				MGA_Client *client = *it;
+				client->Disconnect();
+			}
+			s->fThreadsLock.Unlock();
+
+			if ((s->fSuspendCB) && (s->fSuspendCB != Py_None)) {
+				PyObject *result = PyObject_CallFunctionObjArgs(s->fSuspendCB, NULL);
+				if (!result) {
+					PyErr_Print();
+					PyErr_Clear();
+				}
+				else
+					Py_DECREF(result);
+			}
+		}
+		else if (state == CL_POWER_WAKEUP) {
+			if ((s->fResumeCB) && (s->fResumeCB != Py_None)) {
+				PyObject *result = PyObject_CallFunctionObjArgs(s->fResumeCB, NULL);
+				if (!result) {
+					PyErr_Print();
+					PyErr_Clear();
+				}
+				else
+					Py_DECREF(result);
+			}
 		}
 	}
 
 	PyGILState_Release(gstate);
-#endif
 	return CL_OK;
 }
 
@@ -741,6 +763,31 @@ set_default_idle_callback(PyObject *self, PyObject *args, PyObject *kwds)
 	Py_INCREF(object);
 	Py_XDECREF(state->fIdleCB);
 	state->fIdleCB = object;
+	
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	MGA::MODULE_STATE *state = GET_STATE();
+	if (!state) {
+		PyErr_SetString(PyExc_RuntimeError, "no module state!");
+		return NULL;
+	}
+	char *kwlist[] = { "suspend", "resume", NULL };
+	PyObject *suspend, *resume;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &suspend, &resume))
+		return NULL;
+	
+	Py_INCREF(suspend);
+	Py_XDECREF(state->fSuspendCB);
+	state->fSuspendCB = suspend;
+
+	Py_INCREF(resume);
+	Py_XDECREF(state->fResumeCB);
+	state->fResumeCB = resume;
 	
 	Py_RETURN_NONE;
 }
@@ -1007,6 +1054,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"unlock",						(PyCFunction)unlock,						METH_NOARGS,					"unlock()\n\nReleases the global MGA threads lock." },
 	{	"_cleanup",						(PyCFunction)_cleanup,						METH_NOARGS,					"_cleanup()\n\nCleanup resources." },
 	{	"set_default_idle_callback",	(PyCFunction)set_default_idle_callback,		METH_VARARGS | METH_KEYWORDS,	"set_default_idle_callback(callback)\n\nSets the default callback to be issued during client sync operations." },
+	{	"set_power_callbacks",			(PyCFunction)set_power_callbacks,			METH_VARARGS | METH_KEYWORDS,	"set_power_callbacks(suspend, resume)\n\nSets callbacks for suspend/resume system events." },
 	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
 	{	"get_application_log_path",		(PyCFunction)get_application_log_path,		METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
 	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
@@ -1027,6 +1075,8 @@ module_clear(PyObject *m)
 		return 1;
 
 	Py_CLEAR(s->fIdleCB);
+	Py_CLEAR(s->fSuspendCB);
+	Py_CLEAR(s->fResumeCB);
 	Py_CLEAR(s->fException);
 	Py_CLEAR(s->fTimerList);
 	Py_CLEAR(s->fJSONException);
@@ -1084,6 +1134,8 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 		return 1;
 
 	Py_VISIT(s->fIdleCB);
+	Py_VISIT(s->fSuspendCB);
+	Py_VISIT(s->fResumeCB);
 	Py_VISIT(s->fException);
 	Py_VISIT(s->fTimerList);
 	Py_VISIT(s->fJSONException);
@@ -1213,6 +1265,8 @@ MOD_INIT(_kongalib)
 		sMainThreadID = PyThreadState_Get()->thread_id;
 	state->fInitialized = true;
 	state->fIdleCB = NULL;
+	state->fSuspendCB = NULL;
+	state->fResumeCB = NULL;
 	state->fTimeOut = 0;
 	state->fStartTime = 0;
 	state->fJSONException = PyDict_GetItemString(PyModule_GetDict(state->fParentModule), "JSONError");

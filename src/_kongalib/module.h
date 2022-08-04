@@ -156,6 +156,8 @@ typedef struct MODULE_STATE
 	CL_RecursiveMutex				fThreadsLock;
 	CL_Dispatcher					*fDispatcher;
 	PyObject						*fIdleCB;
+	PyObject						*fSuspendCB;
+	PyObject						*fResumeCB;
 	volatile bool					fInitialized;
 	PyObject						*fException;
 	CL_Translator					*fTranslator;

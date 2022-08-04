@@ -331,7 +331,7 @@ class JSONError(Exception):
 			return self.__unicode__().encode('utf-8')
 
 
-from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, checksum, _apply_stylesheet, regexp_find_all
+from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all
 from .constants import *
 from .client import *
 from .expression import *
