@@ -75,9 +75,15 @@ MGA::ConvertString(PyObject *object, string *string)
 		return 1;
 	}
 	else if (PyUnicode_Check(object)) {
+#if PY3K
+		Py_ssize_t size;
+		const char *s = PyUnicode_AsUTF8AndSize(object, &size);
+		*string = std::string(s, size);
+#else
 		CL_Blob buffer;
 		UnicodeToUTF8(object, buffer);
 		*string = std::string((const char *)buffer.GetData(), (size_t)buffer.GetSize());
+#endif
 		return 1;
 	}
 	PyErr_SetString(PyExc_ValueError, "Expected 'str' or 'unicode' object");
