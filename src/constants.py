@@ -147,6 +147,7 @@ PATCHED_CONFIG_VERSION = 2084                                  #: Le preferenze 
 BINARY_STORAGE_FS_CANNOT_RESOLVE_IMAGES_PATH = 2085            #: Il server non è in grado di risolvere il percorso su filesystem per l'accesso alle immagini; controllare le impostazioni di accesso nella configurazione del database
 BINARY_STORAGE_FS_CANNOT_RESOLVE_DOCS_PATH = 2086              #: Il server non è in grado di risolvere il percorso su filesystem per l'accesso ai documenti; controllare le impostazioni di accesso nella configurazione del database
 BINARY_DATA_DESC = 2087
+CANNOT_UPLAOD_SQLITE_UNAVAILABLE = 2088                        #: Impossibile caricare il database: supporto SQLite non disponibile sul server remoto
 DRIVER_LOAD_FAILED = 2100
 MALFORMED_DRIVER = 2101
 INCOMPATIBLE_DRIVER_VERSION = 2102
