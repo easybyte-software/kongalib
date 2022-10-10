@@ -1040,6 +1040,32 @@ regexp_find_all(PyObject *self, PyObject *args)
 }
 
 
+static PyObject *
+_check_all(PyObject *self, PyObject *args)
+{
+	Py_buffer buffer;
+	if (!PyArg_ParseTuple(args, "y*", &buffer))
+		return NULL;
+
+	bool hasZero = false;
+	uint64 *p = (uint64 *)buffer.buf;
+	int32 i, size = (buffer.len / sizeof(uint64));
+	for (i = 0; i < size; i++) {
+		if (*p == 0) {
+			hasZero = true;
+			break;
+		}
+		p++;
+	}
+	PyBuffer_Release(&buffer);
+	if (hasZero)
+		Py_RETURN_FALSE;
+	else
+		Py_RETURN_TRUE;
+}
+
+
+
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
 	{	"host_lookup",					(PyCFunction)host_lookup,					METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
@@ -1062,6 +1088,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
 	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_NOARGS,					"_set_process_foreground()\n\nBrings process to the foreground." },
 	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
+	{	"_check_all",					(PyCFunction)_check_all, 					METH_VARARGS | METH_KEYWORDS,	"_check_all(ids) -> Returns true if all elements of array ids are non-zero." },
 	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
 	{	NULL,							NULL,										0,								NULL }
 };
