@@ -55,10 +55,13 @@ class AsyncClient(Client):
 			try:
 				if future.cancelled() or (progress is None):
 					result = not future.cancelled()
-				elif asyncio.iscoroutinefunction(progress):
-					result = asyncio.run_coroutine_threadsafe(progress(ptype, completeness, state, userdata), loop).result()
 				else:
-					result = progress(ptype, completeness, state, userdata)
+					if asyncio.iscoroutinefunction(progress):
+						coro = progress
+					else:
+						async def coro(*args):
+							return progress(*args)
+					result = asyncio.run_coroutine_threadsafe(coro(ptype, completeness, state, userdata), loop).result()
 				if result is False:
 					return False
 			except Exception as e:

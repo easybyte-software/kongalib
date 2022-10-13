@@ -576,7 +576,10 @@ class _ServerProxy(threading.Thread):
 							raise RuntimeError('Method "%s" unavailable in this context' % name)
 						result = func(*args, **kwargs)
 						if asyncio.iscoroutine(result):
-							loop = asyncio.get_event_loop()
+							try:
+								loop = asyncio.get_running_loop()
+							except:
+								loop = asyncio.get_event_loop_policy().get_event_loop()
 							result = asyncio.run_coroutine_threadsafe(result, loop).result()
 						result = (None, result)
 					except Exception as e:
