@@ -42,11 +42,11 @@ class AsyncClient(Client):
 	"""
 
 	def _safe_set_result(self, future, result):
-		if not future.cancelled():
+		if not future.done():
 			future.set_result(result)
 	
 	def _safe_set_exception(self, future, e):
-		if not future.cancelled():
+		if not future.done():
 			future.set_exception(e)
 	
 	def _make_progress(self, future, progress, userdata):
