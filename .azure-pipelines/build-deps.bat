@@ -35,7 +35,7 @@ dir /s "%BUILD_SOURCESDIRECTORY%\third_party"
 echo ------------------------------------------------------------------------------------------
 echo Compiling zlib
 echo ------------------------------------------------------------------------------------------
-cd "%BUILD_SOURCESDIRECTORY%\zlib-1.2.12"
+cd "%BUILD_SOURCESDIRECTORY%\zlib-1.2.13"
 nmake -f win32\Makefile.msc zlib.lib
 copy /Y zlib.lib "%BUILD_SOURCESDIRECTORY%\third_party\lib"
 copy /Y zlib.h "%BUILD_SOURCESDIRECTORY%\third_party\include"
