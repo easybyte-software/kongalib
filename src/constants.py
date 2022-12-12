@@ -953,6 +953,7 @@ ELAB_FATT_DIFF_FAIL_DATA_FATT = 7477
 ELAB_FATT_DIFF_FAILED_UPDATE_TIP = 7478                        #: Fallito l'aggiornamento dei dati della tipologia documenti
 ELAB_FATT_DIFF_CODTIPFATT_MISS = 7479                          #: L'elaborazione non può procedere perché non è stato specificato il codice della tipologia di fatturazione!
 ELAB_FATT_DIFF_TOO_MANY_DI = 7480
+ELAB_FATT_DIFF_INVALID_TOKEN = 7481                            #: Impossibile proseguire con la conferma della fattura differita! Token di fatturazione non valido!
 ELAB_REG_IVA_LAST_PAGE_NF = 7500                               #: La stampa non può essere resa definitiva in quanto manca il numero dell'ultima pagina stampata!
 ELAB_REG_IVA_LAST_PROT_NF = 7501                               #: La stampa non può essere resa definitiva in quanto manca il numero dell'ultimo protocollo stampato!
 ELAB_REG_IVA_DATE_LAST_PROT_NF = 7502                          #: La stampa non può essere resa definitiva in quanto manca la data dell'ultimo protocollo stampato!
