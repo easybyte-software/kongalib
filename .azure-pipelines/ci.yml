@@ -61,13 +61,9 @@ jobs:
 - job: macOS
   variables:
     python.architecture: 'x64'
-    deps_sdk: macosx12.1
+    deps_sdk: macosx13.1
   strategy:
     matrix:
-      Python27:
-        arch: '-arch x86_64'
-        cmake_arch: x86_64
-        python.version: '2.7'
       Python37:
         arch: '-arch x86_64'
         cmake_arch: x86_64
@@ -84,6 +80,10 @@ jobs:
         arch: '-arch x86_64 -arch arm64'
         cmake_arch: arm64;x86_64
         python.version: '3.10'
+      Python311:
+        arch: '-arch x86_64 -arch arm64'
+        cmake_arch: arm64;x86_64
+        python.version: '3.11'
   pool:
     vmImage: 'macOS-latest'
   steps:
@@ -112,6 +112,9 @@ jobs:
         python.architecture: 'x64'
       Python310:
         python.version: '3.10'
+        python.architecture: 'x64'
+      Python311:
+        python.version: '3.11'
         python.architecture: 'x64'
   pool:
     vmImage: 'windows-latest'
