@@ -1047,21 +1047,15 @@ _check_all(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "y*", &buffer))
 		return NULL;
 
-	bool hasZero = false;
+	uint32 nonZero = 0;
 	uint64 *p = (uint64 *)buffer.buf;
 	int32 i, size = (buffer.len / sizeof(uint64));
 	for (i = 0; i < size; i++) {
-		if (*p == 0) {
-			hasZero = true;
-			break;
-		}
-		p++;
+		if (*p++ != 0)
+			nonZero++;
 	}
 	PyBuffer_Release(&buffer);
-	if (hasZero)
-		Py_RETURN_FALSE;
-	else
-		Py_RETURN_TRUE;
+	return PyLong_FromLong(nonZero);
 }
 
 
