@@ -375,10 +375,11 @@ class Interpreter(object):
 	def __del__(self):
 		with self.lock:
 			if self.proc is not None:
-				try:
-					self.proxy.exit()
-				except:
-					pass
+				if self.proc.is_alive():
+					try:
+						self.proxy.exit()
+					except:
+						pass
 				try:
 					self.logger_listener.stop()
 				except:
@@ -516,6 +517,7 @@ class _Method(object):
 			self.handler._conn.send((self.handler._name, self.name, args, kwargs))
 			if DEBUG:
 				debug_log('[Proxy] call sent in %f secs. Waiting reply: %s' % (time.time() - s, str((self.handler._name, self.name))))
+			
 			e, result = self.handler._conn.recv()
 			if DEBUG:
 				s = time.time()
@@ -606,6 +608,7 @@ class _ServerProxy(threading.Thread):
 class BuiltinHandler(object):
 	def __init__(self):
 		self.__interpreter = None
+		self.__exit_funcs = []
 	
 	def _set_interpreter(self, interpreter):
 		self.__interpreter = interpreter
@@ -657,6 +660,14 @@ class BuiltinHandler(object):
 	
 	def noop(self):
 		pass
+
+	def atexit(self, func, *args, **kwargs):
+		self.__exit_funcs.append((func, args, kwargs))
+	
+	def _atexit(self):
+		while self.__exit_funcs:
+			func, args, kwargs = self.__exit_funcs.pop()
+			func(*args, **kwargs)
 
 
 def set_connection_family(family):
@@ -731,6 +742,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 		finally:
 			_handlers['builtin']._set_interpreter(None)
 			del interpreter
+			_handlers['builtin']._atexit()
 			try:
 				debug_log("[ServerProxy] done")
 			finally:
