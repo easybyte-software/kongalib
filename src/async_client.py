@@ -73,6 +73,8 @@ class AsyncClient(Client):
 	def _make_error(self, future):
 		def error(errno, *args):
 			loop = future.get_loop()
+			if isinstance(errno, int) and (errno in (ABORTED, EXECUTE_ABORTED)):
+				errno = Error(errno, '')
 			if isinstance(errno, Error):
 				if errno.errno in (ABORTED, EXECUTE_ABORTED):
 					loop.call_soon_threadsafe(future.cancel)
