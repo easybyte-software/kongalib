@@ -61,7 +61,9 @@ class LRUCache(object):
 
 	def __setitem__(self, key, value):
 		try:
-			self.cache.pop(key)
+			old_value = self.cache.pop(key)
+			if (value is not old_value) and (self.destructor is not None):
+				self.destructor(key, old_value)
 		except KeyError:
 			if len(self.cache) >= self.capacity:
 				item = self.cache.popitem(last=False)
