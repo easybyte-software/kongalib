@@ -982,6 +982,7 @@ ELAB_ASS_EFF_BANCA_INVALID = 7541                              #: Assegnazione e
 ELAB_FATT_DIFF_MG_DESCRITT_NF = 7542                           #: L'elaborazione non può procedere perché non è presente l'articolo descrittivo con codice '#'!
 ELAB_FATT_DIFF_NO_DF = 7543                                    #: Impossibile procedere alla conferma! Non sono stati trovati documenti.
 ELAB_FATT_DIFF_NO_CONFERMA = 7544
+ELAB_FATT_DIFF_NO_DE = 7545                                    #: Impossibile procedere alla conferma! Non sono stati trovati documenti elettronici.
 ELAB_NUM_FATT_CAR_ROWS_MISS = 7550                             #: L'elaborazione non può procedere perché non sono stati indicati i movimenti di magazzino da aggiornare!
 ELAB_NUM_FATT_CAR_NUMERO_MISS = 7551                           #: L'elaborazione non può procedere perché non e' stato specificato il numero fattura da assegnare!
 ELAB_VERORD_LISTA_MAG_ERROR = 7575                             #: L'elaborazione non può procedere perché non sono stati recuperati i dati sui magazzini dell'azienda!
