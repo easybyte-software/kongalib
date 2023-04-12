@@ -244,7 +244,7 @@ def parse(sql):
 			node = node[1]
 		p[0] = OperandIN(p[1], values)
 	
-	def p_expression_in(p):
+	def p_expression_not_in(p):
 		'expression : ID NOT IN LPAREN valueslist RPAREN'
 		values = []
 		node = p[5]
