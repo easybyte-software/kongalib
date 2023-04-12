@@ -244,6 +244,15 @@ def parse(sql):
 			node = node[1]
 		p[0] = OperandIN(p[1], values)
 	
+	def p_expression_in(p):
+		'expression : ID NOT IN LPAREN valueslist RPAREN'
+		values = []
+		node = p[5]
+		while node is not None:
+			values.append(node[0])
+			node = node[1]
+		p[0] = OperandNotIN(p[1], values)
+	
 	def p_function(p):
 		'function : ID LPAREN ID RPAREN'
 		p[0] = '%s(%s)' % (p[1], p[3])
