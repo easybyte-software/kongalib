@@ -303,11 +303,22 @@ class ErrorList(Error):
 		cls.PREPARE_CALLBACK = callback
 
 
+
 class JSONError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 	def __str__(self):
 		return ensure_text(self.msg)
+
+
+
+def ensure_text(text, error='replace'):
+	if isinstance(text, bytes):
+		text = str(text, 'utf-8', 'replace')
+	elif not isinstance(text, str):
+		text = str(text)
+	return text
+
 
 
 from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all, _check_all
@@ -375,13 +386,6 @@ def divide_and_ceil(x, y, ndigits=2):
 def escape(query):
 	"""Sostituisce `'` con `''` per preparare una stringa all'inserimento SQL."""
 	return query.replace("'", "''")
-
-def ensure_text(text, error='replace'):
-	if isinstance(text, bytes):
-		text = str(text, 'utf-8', 'replace')
-	elif not isinstance(text, str):
-		text = str(text)
-	return text
 
 
 atexit.register(_cleanup)
