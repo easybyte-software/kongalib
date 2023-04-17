@@ -20,8 +20,9 @@ import re
 import io
 import tempfile
 import collections
+from xml.etree import ElementTree as ET
 
-from .compat import *
+from kongalib import ensure_text
 
 
 
@@ -366,7 +367,7 @@ class Operand(_HasLogic):
 	def __hash__(self):
 		return hash(str(self))
 	
-	def __unicode__(self):
+	def __str__(self):
 		if self.value is None:
 			value = 'NULL'
 		elif re.match(r'^(\-)?[0-9]+$', self.value):
@@ -381,12 +382,6 @@ class Operand(_HasLogic):
 					value = "'%s'" % self.value.replace("'", "''")
 		return (u'%s %s %s' % (ensure_text(self.column), ensure_text(self.operator), ensure_text(value)))
 
-	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
-	
 	def __repr__(self):
 		return str(self)
 
@@ -519,7 +514,7 @@ class OperandIsNotNull(Operand):
 
 class OperandIN(OperandNE):
 	def __init__(self, column, value):
-		if not isinstance(value, text_base_types):
+		if not isinstance(value, str):
 			value = u"('%s')" % (u"', '".join([ ensure_text(x).replace("'", "''") for x in value]))
 		Operand.__init__(self, column, 'IN', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
 
@@ -527,7 +522,7 @@ class OperandIN(OperandNE):
 
 class OperandNotIN(OperandNE):
 	def __init__(self, column, value):
-		if not isinstance(value, text_base_types):
+		if not isinstance(value, str):
 			value = u"('%s')" % (u"', '".join([ ensure_text(x).replace("'", "''") for x in value]))
 		Operand.__init__(self, column, 'NOT IN', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
 
@@ -645,7 +640,7 @@ class Expression(_HasLogic):
 	def __hash__(self):
 		return hash(str(self))
 
-	def __unicode__(self):
+	def __str__(self):
 		s = u''
 		for child in self.children:
 			if child.logic_op & _HasLogic.LOGIC_NOT:
@@ -657,12 +652,6 @@ class Expression(_HasLogic):
 				elif child.logic_op & _HasLogic.LOGIC_OR:
 					s += ' OR '
 		return ensure_text(s)
-
-	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
 	
 	def __repr__(self):
 		return str(self)
@@ -789,7 +778,7 @@ def NOT(arg):
 def where(expr):
 	if expr is None:
 		return []
-	elif isinstance(expr, text_base_types):
+	elif isinstance(expr, str):
 		return where(parse(expr))
 	elif isinstance(expr, Operand):
 		return [ expr.as_list(), None ]
@@ -804,10 +793,10 @@ def loads(xml):
 	if not xml:
 		return None
 	document = ET.ElementTree()
-	if isinstance(xml, text_base_types):
+	if isinstance(xml, str):
 		xml = ensure_text(xml).encode('utf-8')
-	if isinstance(xml, data_base_types):
-		xml = io.BytesIO(bytes(xml))
+	if isinstance(xml, bytes):
+		xml = io.BytesIO(xml)
 	if not ET.iselement(xml):
 		xml = document.parse(xml, ET.XMLTreeBuilder(parse_comments=False))
 	if xml.tag == 'operand':

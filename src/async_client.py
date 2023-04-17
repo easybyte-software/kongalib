@@ -181,10 +181,10 @@ class AsyncClient(Client):
 		"""
 		if (server is None) and (host is None):
 			raise ValueError("either 'host' or 'server' parameter must be specified")
-		if isinstance(server, text_base_types) and (host is None):
+		if isinstance(server, str) and (host is None):
 			host = server
 			server = None
-		if isinstance(host, text_base_types) and (port is None) and (':' in host):
+		if isinstance(host, str) and (port is None) and (':' in host):
 			pos = host.rfind(':')
 			host = host[:pos]
 			try:
@@ -549,7 +549,7 @@ class AsyncClient(Client):
 		Se *get_total* è ``False``, il risultato sarà il solo *result_set*, ossia una lista di righe risultato della query, dove ogni riga è una
 		lista di valori.
 		"""
-		if isinstance(fieldnamelist, text_base_types):
+		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
 			fieldnamelist = list(fieldnamelist)
@@ -568,7 +568,7 @@ class AsyncClient(Client):
 	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, progress=None):
 		"""Esattamente come :meth:`.select_data`, ma l'oggetto ``asyncio.Future`` restituito una volta completato ritornerà un *result_set* sotto
 		forma di lista di ``dict``, anzichè una lista di liste."""
-		if isinstance(fieldnamelist, text_base_types):
+		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
 			fieldnamelist = list(fieldnamelist)
@@ -778,38 +778,3 @@ class AsyncClient(Client):
 			IN_LANGUAGE: language,
 		}, progress=progress)
 
-
-
-if __name__ == '__main__':
-	import progress.bar
-	import progress.spinner
-	
-	async def main():
-		client = AsyncClient()
-		await client.connect('127.0.0.1')
-		await client.open_database('sqlite', 'demo')
-		await client.authenticate('admin', '')
-
-		# bar = progress.bar.IncrementalBar()
-		bar = progress.spinner.Spinner()
-		def prog(completeness, state, userdata):
-			# bar.goto(completeness)
-			bar.next()
-			return False
-
-		with bar:
-			# async with client:
-			try:
-				df = await client.select_data('EB_DocumentiFiscali', ['NumeroInterno'], progress=prog)
-			except Exception as e:
-				df = None
-				print(e)
-
-		# print("DONE")
-		drivers = client.list_drivers()
-		dbs = client.list_databases()
-		print(await asyncio.gather(drivers, dbs))
-		print(df)
-
-
-	asyncio.run(main(), debug=True)

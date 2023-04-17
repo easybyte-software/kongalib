@@ -133,12 +133,8 @@ if sys.platform == 'win32':
 
 
 here = os.path.abspath(os.path.dirname(__file__))
-if sys.version_info[0] < 3:
-	README = open(os.path.join(here, 'README.rst')).read()
-	VERSION = open(os.path.join(here, 'VERSION')).read()
-else:
-	README = open(os.path.join(here, 'README.rst'), encoding='utf-8').read()
-	VERSION = open(os.path.join(here, 'VERSION'), encoding='utf-8').read()
+README = open(os.path.join(here, 'README.rst'), encoding='utf-8').read()
+VERSION = open(os.path.join(here, 'VERSION'), encoding='utf-8').read()
 
 setup(
     name = 'kongalib',
@@ -177,13 +173,13 @@ setup(
 	classifiers = [
 		"Natural Language :: Italian",
 		"Programming Language :: Python",
-		"Programming Language :: Python :: 2",
-		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3.6",
+		"Programming Language :: Python :: 3 :: Only",
 		"Programming Language :: Python :: 3.7",
 		"Programming Language :: Python :: 3.8",
 		"Programming Language :: Python :: 3.9",
+		"Programming Language :: Python :: 3.10",
+		"Programming Language :: Python :: 3.11",
 		"Programming Language :: C++",
 		"Development Status :: 5 - Production/Stable",
 		"Environment :: Console",

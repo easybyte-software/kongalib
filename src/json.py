@@ -16,7 +16,6 @@
 from __future__ import print_function
 
 from kongalib import JSONEncoder, JSONDecoder, Decimal
-from .compat import *
 
 
 
@@ -64,7 +63,7 @@ class Decoder(JSONDecoder):
 		self.stack = [ [None, None] ]
 		self.top = None
 
-		if isinstance(text, text_base_types) or isinstance(text, data_base_types):
+		if isinstance(text, (str, bytes)):
 			self.parse(text)
 		else:
 			while True:

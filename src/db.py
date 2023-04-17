@@ -18,7 +18,6 @@ import datetime
 
 from kongalib import Client, Decimal, Error as _Error, ErrorList
 from .constants import *
-from .compat import *
 
 
 apilevel = "2.0"			#: Versione delle API, come da specifica
@@ -142,11 +141,11 @@ class Cursor(object):
 			self.__description = []
 			row = self.__result[0]
 			for field, data in zip(fields, row):
-				if isinstance(data, int_types) or isinstance(data, (float, Decimal)):
+				if isinstance(data, (int, float, Decimal)):
 					t = NUMBER
 				elif isinstance(data, (datetime.date, datetime.datetime)):
 					t = DATETIME
-				elif isinstance(data, text_type):
+				elif isinstance(data, str):
 					t = STRING
 				else:
 					t = BINARY

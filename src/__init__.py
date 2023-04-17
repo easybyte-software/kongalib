@@ -20,8 +20,6 @@ import sys
 import traceback
 import atexit
 
-from .compat import *
-
 DEFAULT_DISCOVER_TIMEOUT	= 5000
 DEFAULT_CONNECT_TIMEOUT		= 30000
 DEFAULT_EXECUTE_TIMEOUT		= 10000
@@ -138,10 +136,7 @@ class Log(object):
 
 	def strip_html(self, html):
 		"""Elimina tutto il codice HTML dalla stringa in *html*, lasciando solo le parti testuali."""
-		try:
-			from HTMLParser import HTMLParser
-		except:
-			from html.parser import HTMLParser
+		from html.parser import HTMLParser
 
 		class Stripper(HTMLParser):
 			def __init__(self):
@@ -203,14 +198,9 @@ class Error(Exception):
 	def __init__(self, errno, msg):
 		self.errno = errno
 		self.error = self.msg = msg
-	def __unicode__(self):
+	def __str__(self):
 		msg = self.msg and ('%s' % self.msg) or '(internal error)'
 		return ensure_text(msg)
-	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
 	def __repr__(self):
 		return '<Error %d: %s>' % (self.errno, str(self))
 
@@ -246,14 +236,8 @@ class ErrorList(Error):
 				self.error = error
 				break
 	
-	def __unicode__(self):
-		return u'\n'.join([ ensure_text(e) for e in self.get_errors() ])
-
 	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
+		return u'\n'.join([ ensure_text(e) for e in self.get_errors() ])
 
 	def __repr__(self):
 		return '<ErrorList: %s>' % repr(self.get_errors())
@@ -322,13 +306,8 @@ class ErrorList(Error):
 class JSONError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
-	def __unicode__(self):
-		return ensure_text(self.msg)
 	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
+		return ensure_text(self.msg)
 
 
 from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all, _check_all
@@ -351,14 +330,8 @@ class ErrorMessage(object):
 		else:
 			self.traceback = ''.join(traceback.format_exception(*exc))
 	
-	def __unicode__(self):
-		return ensure_text(self.error if self.traceback is None else self.traceback)
-
 	def __str__(self):
-		if PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
+		return ensure_text(self.error if self.traceback is None else self.traceback)
 
 
 def _on_destroy_thread():
@@ -402,6 +375,13 @@ def divide_and_ceil(x, y, ndigits=2):
 def escape(query):
 	"""Sostituisce `'` con `''` per preparare una stringa all'inserimento SQL."""
 	return query.replace("'", "''")
+
+def ensure_text(text, error='replace'):
+	if isinstance(text, bytes):
+		text = str(text, 'utf-8', 'replace')
+	elif not isinstance(text, str):
+		text = str(text)
+	return text
 
 
 atexit.register(_cleanup)

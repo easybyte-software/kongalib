@@ -16,7 +16,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from kongalib import Error, PY3
+from kongalib import Error
 from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
 
 import sys
@@ -176,10 +176,7 @@ def init_interpreter(init_logging=True):
 			return True
 		tb = list(filter(do_filter, tb))
 		try:
-			if PY3:
-				proxy.builtin.print_exception(type, value, tb)
-			else:
-				proxy.builtin.print_exception(type.__name__, str(value), tb)
+			proxy.builtin.print_exception(type, value, tb)
 		except:
 			debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
 	sys.excepthook = excepthook
@@ -309,8 +306,6 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 			args, path, timeout, script, cwd = request
 			sys.argv = args
 			sys.path = path
-			if (not PY3) and isinstance(script, unicode):
-				script = script.encode('utf-8', 'replace')
 			filename = args[0]
 			if cwd:
 				os.chdir(cwd)
@@ -733,10 +728,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 				return True
 			tb = list(filter(do_filter, tb))
 			try:
-				if PY3:
-					_handlers['builtin'].print_exception(type, value, tb)
-				else:
-					_handlers['builtin'].print_exception(type.__name__, str(value), tb)
+				_handlers['builtin'].print_exception(type, value, tb)
 			except:
 				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
 		finally:

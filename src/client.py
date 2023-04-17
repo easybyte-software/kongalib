@@ -22,7 +22,6 @@ from kongalib import Error, ErrorList
 from .constants import *
 from .expression import *
 from .data_dictionary import *
-from .compat import *
 
 from ._kongalib import Client as ClientImpl
 from ._kongalib import start_timer
@@ -171,10 +170,10 @@ class Client(object):
 		"""
 		if (server is None) and (host is None):
 			raise ValueError("either 'host' or 'server' parameter must be specified")
-		if isinstance(server, text_base_types) and (host is None):
+		if isinstance(server, str) and (host is None):
 			host = server
 			server = None
-		if isinstance(host, text_base_types) and (port is None) and (':' in host):
+		if isinstance(host, str) and (port is None) and (':' in host):
 			pos = host.rfind(':')
 			host = host[:pos]
 			try:
@@ -534,7 +533,7 @@ class Client(object):
 		parametro *get_total* come descritto sopra), la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred` e l'operazione
 		viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito.
 		"""
-		if isinstance(fieldnamelist, text_base_types):
+		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
 			fieldnamelist = list(fieldnamelist)
@@ -582,7 +581,7 @@ class Client(object):
 	
 	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, success=None, error=None, progress=None):
 		"""Esattamente come :meth:`.select_data`, ma restituisce il *result_set* come una lista di ``dict``, anzichè una lista di liste."""
-		if isinstance(fieldnamelist, text_base_types):
+		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
 			fieldnamelist = list(fieldnamelist)

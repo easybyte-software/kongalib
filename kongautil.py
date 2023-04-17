@@ -53,13 +53,8 @@ class PrintError(RuntimeError):
 	"""Eccezione lanciata se ci sono errori nell'esecuzione di una stampa con la funzione :func:`print_layout`."""
 	def __init__(self, log):
 		self._log = log
-	def __unicode__(self):
-		return u'Log:\n%s' % ('\n'.join([ ('  %s' % line) for line in kongalib.ensure_text(self._log.dumps()).split(u'\n') ]))
 	def __str__(self):
-		if kongalib.PY3:
-			return self.__unicode__()
-		else:
-			return self.__unicode__().encode('utf-8')
+		return 'Log:\n%s' % ('\n'.join([ ('  %s' % line) for line in kongalib.ensure_text(self._log.dumps()).split(u'\n') ]))
 	def get_log(self):
 		"""Ottiene un oggetto di classe :class:`kongalib.Log` contenente gli errori di stampa."""
 		return self._log
@@ -162,10 +157,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 		client = kongalib.Client()
 		if host is None:
 			import argparse
-			try:
-				import configparser
-			except:
-				import ConfigParser as configparser
+			import configparser
 			files = [
 				os.path.abspath(os.path.expanduser(os.path.join('~', 'kongalib.cfg' if sys.platform == 'win32' else '.kongalib'))),
 				os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'kongalib.cfg'),
@@ -394,7 +386,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 		log = kongalib.Log()
 		if not filename:
 			raise ValueError("Output filename must be specified")
-		if isinstance(command_or_layout, kongalib.text_base_types) and (command_or_layout.strip().startswith('<?xml') or command_or_layout.strip().startswith('<layout')):
+		if isinstance(command_or_layout, str) and (command_or_layout.strip().startswith('<?xml') or command_or_layout.strip().startswith('<layout')):
 			import tempfile
 			temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
 			with temp:

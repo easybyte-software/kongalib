@@ -15,7 +15,6 @@
 
 from kongalib import Error, ErrorList
 from .constants import *
-from .compat import *
 
 
 TYPE_TINYINT				= 1				#: Tipo di campo SQL TINYINT; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``int``.
@@ -89,7 +88,7 @@ class DataDictionary(object):
 		
 		def get_label(self, key):
 			"""Ottiene la descrizione della chiave *key* sotto forma di ``dict`` con le traduzioni corrispondenti a ciascuna lingua."""
-			if isinstance(key, text_base_types):
+			if isinstance(key, str):
 				return self.__data[key][1]
 			for value, label in self.__data.values():
 				if value == key:

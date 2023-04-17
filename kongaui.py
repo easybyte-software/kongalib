@@ -28,14 +28,6 @@ import kongautil
 from kongalib.scripting import _TimeoutBlocker
 from kongalib.scripting import proxy as _proxy
 
-PY3 = (sys.version_info[0] >= 3)
-
-
-if PY3:
-	basestring = str
-else:
-	input = raw_input
-
 
 
 BUTTON_OK							= 0x0001		#: Bottone "Ok"
@@ -75,47 +67,8 @@ if not _proxy.is_valid():
 
 
 def _get_term_width():
-	if PY3:
-		import shutil
-		return shutil.get_terminal_size(fallback=(80, 24))[0]
-	else:
-		# from https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
-		if sys.platform == 'win32':
-			try:
-				from ctypes import windll, create_string_buffer
-				h = windll.kernel32.GetStdHandle(-12)
-				csbi = create_string_buffer(22)
-				res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-			except:
-				res = None
-			if res:
-				import struct
-				(bufx, bufy, curx, cury, wattr, left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
-				return right - left + 1
-			else:
-				return 80
-		else:
-			def ioctl_GWINSZ(fd):
-				try:
-					import fcntl, termios, struct
-					cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-				except:
-					return None
-				return cr
-			cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-			if not cr:
-				try:
-					fd = os.open(os.ctermid(), os.O_RDONLY)
-					cr = ioctl_GWINSZ(fd)
-					os.close(fd)
-				except:
-					pass
-			if not cr:
-				try:
-					cr = (env['LINES'], env['COLUMNS'])
-				except:
-					return 80
-			return int(cr[1])
+	import shutil
+	return shutil.get_terminal_size(fallback=(80, 24))[0]
 
 
 
@@ -338,11 +291,7 @@ def set_progress(progress=None, message=None, state=None):
 			tick = ('\\', '|', '/', '-')[int(time.time() * 5) % 4]
 			bar = '%s %s' % (elide(', '.join(text), term_width - 3), tick)
 		else:
-			if PY3:
-				block = u'\u2588'
-			else:
-				block = '#'
-			progress = (block * int((progress * 30) // 100))
+			progress = ('\u2588' * int((progress * 30) // 100))
 			bar = '|%-30s| %s' % (progress, elide(', '.join(text), term_width - 34))
 		print('\033[2K\r' + bar, end='')
 		sys.stdout.flush()
@@ -494,7 +443,7 @@ def execute_form(form_data, title=None, message=None, condition=None):
 						raise InvalidInput('Expected iso date (YYYY-MM-DD)')
 			elif wtype in ('choice', 'listbox', 'combobox'):
 				items = entry.get('items', [])
-				if (not isinstance(items, (tuple, list))) or (not all([ isinstance(item, basestring) for item in items ])):
+				if (not isinstance(items, (tuple, list))) or (not all([ isinstance(item, str) for item in items ])):
 					raise RuntimeError("Expected list of strings as 'items' value")
 				print(label)
 				for index, item in enumerate(items):
