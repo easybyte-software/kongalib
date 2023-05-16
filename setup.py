@@ -108,6 +108,8 @@ elif sys.platform == 'win32':
 		else:
 			cflags += ' /I%s\\Include' % konga_sdk
 			ldflags += ' /LIBPATH:%s\\Lib' % konga_sdk
+	cflags += ' %s' % (os.environ.get('CFLAGS') or '')
+	ldflags += ' %s' % (os.environ.get('LDFLAGS') or '')
 else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
