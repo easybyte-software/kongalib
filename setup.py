@@ -112,7 +112,7 @@ else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
-	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -ldbus-1' % konga_sdk
+	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre -ldbus-1' % konga_sdk
 	extra_libs = ''
 
 defines = [
