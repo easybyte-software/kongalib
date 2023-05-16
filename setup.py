@@ -4,8 +4,6 @@ import glob
 import os
 import os.path
 import ssl
-if hasattr(ssl, '_create_unverified_context'):
-	ssl._create_default_https_context = ssl._create_unverified_context
 
 try:
 	from setuptools import setup, Extension
@@ -94,7 +92,7 @@ if sys.platform == 'darwin':
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
-	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -lpcre -lxml2 -lxslt -liconv -ltidy -lz -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
+	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -ltidy -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11 -DPY_SSIZE_T_CLEAN'
 	ldflags += ' -stdlib=libc++'
 	extra_libs = ''
@@ -102,7 +100,7 @@ elif sys.platform == 'win32':
 	suffix = '_d' if debug else ''
 	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267'
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'
-	extra_libs = 'ebpr_s%s konga_client_s%s zlib%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt' % (suffix, suffix, suffix[1:])
+	extra_libs = 'ebpr_s%s konga_client_s%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt' % (suffix, suffix)
 	if konga_sdk is not None:
 		if ' ' in konga_sdk:
 			cflags += ' /I"%s\\Include"' % konga_sdk
@@ -114,14 +112,8 @@ else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
-	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lpcre -lxml2 -lxslt -lz -ltidy -ldbus-1' % konga_sdk
+	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -ldbus-1' % konga_sdk
 	extra_libs = ''
-
-if 'KONGALIB_CFLAGS' in os.environ:
-	cflags = '%s %s' % (os.environ['KONGALIB_CFLAGS'], cflags)
-if 'KONGALIB_LDFLAGS' in os.environ:
-	ldflags = '%s %s' % (os.environ['KONGALIB_LDFLAGS'], ldflags)
-
 
 defines = [
 	('NOUNCRYPT', None),
