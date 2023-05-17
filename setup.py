@@ -138,6 +138,10 @@ setup(
     package_dir = { 'kongalib': 'src' },
     py_modules = [ 'kongautil', 'kongaui' ],
 
+	package_data = {
+		'kongalib': [ 'data/constants.json' ],
+	},
+
     ext_modules = [ Extension('kongalib._kongalib',
     	glob.glob(os.path.join('src', '_kongalib', '*.cpp')) + glob.glob(os.path.join('src', '_kongalib', 'yajl-2.0.1', 'src', '*.c')),
     	include_dirs = [
