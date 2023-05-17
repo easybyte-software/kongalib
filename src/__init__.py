@@ -50,6 +50,8 @@ BACKUP_ON_COMPUTER			= 0x1			#: Il backup è posizionato in locale sulla macchin
 BACKUP_ON_CLOUD				= 0x2			#: Il backup è posizionato nel cloud
 
 
+__version__ = '2.0.0'
+
 
 class Log(object):
 	"""La classe Log serve ad immagazzinare i messaggi prodotti dal server durante un'operazione; oggetti di questa classe
@@ -321,7 +323,7 @@ def ensure_text(text, error='replace'):
 
 
 
-from ._kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all, _check_all
+from _kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, start_timer, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, lock, unlock, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all, _check_all
 from .constants import *
 from .client import *
 from .expression import *

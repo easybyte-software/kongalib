@@ -23,8 +23,8 @@ from .constants import *
 from .expression import *
 from .data_dictionary import *
 
-from ._kongalib import Client as ClientImpl
-from ._kongalib import start_timer
+from _kongalib import Client as ClientImpl
+from _kongalib import start_timer
 
 
 DEFAULT_DISCOVER_TIMEOUT		= 5000

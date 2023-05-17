@@ -1,0 +1,61 @@
+[build-system]
+requires = [ "setuptools >= 61.0.0" ]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "kongalib"
+authors = [
+    { name = "EasyByte Software", email = "konga@easybyte.it" }
+]
+description = "Konga client library"
+readme = "README.rst"
+requires-python = ">= 3.7"
+keywords = [ "konga", "client", "erp" ]
+license = { text = "LGPL" }
+classifiers = [
+	"Natural Language :: Italian",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3 :: Only",
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: C++",
+	"Development Status :: 5 - Production/Stable",
+	"Environment :: Console",
+	"Intended Audience :: Developers",
+	"Intended Audience :: Information Technology",
+	"Intended Audience :: Financial and Insurance Industry",
+	"License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+	"Operating System :: MacOS :: MacOS X",
+	"Operating System :: Microsoft :: Windows",
+	"Operating System :: POSIX :: Linux",
+	"Topic :: Office/Business",
+	"Topic :: Office/Business :: Financial",
+	"Topic :: Software Development :: Libraries"
+]
+dependencies = [
+	"colorama"
+]
+dynamic = [ "version" ]
+
+
+[project.urls]
+homepage = "https://github.com/easybyte-software/kongalib"
+documentation = "https://public.easybyte.it/docs/current/technical/kongalib/index.html"
+repository = "https://github.com/easybyte-software/kongalib.git"
+
+
+[tool.setuptools]
+packages = [ "kongalib" ]
+package-dir = { kongalib = "src" }
+py-modules = [ "kongautil", "kongaui" ]
+package-data = { kongalib = [ "data/constants.json" ] }
+zip-safe = true
+
+
+[tool.setuptools.dynamic]
+version = { attr = "kongalib.__version__" }

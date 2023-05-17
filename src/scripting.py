@@ -17,7 +17,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from kongalib import Error
-from ._kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
+from _kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
 
 import sys
 import os

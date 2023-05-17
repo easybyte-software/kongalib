@@ -5,11 +5,7 @@ import os
 import os.path
 import ssl
 
-try:
-	from setuptools import setup, Extension
-except:
-	from distutils.core import setup
-	from distutils.extension import Extension
+from setuptools import setup, Extension
 
 import distutils.ccompiler
 
@@ -126,23 +122,9 @@ if sys.platform == 'win32':
 	defines.append(('WIN32', None))
 
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.rst'), encoding='utf-8').read()
-VERSION = open(os.path.join(here, 'VERSION'), encoding='utf-8').read()
 
 setup(
-    name = 'kongalib',
-    version = VERSION,
-    
-    packages = [ 'kongalib' ],
-    package_dir = { 'kongalib': 'src' },
-    py_modules = [ 'kongautil', 'kongaui' ],
-
-	package_data = {
-		'kongalib': [ 'data/constants.json' ],
-	},
-
-    ext_modules = [ Extension('kongalib._kongalib',
+    ext_modules = [ Extension('_kongalib',
     	glob.glob(os.path.join('src', '_kongalib', '*.cpp')) + glob.glob(os.path.join('src', '_kongalib', 'yajl-2.0.1', 'src', '*.c')),
     	include_dirs = [
     		os.path.join('src', '_kongalib'),
@@ -154,44 +136,5 @@ setup(
     	extra_link_args = ldflags.split(),
     	libraries = extra_libs.split(),
     ) ],
-    
-    install_requires=[
-        'colorama',
-    ],
-    
-	zip_safe = True,
-
-    # metadata for upload to PyPI
-    author = "EasyByte Software",
-    author_email = "konga@easybyte.it",
-    description = "Konga client library",
-    license = "LGPL",
-    keywords = [ "konga", "client", "erp" ],
-    url = "https://github.com/easybyte-software/kongalib",
-	classifiers = [
-		"Natural Language :: Italian",
-		"Programming Language :: Python",
-		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3 :: Only",
-		"Programming Language :: Python :: 3.7",
-		"Programming Language :: Python :: 3.8",
-		"Programming Language :: Python :: 3.9",
-		"Programming Language :: Python :: 3.10",
-		"Programming Language :: Python :: 3.11",
-		"Programming Language :: C++",
-		"Development Status :: 5 - Production/Stable",
-		"Environment :: Console",
-		"Intended Audience :: Developers",
-		"Intended Audience :: Information Technology",
-		"Intended Audience :: Financial and Insurance Industry",
-		"License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-		"Operating System :: MacOS :: MacOS X",
-		"Operating System :: Microsoft :: Windows",
-		"Operating System :: POSIX :: Linux",
-		"Topic :: Office/Business",
-		"Topic :: Office/Business :: Financial",
-		"Topic :: Software Development :: Libraries",
-	],
-	long_description = README,
 )
 
