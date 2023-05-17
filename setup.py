@@ -10,24 +10,10 @@ from setuptools import setup, Extension
 import distutils.ccompiler
 
 
-debug = '--debug' in sys.argv
-if debug:
-	sys.argv.remove('--debug')
-
 new_compiler = distutils.ccompiler.new_compiler
 def _new_compiler(*args, **kwargs):
 	compiler = new_compiler(*args, **kwargs)
 	
-	def wrapper(func):
-		def _wrapper(*args, **kwargs):
-			kwargs['debug'] = debug
-			return func(*args, **kwargs)
-		return _wrapper
-	
-	compiler.compile = wrapper(compiler.compile)
-	compiler.link_shared_object = wrapper(compiler.link_shared_object)
-	compiler.create_static_lib = wrapper(compiler.create_static_lib)
-	compiler.find_library_file = wrapper(compiler.find_library_file)
 	if (sys.platform == 'darwin') or (sys.platform.startswith('linux')):
 		def _compile_wrapper(func):
 			def _wrapper(obj, src, ext, cc_args, extra_postargs, pp_opts):
@@ -93,10 +79,9 @@ if sys.platform == 'darwin':
 	ldflags += ' -stdlib=libc++'
 	extra_libs = ''
 elif sys.platform == 'win32':
-	suffix = '_d' if debug else ''
 	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267'
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'
-	extra_libs = 'ebpr_s%s konga_client_s%s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt' % (suffix, suffix)
+	extra_libs = 'ebpr_s konga_client_s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt'
 	if konga_sdk is not None:
 		if ' ' in konga_sdk:
 			cflags += ' /I"%s\\Include"' % konga_sdk

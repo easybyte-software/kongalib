@@ -51,13 +51,12 @@ repository = "https://github.com/easybyte-software/kongalib.git"
 
 [tool.setuptools.packages.find]
 where = [ "src" ]
-include = [ "kongalib", "_kongalib" ]
+exclude = [ "constants.py" ]
 namespaces = false
 
 
 [tool.setuptools]
 py-modules = [ "kongautil", "kongaui" ]
-package-data = { kongalib = [ "data/constants.json" ] }
 zip-safe = true
 
 

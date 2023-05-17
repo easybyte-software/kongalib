@@ -72,8 +72,8 @@ _EXTERNAL = {}
 
 def _ensure():
 	if not _EXTERNAL.get('@fetched', False):
-		if pkg_resources.resource_exists('kongalib', 'data/constants.json'):
-			with pkg_resources.resource_stream('kongalib', 'data/constants.json') as f:
+		if pkg_resources.resource_exists('kongalib', 'constants.json'):
+			with pkg_resources.resource_stream('kongalib', 'constants.json') as f:
 				data = json.loads(f)
 			if isinstance(data, dict):
 				_EXTERNAL.update(data)
