@@ -49,9 +49,13 @@ documentation = "https://public.easybyte.it/docs/current/technical/kongalib/inde
 repository = "https://github.com/easybyte-software/kongalib.git"
 
 
+[tool.setuptools.packages.find]
+where = [ "src" ]
+include = [ "kongalib", "_kongalib" ]
+namespaces = false
+
+
 [tool.setuptools]
-packages = [ "kongalib" ]
-package-dir = { kongalib = "src" }
 py-modules = [ "kongautil", "kongaui" ]
 package-data = { kongalib = [ "data/constants.json" ] }
 zip-safe = true
