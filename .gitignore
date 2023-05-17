@@ -8,3 +8,5 @@ dist
 src/kongalib/constants.json
 VERSION
 src/constants.py
+src/_kongalib*.so
+src/_kongalib*.pyd
