@@ -63,6 +63,7 @@ jobs:
     - powershell: |
         Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
         Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
+        ls $(Build.SourcesDirectory)
       displayName: Install Konga SDK
     - powershell: |
         dir env:
