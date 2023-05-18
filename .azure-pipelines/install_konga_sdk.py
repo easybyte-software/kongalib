@@ -38,11 +38,11 @@ def main(tag, operating_system):
 		f.write(r.content)
 	print('Downloaded SDK into %s' % path)
 	if operating_system == 'mac':
-		cmd = '7zz e -aoa %s && sudo installer -pkg KongaSDK.pkg -target /' % path
+		cmd = '7z e -aoa %s && sudo installer -pkg KongaSDK.pkg -target /' % path
 	elif operating_system == 'win':
 		cmd = '%s /install /quiet' % path
 	else:
-		cmd = 'sudo apt install %s && sudo apt install -f' % path
+		cmd = 'sudo apt install gdebi && sudo gdebi %s' % path
 	subprocess.run(cmd, shell=True)
 
 
