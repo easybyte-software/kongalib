@@ -9,10 +9,10 @@ import requests
 def get_filename_from_cd(cd):
 	if not cd:
 		return None
-	fname = re.findall('filename=(.+)', cd)
-	if len(fname) == 0:
+	m = re.search(r'filename=(\")?(.+)(\")?', cd)
+	if m is None:
 		return None
-	return fname[0]
+	return m.group(2)
 
 
 def main(tag, operating_system):
