@@ -64,9 +64,9 @@ jobs:
         Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
         Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/quiet" -Wait
       displayName: Install Konga SDK
-    - bash: |
-        echo $PATH
-      displayName: Show PATH
+    - powershell: |
+        dir env:
+      displayName: Show env
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
     - task: PublishBuildArtifacts@1
