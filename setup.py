@@ -3,7 +3,6 @@ import sys
 import glob
 import os
 import os.path
-import ssl
 
 from setuptools import setup, Extension
 
@@ -89,9 +88,9 @@ elif sys.platform == 'win32':
 		cflags.append('/I%s\\Include' % konga_sdk)
 		ldflags.append('/LIBPATH:%s\\Lib' % konga_sdk)
 	if os.environ.get('CFLAGS'):
-		cflags.append(os.environ['CFLAGS'])
+		cflags += os.environ['CFLAGS'].split(' ')
 	if os.environ.get('LDFLAGS'):
-		ldflags.append(os.environ['LDFLAGS'])
+		ldflags += os.environ['LDFLAGS'].split(' ')
 else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
