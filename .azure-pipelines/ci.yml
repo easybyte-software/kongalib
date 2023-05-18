@@ -38,8 +38,8 @@ jobs:
         python3 -m pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - bash: |
-        wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=mac
-        7z e -aoa $(System.DefaultWorkingDirectory)/KongaSDK_universal.dmg && sudo installer -pkg KongaSDK.pkg -target /
+        curl https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=mac -o KongaSDK.dmg
+        7z e -aoa KongaSDK.dmg && sudo installer -pkg KongaSDK.pkg -target /
       displayName: Install Konga SDK
     - bash: |
         ls -l /usr/local/lib
@@ -61,8 +61,8 @@ jobs:
         pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - powershell: |
-        Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=win
-        Start-Process $(System.DefaultWorkingDirectory)\KongaSDK_x64_setup.exe -ArgumentList "/quiet" -Wait
+        Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
+        Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/quiet" -Wait
       displayName: Install Konga SDK
     - bash: |
         echo $PATH
