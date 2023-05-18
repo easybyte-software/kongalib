@@ -41,6 +41,10 @@ jobs:
         scriptPath: '.azure-pipelines/install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} mac'
       displayName: Install Konga SDK
+	- bash: |
+		ls -l /usr/local/lib
+		ls -l /usr/local/include
+	  displayName: Show /usr/local
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
     - task: PublishBuildArtifacts@1

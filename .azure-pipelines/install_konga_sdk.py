@@ -26,7 +26,8 @@ def main(tag, operating_system):
 		else:
 			tag = 'archive/%s' % tag
 	url = 'https://public.easybyte.it/downloads/%s/sdk?os=%s' % (tag, operating_system)
-
+	print("Fetching SDK from %s" % url)
+	
 	r = requests.get(url, allow_redirects=True)
 
 	filename = get_filename_from_cd(r.headers.get('content-disposition'))
