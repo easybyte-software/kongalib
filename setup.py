@@ -77,22 +77,27 @@ if sys.platform == 'darwin':
 	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -ltidy -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11 -DPY_SSIZE_T_CLEAN'
 	ldflags += ' -stdlib=libc++'
-	extra_libs = ''
+	cflags = cflags.split(' ')
+	ldflags = ldflags.split(' ')
+	extra_libs = []
+
 elif sys.platform == 'win32':
-	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267'
-	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'
-	extra_libs = 'ebpr_s konga_client_s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt'
+	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267'.split(' ')
+	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'.split(' ')
+	extra_libs = 'ebpr_s konga_client_s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt'.split(' ')
 	if konga_sdk is not None:
-		cflags += ' /I%s\\Include' % konga_sdk
-		ldflags += ' /LIBPATH:%s\\Lib' % konga_sdk
-	cflags += ' %s' % (os.environ.get('CFLAGS') or '')
-	ldflags += ' %s' % (os.environ.get('LDFLAGS') or '')
+		cflags.append('/I%s\\Include' % konga_sdk)
+		ldflags.append('/LIBPATH:%s\\Lib' % konga_sdk)
+	cflags.append(os.environ.get('CFLAGS') or '')
+	ldflags.append(os.environ.get('LDFLAGS') or '')
 else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
 	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre -ldbus-1' % konga_sdk
-	extra_libs = ''
+	cflags = cflags.split(' ')
+	ldflags = ldflags.split(' ')
+	extra_libs = []
 
 defines = [
 	('NOUNCRYPT', None),
@@ -113,9 +118,9 @@ setup(
     		os.path.join('src', '_kongalib', 'yajl-2.0.1', 'include'),
     	],
     	define_macros = defines,
-    	extra_compile_args = cflags.split(),
-    	extra_link_args = ldflags.split(),
-    	libraries = extra_libs.split(),
+    	extra_compile_args = cflags,
+    	extra_link_args = ldflags,
+    	libraries = extra_libs,
     ) ],
 )
 
