@@ -6,124 +6,68 @@ parameters:
   displayName: Publish wheels by uploading to PyPI
   type: boolean
   default: false
-- name: verbose_param
-  displayName: Build C dependencies verbosely
-  type: boolean
-  default: false
-- name: konga_branch_param
-  displayName: Branch from which to fetch Konga sources
+- name: sdk_version_param
+  displayName: Version of the Konga SDK to be used
   type: string
-  default: stable-1.11.2
-
-variables:
-  konga_branch: ${{ parameters.konga_branch_param }}
-  verbose: ${{ parameters.verbose_param }}
+  default: latest
 
 jobs:
-
-- job: LinuxSDist
-  pool:
-    vmImage: 'ubuntu-latest'
-  variables:
-    python.architecture: 'none'
+- job: linux
+  pool: {vmImage: 'Ubuntu-latest'}
   steps:
-    - script: |
-        python -m pip install setuptools twine
-        python setup.py sdist
-      displayName: Publish sdist
-    - template: ./azure-publish-dist.yml
-    - script: |
-        python -m twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
-      displayName: 'Upload wheels to PyPI'
-      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
+    - task: UsePythonVersion@0
+    - bash: |
+        set -o errexit
+        python3 -m pip install --upgrade pip
+        pip3 install cibuildwheel==2.12.3
+      displayName: Prepare build environment
+    - task: PythonScript@0
+      inputs:
+          scriptPath: './install_konga_sdk.py'
+        arguments: '${{ parameters.sdk_version_param }} linux'
+      displayName: Install Konga SDK
+    - bash: cibuildwheel --output-dir wheelhouse .
+      displayName: Build wheels
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathtoPublish: 'wheelhouse'
 
-
-- job: ManyLinux
-  strategy:
-    matrix:
-      64Bit:
-        arch: x86_64
-        plat: manylinux2014_x86_64
-        image: quay.io/pypa/manylinux2014_x86_64
-        python.architecture: x64
-  pool:
-    vmImage: 'ubuntu-latest'
+- job: macos
+  pool: {vmImage: 'macOS-latest'}
   steps:
-    - template: ./azure-setup.yml
-    - template: ./azure-manylinux-wheels.yml
-    - template: ./azure-publish-dist.yml
-    - script: |
-        pip install twine
-        python -m twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
-      displayName: 'Upload wheels to PyPI'
-      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
+    - task: UsePythonVersion@0
+    - bash: |
+        set -o errexit
+        python3 -m pip install --upgrade pip
+        python3 -m pip install cibuildwheel==2.12.3
+      displayName: Prepare build environment
+    - task: PythonScript@0
+      inputs:
+          scriptPath: './install_konga_sdk.py'
+        arguments: '${{ parameters.sdk_version_param }} mac'
+      displayName: Install Konga SDK
+    - bash: cibuildwheel --output-dir wheelhouse .
+      displayName: Build wheels
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathtoPublish: wheelhouse
 
-- job: macOS
-  variables:
-    python.architecture: 'x64'
-    deps_sdk: macosx13.1
-  strategy:
-    matrix:
-      Python37:
-        arch: '-arch x86_64'
-        cmake_arch: x86_64
-        python.version: '3.7'
-      Python38:
-        arch: '-arch x86_64'
-        cmake_arch: x86_64
-        python.version: '3.8'
-      Python39:
-        arch: '-arch x86_64 -arch arm64'
-        cmake_arch: arm64;x86_64
-        python.version: '3.9'
-      Python310:
-        arch: '-arch x86_64 -arch arm64'
-        cmake_arch: arm64;x86_64
-        python.version: '3.10'
-      Python311:
-        arch: '-arch x86_64 -arch arm64'
-        cmake_arch: arm64;x86_64
-        python.version: '3.11'
-  pool:
-    vmImage: 'macOS-latest'
+- job: windows
+  pool: {vmImage: 'windows-latest'}
   steps:
-    - template: ./azure-setup.yml
-    - template: ./azure-steps.yml
-    - template: ./azure-publish-dist.yml
-    - script: |
-        pip install twine
-        python -m twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
-      displayName: 'Upload wheels to PyPI'
-      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
-
-- job: Windows
-  variables:
-    vs_version: 17
-  strategy:
-    matrix:
-      Python37:
-        python.version: '3.7'
-        python.architecture: 'x64'
-      Python38:
-        python.version: '3.8'
-        python.architecture: 'x64'
-      Python39:
-        python.version: '3.9'
-        python.architecture: 'x64'
-      Python310:
-        python.version: '3.10'
-        python.architecture: 'x64'
-      Python311:
-        python.version: '3.11'
-        python.architecture: 'x64'
-  pool:
-    vmImage: 'windows-latest'
-  steps:
-    - template: ./azure-setup.yml
-    - template: ./azure-steps.yml
-    - template: ./azure-publish-dist.yml
-    - script: |
-        pip install twine
-        python -m twine upload -r pypi --config-file $(PYPIRC_PATH) dist/*
-      displayName: 'Upload wheels to PyPI'
-      condition: and(succeeded(), eq('${{ parameters.publish_param }}', true))
+    - task: UsePythonVersion@0
+    - bash: |
+        set -o errexit
+        python -m pip install --upgrade pip
+        pip install cibuildwheel==2.12.3
+      displayName: Prepare build environment
+    - task: PythonScript@0
+      inputs:
+          scriptPath: './install_konga_sdk.py'
+        arguments: '${{ parameters.sdk_version_param }} win'
+      displayName: Install Konga SDK
+    - bash: cibuildwheel --output-dir wheelhouse .
+      displayName: Build wheels
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathtoPublish: 'wheelhouse'
