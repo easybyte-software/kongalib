@@ -23,14 +23,14 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-          scriptPath: './install_konga_sdk.py'
+        scriptPath: './install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} linux'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: 'wheelhouse'
+        pathtoPublish: 'wheelhouse'
 
 - job: macos
   pool: {vmImage: 'macOS-latest'}
@@ -43,14 +43,14 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-          scriptPath: './install_konga_sdk.py'
+        scriptPath: './install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} mac'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: wheelhouse
+        pathtoPublish: wheelhouse
 
 - job: windows
   pool: {vmImage: 'windows-latest'}
@@ -63,11 +63,11 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-          scriptPath: './install_konga_sdk.py'
+        scriptPath: './install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} win'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: 'wheelhouse'
+        pathtoPublish: 'wheelhouse'
