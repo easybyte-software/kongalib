@@ -5,8 +5,10 @@ dist
 *.egg-info
 **/*.pyc
 **/*.pdb
+**/.DS_Store
 src/kongalib/constants.json
 VERSION
 src/constants.py
 src/_kongalib*.so
 src/_kongalib*.pyd
+
