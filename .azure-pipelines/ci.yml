@@ -23,7 +23,7 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-        scriptPath: './install_konga_sdk.py'
+        scriptPath: '.azure-pipelines/install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} linux'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
@@ -43,7 +43,7 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-        scriptPath: './install_konga_sdk.py'
+        scriptPath: '.azure-pipelines/install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} mac'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
@@ -63,7 +63,7 @@ jobs:
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
-        scriptPath: './install_konga_sdk.py'
+        scriptPath: '.azure-pipelines/install_konga_sdk.py'
         arguments: '${{ parameters.sdk_version_param }} win'
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
