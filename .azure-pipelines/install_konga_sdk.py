@@ -44,7 +44,10 @@ def main(tag, operating_system):
 		cmd = 'start /wait %s -install -quiet' % path
 	else:
 		cmd = 'sudo apt install gdebi && sudo gdebi %s' % path
-	subprocess.run(cmd, shell=True)
+	try:
+		subprocess.run(cmd, shell=True, check=True)
+	except subprocess.CalledProcessError as e:
+		print("ERROR, output was:\n%s" % e.output)
 
 
 main(sys.argv[1], sys.argv[2])

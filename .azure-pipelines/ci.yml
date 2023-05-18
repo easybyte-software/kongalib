@@ -9,7 +9,8 @@ parameters:
 - name: sdk_version_param
   displayName: Version of the Konga SDK to be used
   type: string
-  default: latest
+  # this should be changed back to latest on production
+  default: 2.0.0-beta
 
 jobs:
 - job: linux
