@@ -1,5 +1,7 @@
 import sys
+import os, os.path
 import re
+import tempfile
 import subprocess
 import requests
 
@@ -24,7 +26,10 @@ def main(tag, operating_system):
 	url = 'https://public.easybyte.it/downloads/%s/sdk?os=%s' % (tag, operating_system)
 
 	r = requests.get(url, allow_redirects=True)
-	path = get_filename_from_cd(r.headers.get('content-disposition'))
+
+	filename = get_filename_from_cd(r.headers.get('content-disposition'))
+	path = os.path.join(tempfile.mkdtemp(), filename)
+
 	with open(path, 'wb') as f:
 		f.write(r.content)
 	print('Downloaded SDK into %s' % path)
