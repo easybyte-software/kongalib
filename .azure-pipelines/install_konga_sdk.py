@@ -30,13 +30,15 @@ def main(tag, operating_system):
 	r = requests.get(url, allow_redirects=True)
 
 	filename = get_filename_from_cd(r.headers.get('content-disposition'))
-	path = os.path.join(tempfile.mkdtemp(), filename)
+	root = tempfile.mkdtemp()
+	os.chdir(root)
+	path = os.path.join(root, filename)
 
 	with open(path, 'wb') as f:
 		f.write(r.content)
 	print('Downloaded SDK into %s' % path)
 	if operating_system == 'mac':
-		cmd = 'sudo installer -pkg %s -target /' % path
+		cmd = '7zz e -aoa %s && sudo installer -pkg KongaSDK.pkg -target /' % path
 	elif operating_system == 'win':
 		cmd = '%s /install /quiet' % path
 	else:
