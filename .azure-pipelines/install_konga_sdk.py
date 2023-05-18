@@ -41,7 +41,7 @@ def main(tag, operating_system):
 	if operating_system == 'mac':
 		cmd = '7z e -aoa %s && sudo installer -pkg KongaSDK.pkg -target /' % path
 	elif operating_system == 'win':
-		cmd = '%s /install /quiet' % path
+		cmd = 'start /wait %s -install -quiet' % path
 	else:
 		cmd = 'sudo apt install gdebi && sudo gdebi %s' % path
 	subprocess.run(cmd, shell=True)
