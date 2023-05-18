@@ -19,7 +19,7 @@ jobs:
     - bash: |
         set -o errexit
         python3 -m pip install --upgrade pip
-        pip3 install cibuildwheel==2.12.3
+        pip3 install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
@@ -39,7 +39,7 @@ jobs:
     - bash: |
         set -o errexit
         python3 -m pip install --upgrade pip
-        python3 -m pip install cibuildwheel==2.12.3
+        python3 -m pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
@@ -59,7 +59,7 @@ jobs:
     - bash: |
         set -o errexit
         python -m pip install --upgrade pip
-        pip install cibuildwheel==2.12.3
+        pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - task: PythonScript@0
       inputs:
