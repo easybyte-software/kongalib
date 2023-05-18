@@ -83,12 +83,8 @@ elif sys.platform == 'win32':
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'
 	extra_libs = 'ebpr_s konga_client_s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt'
 	if konga_sdk is not None:
-		if ' ' in konga_sdk:
-			cflags += ' "-I%s\\Include"' % konga_sdk
-			ldflags += ' "-LIBPATH:%s\\Lib"' % konga_sdk
-		else:
-			cflags += ' /I%s\\Include' % konga_sdk
-			ldflags += ' /LIBPATH:%s\\Lib' % konga_sdk
+		cflags += ' /I%s\\Include' % konga_sdk
+		ldflags += ' /LIBPATH:%s\\Lib' % konga_sdk
 	cflags += ' %s' % (os.environ.get('CFLAGS') or '')
 	ldflags += ' %s' % (os.environ.get('LDFLAGS') or '')
 else:
