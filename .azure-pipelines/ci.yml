@@ -11,6 +11,10 @@ parameters:
   type: string
   # this should be changed back to "current" after 2.0.0 release
   default: stable/2.0.0-beta
+- name: platform_param
+  displayName: Platform filter [windows|darwin|linux|*]
+  type: string
+  default: *
 
 jobs:
 - job: linux
@@ -27,6 +31,7 @@ jobs:
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
+  condition: or(eq('${{ parameters.publish_param }}', 'linux'), eq('${{ parameters.publish_param }}', '*'))
 
 - job: macos
   pool: {vmImage: 'macOS-latest'}
@@ -46,6 +51,7 @@ jobs:
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: wheelhouse
+  condition: or(eq('${{ parameters.publish_param }}', 'darwin'), eq('${{ parameters.publish_param }}', '*'))
 
 - job: windows
   pool: {vmImage: 'windows-latest'}
@@ -67,3 +73,4 @@ jobs:
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
+  condition: or(eq('${{ parameters.publish_param }}', 'windows'), eq('${{ parameters.publish_param }}', '*'))
