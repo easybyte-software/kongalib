@@ -14,13 +14,13 @@ parameters:
 - name: platform_param
   displayName: Platform filter [windows|darwin|linux|*]
   type: string
-  default: *
+  default: '*'
 
 variables:
   CIBW_BEFORE_ALL_LINUX: 'cd $(System.DefaultWorkingDirectory) && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tgz -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
   CIBW_ENVIRONMENT: 'KONGA_SDK=$(System.DefaultWorkingDirectory)'
-  CIBW_BUILD: *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64
-  CIBW_SKIP: cp36-*
+  CIBW_BUILD: '*-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
+  CIBW_SKIP: 'cp36-*'
 
 jobs:
 - job: linux
