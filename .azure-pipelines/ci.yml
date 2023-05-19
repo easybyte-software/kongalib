@@ -17,7 +17,7 @@ parameters:
   default: '*'
 
 variables:
-  CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz && export KONGASDK=`pwd`'
+  CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar && cd /usr/local && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
   CIBW_BUILD: '*-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
   CIBW_SKIP: 'cp36-*'
 
