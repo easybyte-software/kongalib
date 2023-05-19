@@ -20,8 +20,8 @@ variables:
   CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && cd /usr/local && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
   CIBW_BUILD: 'cp37-macosx_x86_64 *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
   CIBW_SKIP: 'cp36-* pp*'
-  CIBW_ARCHS_MACOS: 'x86_64 universal2'
-  CIBW_ARCHS_LINUX: 'x86_64 aarch64'
+  CIBW_ARCHS_MACOS: 'x86_64 arm64'
+  CIBW_ARCHS_LINUX: 'x86_64'
 
 jobs:
 - job: linux
