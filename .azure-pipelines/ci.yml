@@ -16,6 +16,12 @@ parameters:
   type: string
   default: *
 
+variables:
+  CIBW_BEFORE_ALL_LINUX: 'cd $(System.DefaultWorkingDirectory) && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tgz -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
+  CIBW_ENVIRONMENT: 'KONGA_SDK=$(System.DefaultWorkingDirectory)'
+  CIBW_BUILD: *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64
+  CIBW_SKIP: cp36-*
+
 jobs:
 - job: linux
   pool: {vmImage: 'Ubuntu-latest'}
@@ -43,7 +49,7 @@ jobs:
         python3 -m pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - bash: |
-        curl https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=mac -o KongaSDK.dmg
+        curl https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=mac -o KongaSDK.dmg
         7z e -aoa KongaSDK.dmg && sudo installer -pkg KongaSDK.pkg -target /
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
@@ -63,7 +69,7 @@ jobs:
         pip install requests cibuildwheel==2.12.3
       displayName: Prepare build environment
     - powershell: |
-        Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?os=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
+        Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
         Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
