@@ -1,6 +1,7 @@
 from __future__ import print_function
 import sys
 import glob
+import shutil
 import os
 import os.path
 
@@ -38,6 +39,7 @@ distutils.ccompiler.new_compiler = _new_compiler
 
 
 konga_sdk = os.environ.get('KONGASDK', None)
+root = os.path.abspath(os.path.dirname(__file__))
 
 
 if sys.platform == 'darwin':
@@ -72,6 +74,9 @@ if sys.platform == 'darwin':
 	macosx_version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.10'
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
+	constants = '%s/share/kongalib/constants.json' % konga_sdk
+	if os.path.exists(constants):
+		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
 	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
 	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -ltidy -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11 -DPY_SSIZE_T_CLEAN'
@@ -87,6 +92,9 @@ elif sys.platform == 'win32':
 	if konga_sdk is not None:
 		cflags.append('/I%s\\Include' % konga_sdk)
 		ldflags.append('/LIBPATH:%s\\Lib' % konga_sdk)
+		constants = '%s\\constants.json' % konga_sdk
+		if os.path.exists(constants):
+			shutil.copy(constants, '%s\\src\\kongalib\\constants.json' % root)
 	if os.environ.get('CFLAGS'):
 		cflags += os.environ['CFLAGS'].split(' ')
 	if os.environ.get('LDFLAGS'):
@@ -94,6 +102,9 @@ elif sys.platform == 'win32':
 else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
+	constants = '%s/share/kongalib/constants.json' % konga_sdk
+	if os.path.exists(constants):
+		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
 	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
 	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre -ldbus-1' % konga_sdk
 	cflags = cflags.split(' ')
