@@ -22,6 +22,7 @@ variables:
   CIBW_SKIP: 'cp36-* pp*'
   CIBW_ARCHS_MACOS: 'x86_64 arm64 universal2'
   CIBW_ARCHS_LINUX: 'x86_64'
+  CIBW_BUILD_VERBOSITY: 2
 
 jobs:
 - job: linux
