@@ -78,7 +78,7 @@ if sys.platform == 'darwin':
 	if os.path.exists(constants):
 		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
 	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
-	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -ltidy -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
+	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
 	cflags += ' -stdlib=libc++ -std=c++11 -DPY_SSIZE_T_CLEAN'
 	ldflags += ' -stdlib=libc++'
 	cflags = cflags.split(' ')
