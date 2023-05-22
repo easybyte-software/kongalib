@@ -53,6 +53,7 @@ jobs:
     - bash: |
         curl https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=mac -o KongaSDK.dmg
         7z e -aoa KongaSDK.dmg && sudo installer -pkg KongaSDK.pkg -target /
+        ls /usr/local/lib
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
