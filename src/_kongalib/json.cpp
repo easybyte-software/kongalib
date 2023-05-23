@@ -679,17 +679,17 @@ dec_parse(MGA::JSONDecoderObject *self, PyObject *args, PyObject *kwds)
 	if (status != yajl_status_ok) {
 		if (!PyErr_Occurred()) {
 			unsigned char *error = yajl_get_error(self->fHandle, 0, (const unsigned char *)text.c_str(), text.size());
-			size_t line, column;
-			yajl_get_error_position(self->fHandle, &line, &column);
+			size_t pos = self->fPosition + yajl_get_bytes_consumed(self->fHandle);
 			if (self->fFileName.empty())
-				text = CL_StringFormat("<string>, line %d, column %d: %s", (int)line, (int)column, (const char *)error);
+				text = CL_StringFormat("<string>, position %d: %s", (int)pos, (const char *)error);
 			else
-				text = CL_StringFormat("%s, line %d, column %d: %s", self->fFileName.c_str(), (int)line, (int)column, (const char *)error);
+				text = CL_StringFormat("%s, position %d: %s", self->fFileName.c_str(), (int)pos, (const char *)error);
 			setException(text);
 			yajl_free_error(self->fHandle, error);
 		}
 		return NULL;
 	}
+	self->fPosition += text.size();
 	Py_RETURN_NONE;
 }
 
@@ -704,15 +704,15 @@ dec_complete_parse(MGA::JSONDecoderObject *self, PyObject *args, PyObject *kwds)
 	Py_END_ALLOW_THREADS
 	if (status != yajl_status_ok) {
 		string text = yajl_status_to_string(status);
-		size_t line, column;
-		yajl_get_error_position(self->fHandle, &line, &column);
+		size_t pos = self->fPosition + yajl_get_bytes_consumed(self->fHandle);
 		if (self->fFileName.empty())
-			text = CL_StringFormat("<string>, line %d, column %d: %s", (int)line, (int)column, text.c_str());
+			text = CL_StringFormat("<string>, position %d: %s", (int)pos, text.c_str());
 		else
-			text = CL_StringFormat("%s, line %d, column %d: %s", self->fFileName.c_str(), (int)line, (int)column, text.c_str());
+			text = CL_StringFormat("%s, position %d: %s", self->fFileName.c_str(), (int)pos, text.c_str());
 		setException(text);
 		return NULL;
 	}
+	self->fPosition = 0;
 	Py_RETURN_NONE;
 }
 
@@ -733,9 +733,7 @@ dec_set_filename(MGA::JSONDecoderObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 dec_get_parse_position(MGA::JSONDecoderObject *self, PyObject *args, PyObject *kwds)
 {
-	size_t line, column;
-	yajl_get_error_position(self->fHandle, &line, &column);
-	return Py_BuildValue("ii", (int)line, (int)column);
+	return PyLong_FromSize_t(self->fPosition + yajl_get_bytes_consumed(self->fHandle));
 }
 
 
@@ -892,7 +890,7 @@ namespace MGA {
 	}
 	
 	JSONDecoderObject::JSONDecoderObject()
-		: fEncoding("utf-8")
+		: fEncoding("utf-8"), fPosition(0)
 	{
 		fHandle = yajl_alloc(&sCallbacks, NULL, (void *)this);
 		yajl_config(fHandle, yajl_allow_comments, 1);

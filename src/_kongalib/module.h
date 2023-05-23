@@ -27,8 +27,8 @@
 #define PY3K		0
 #endif
 
-#include "yajl/yajl_parse.h"
-#include "yajl/yajl_gen.h"
+#include <yajl/yajl_parse.h>
+#include <yajl/yajl_gen.h>
 
 #include <ebpr/types.h>
 #include <ebpr/system.h>
@@ -146,6 +146,7 @@ typedef struct JSONDecoderObject
 	yajl_handle		fHandle;
 	string			fEncoding;
 	string			fFileName;
+	size_t			fPosition;
 } JSONDecoderObject;
 
 

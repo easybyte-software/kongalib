@@ -114,7 +114,6 @@ else:
 defines = [
 	('NOUNCRYPT', None),
 	('UNICODE', None),
-	('YAJL_BUILD', None),
 ]
 if sys.platform == 'win32':
 	defines.append(('WIN32', None))
@@ -123,12 +122,8 @@ if sys.platform == 'win32':
 
 setup(
     ext_modules = [ Extension('_kongalib',
-    	glob.glob(os.path.join('src', '_kongalib', '*.cpp')) + glob.glob(os.path.join('src', '_kongalib', 'yajl-2.0.1', 'src', '*.c')),
-    	include_dirs = [
-    		os.path.join('src', '_kongalib'),
-    		os.path.join('src', '_kongalib', 'yajl-2.0.1', 'src'),
-    		os.path.join('src', '_kongalib', 'yajl-2.0.1', 'include'),
-    	],
+    	glob.glob(os.path.join('src', '_kongalib', '*.cpp')),
+    	include_dirs = [ os.path.join('src', '_kongalib') ],
     	define_macros = defines,
     	extra_compile_args = cflags,
     	extra_link_args = ldflags,
