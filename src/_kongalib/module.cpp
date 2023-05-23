@@ -18,6 +18,10 @@
 #include "Python.h"
 
 #define __DEFINE_DICTIONARY__
+#include <ebpr/messages.h>
+#undef __DEFINE_DICTIONARY__
+
+#define __DEFINE_DICTIONARY__
 #include <konga_client/messages.h>
 #undef __DEFINE_DICTIONARY__
 
