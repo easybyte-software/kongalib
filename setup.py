@@ -117,6 +117,7 @@ defines = [
 ]
 if sys.platform == 'win32':
 	defines.append(('WIN32', None))
+cflags.append('-I%s' % os.path.join(root, 'src', '_kongalib'))
 
 
 
