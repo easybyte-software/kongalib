@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import pkg_resources
+import importlib.resources
 
 from . import json
 
@@ -72,11 +72,12 @@ _EXTERNAL = {}
 
 def _ensure():
 	if not _EXTERNAL.get('@fetched', False):
-		if pkg_resources.resource_exists('kongalib', 'constants.json'):
-			with pkg_resources.resource_stream('kongalib', 'constants.json') as f:
-				data = json.loads(f)
-			if isinstance(data, dict):
-				_EXTERNAL.update(data)
+		try:
+			data = json.loads(importlib.resources.files('kongalib').joinpath('constants.json').read_bytes())
+		except:
+			data = None
+		if isinstance(data, dict):
+			_EXTERNAL.update(data)
 		_CONSTANTS.update(_EXTERNAL)
 		_EXTERNAL['@fetched'] = True
 	return _CONSTANTS.keys()
