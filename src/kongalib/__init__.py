@@ -328,9 +328,7 @@ from .constants import *
 from .client import *
 from .expression import *
 from .data_dictionary import *
-
-if sys.version_info >= (3, 6):
-	from .async_client import AsyncClient
+from .async_client import AsyncClient
 
 
 class ErrorMessage(object):
