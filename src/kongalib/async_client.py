@@ -457,7 +457,7 @@ class AsyncClient(Client):
 	def get_permissions(self, user_id):
 		return self._execute(CMD_GET_PERMISSIONS, {
 			IN_USER_ID: user_id
-		})
+		}, OUT_PERMISSIONS)
 	
 	def set_permissions(self, user_id, permissions):
 		return self._execute(CMD_SET_PERMISSIONS, {
