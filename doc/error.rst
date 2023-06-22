@@ -27,8 +27,10 @@ Eccezione ErrorList
 Codici di errore
 ----------------
 
-Sono definite le seguenti costanti di errore che possono apparire nell'attributo :attr:`Error.errno` o :attr:`ErrorList.errno`. Da notare che
-queste costanti sono definite anche nel modulo :mod:`kongalib`.
+Sono definite le seguenti costanti di errore che possono apparire nell'attributo :attr:`Error.errno` o :attr:`ErrorList.errno`. Da notare
+che queste costanti sono definite anche nel modulo :mod:`kongalib`.
+
+.. note:: Ulteriori codici di errore che non sono riportati qui di seguito potranno essere riportati da Konga.
 
 
 .. automodule:: kongalib.constants
