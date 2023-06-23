@@ -695,7 +695,7 @@ class AsyncClient(Client):
 			IN_CODE_AZIENDA: code_azienda,
 			IN_NUM_ESERCIZIO: num_esercizio,
 			IN_TX: tx,
-		}, OUT_DATA, progress=progress)
+		}, OUT_DATA, progress=progress, log=log)
 
 	def list_binaries(self, field_or_tablename, id, type=None, progress=None):
 		"""Ottiene la lista dei dati binari associati ad una scheda del database, identificata da *field_or_tablename* (che può essere un nome

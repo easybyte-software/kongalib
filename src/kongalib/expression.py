@@ -203,6 +203,10 @@ def parse(sql):
 	def p_expression_binop(p):
 		'expression : ID OPERAND VALUE'
 		p[0] = Operand(p[1], p[2], p[3])
+	
+	def p_expression_valueop(p):
+		'expression : VALUE OPERAND VALUE'
+		p[0] = Operand(p[1], p[2], p[3], _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
 
 	def p_expression_func_fieldop(p):
 		'expression : function OPERAND ID'
