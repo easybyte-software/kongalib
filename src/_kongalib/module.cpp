@@ -978,23 +978,29 @@ static PyObject *
 _apply_stylesheet(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "xml", "xslt", NULL };
-	string xml, xslt;
+	string xml, xslt, error;
 	CL_Blob xmlBlob, xsltBlob, output;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&", kwlist, MGA::ConvertString, &xml, MGA::ConvertString, &xslt))
 		return NULL;
 
+	Py_BEGIN_ALLOW_THREADS
+
 	xmlBlob.Set(xml.data(), xml.size());
 	xsltBlob.Set(xslt.data(), xslt.size());
 	CL_XML_Document xmlDoc(xmlBlob);
 	CL_XML_Document xsltDoc(xsltBlob, CL_XML_PARSE_REPLACE_ENTITIES);
-
 	if ((!xmlDoc.IsValid()) || (!xsltDoc.IsValid()) || (!xmlDoc.Transform(xsltDoc, &output)) || (output.GetSize() == 0)) {
-		string error = xmlDoc.GetError();
+		error = xmlDoc.GetError();
 		if (error.empty())
 			error = xsltDoc.GetError();
 		if (error.empty())
 			error = "transformation error";
+	}
+
+	Py_END_ALLOW_THREADS
+
+	if (!error.empty()) {
 		PyErr_SetString(PyExc_ValueError, CL_StringFormat("Error applying stylesheet: %s", error.c_str()).c_str());
 		return NULL;
 	}
