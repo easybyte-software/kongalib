@@ -1002,6 +1002,7 @@ ELAB_DEL_SCHEDE_ANNO_MISS = 7632                               #: Non e' stato s
 ELAB_DEL_SCHEDE_DATA_MISS = 7633                               #: Non e' stata specificata la data fino alla quale si vogliono eliminare le schede!
 ELAB_DEL_SCHEDE_REF_NOT_REMOVED = 7634
 ELAB_DEL_SCHEDE_WHERE_MISS = 7635                              #: Non e' stato specificato alcun filtraggio per l'eliminazione delle schede dati fattura!
+ELAB_DEL_SCHEDA_NOT_DEL = 7636
 ELAB_GENFATSC_SCONTRINO_MISS = 7650                            #: Non e' stato specificato lo scontrino da cui generare la fattura
 ELAB_GENFATSC_SCONTRINO_NOT_FOUND = 7651                       #: Lo scontrino specificato non esiste
 ELAB_GENFATSC_CLIENTE_NOT_FOUND = 7652                         #: Il cliente specificato non esiste
