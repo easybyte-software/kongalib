@@ -512,7 +512,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	char *kwlist[] = { "server", "host", "port", "options", "timeout", "success", "error", "progress", "userdata", NULL };
 	PyObject *server = Py_None, *object, *optionsObj = NULL;
 	MGA_ServerSpec spec;
-	CLU_Table *options = NULL;
+	CLU_Table options;
 	char *host = NULL;
 	string portStr, tenant_key;
 	int32 port = 0, timeout = MGA_DEFAULT_CONNECT_TIMEOUT;
@@ -580,30 +580,23 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	}
 	
 	if ((optionsObj) && (optionsObj != Py_None) && (PyDict_Check(optionsObj))) {
-		options = MGA::Table_FromPy(optionsObj);
+		MGA::Table_FromPy(optionsObj, &options);
 	}
-	if (options) {
-		if (PyErr_Occurred()) {
-			CL_Delete(options);
-			return NULL;
-		}
-		if (options->IsValid("sid"))
-			spec.fSID = options->GetString("sid");
-		if (options->IsValid("remote_address"))
-			spec.fRemoteAddress = options->GetString("remote_address");
-	}
-	else {
-		options = CL_New(CLU_Table());
-	}
+	if (PyErr_Occurred())
+		return NULL;
+	
+	if (options.IsValid("sid"))
+		spec.fSID = options.GetString("sid");
+	if (options.IsValid("remote_address"))
+		spec.fRemoteAddress = options.GetString("remote_address");
 
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->Connect(&spec, *options, (MGA_SuccessWithTableCB)_SuccessWithTableCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->Connect(&spec, options, (MGA_SuccessWithTableCB)_SuccessWithTableCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
-		CL_Delete(options);
 		
 		return (PyObject *)request;
 	}
@@ -613,7 +606,6 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		Py_BEGIN_ALLOW_THREADS
 		result = self->fClient->Connect(&spec, &output, *options, timeout);
 		Py_END_ALLOW_THREADS
-		CL_Delete(options);
 		if (result != MGA_OK)
 			return MGA::setException(result);
 		
@@ -706,7 +698,7 @@ MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "command", "data", "timeout", "success", "error", "progress", "idle", "userdata", NULL };
 	PyObject *py_input = NULL;
-	CLU_Table *input = NULL, output;
+	CLU_Table input, output;
 	MGA_Command command;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *idle = NULL, *userdata = Py_None;
@@ -716,11 +708,9 @@ MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (py_input) {
-		input = MGA::Table_FromPy(py_input);
-		if (PyErr_Occurred()) {
-			CL_Delete(input);
+		MGA::Table_FromPy(py_input, &input);
+		if (PyErr_Occurred())
 			return NULL;
-		}
 	}
 	
 	if ((success) && (success != Py_None)) {
@@ -728,19 +718,17 @@ MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->Execute(command, input, (MGA_SuccessWithTableCB)_SuccessWithTableCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, (MGA_IdleCB)_IdleCB, request, timeout);
+		self->fClient->Execute(command, &input, (MGA_SuccessWithTableCB)_SuccessWithTableCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, (MGA_IdleCB)_IdleCB, request, timeout);
 		Py_END_ALLOW_THREADS
-		CL_Delete(input);
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
 // 		uint32 time = CL_Timer::GetTime();
-		result = self->fClient->Execute(command, input, &output, _SyncIdleCB, timeout);
+		result = self->fClient->Execute(command, &input, &output, _SyncIdleCB, timeout);
 // 		fprintf(stderr, "EXECUTE TIME: %d\n", CL_Timer::GetTime() - time);
 		Py_END_ALLOW_THREADS
-		CL_Delete(input);
 		if (result != MGA_OK)
 			return MGA::setException(result, &output);
 		
@@ -770,7 +758,7 @@ MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
-	CLU_Table *dict;
+	CLU_Table dict;
 	PyObject *output;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOi:get_data_dictionary", kwlist, &success, &error, &progress, &userdata, &timeout))
@@ -793,8 +781,7 @@ MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(dict);
-		CL_Delete(dict);
+		output = MGA::Table_FromCLU(&dict);
 		
 		return output;
 	}
@@ -808,7 +795,7 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	PyObject *configured = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
-	CLU_List *drivers;
+	CLU_List drivers;
 	PyObject *output;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOi:list_drivers", kwlist, &configured, &success, &error, &progress, &userdata, &timeout))
@@ -831,8 +818,7 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(drivers);
-		CL_Delete(drivers);
+		output = MGA::List_FromCLU(&drivers);
 		
 		return output;
 	}
@@ -847,7 +833,7 @@ MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	PyObject *driverObj = NULL, *quickObj = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
-	CLU_Table *databases;
+	CLU_Table databases;
 	PyObject *output;
 	bool quick;
 	
@@ -875,8 +861,7 @@ MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(databases);
-		CL_Delete(databases);
+		output = MGA::Table_FromCLU(&databases);
 		
 		return output;
 	}
@@ -927,7 +912,7 @@ MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 	static char *kwlist[] = { "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
 	string driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *output;
-	CLU_Table *info;
+	CLU_Table info;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&|OOOOi:open_database", kwlist, MGA::ConvertString, &driver, MGA::ConvertString, &name, &success, &error, &progress, &userdata, &timeout))
@@ -950,8 +935,7 @@ MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(info);
-		CL_Delete(info);
+		output = MGA::Table_FromCLU(&info);
 		
 		return output;
 	}
@@ -1000,7 +984,7 @@ MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	uint32 old_version, new_version;
-	CLU_List *log;
+	CLU_List log;
 	PyObject *info;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&O&|OOOOi:upgrade_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &driver, MGA::ConvertString, &name, &success, &error, &progress, &userdata, &timeout))
@@ -1024,10 +1008,9 @@ MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 			return MGA::setException(self, result);
 		
 		info = PyTuple_New(3);
-		PyTuple_SET_ITEM(info, 0, MGA::List_FromCLU(log));
+		PyTuple_SET_ITEM(info, 0, MGA::List_FromCLU(&log));
 		PyTuple_SET_ITEM(info, 1, PyInt_FromLong(old_version));
 		PyTuple_SET_ITEM(info, 2, PyInt_FromLong(new_version));
-		CL_Delete(log);
 		
 		return info;
 	}
@@ -1103,8 +1086,8 @@ MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	}
 	else {
 		uint32 affectedRows;
-		CLU_List *columnNames;
-		CLU_List *resultSet;
+		CLU_List columnNames;
+		CLU_List resultSet;
 		string errorMsg;
 		PyObject *output, *temp1, *temp2, *temp3;
 		
@@ -1115,15 +1098,12 @@ MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 			return MGA::setException(result, errorMsg);
 		
 		temp1 = PyInt_FromLong(affectedRows);
-		temp2 = MGA::List_FromCLU(columnNames);
-		temp3 = MGA::List_FromCLU(resultSet);
+		temp2 = MGA::List_FromCLU(&columnNames);
+		temp3 = MGA::List_FromCLU(&resultSet);
 		output = PyTuple_Pack(3, temp1, temp2, temp3);
 		Py_DECREF(temp1);
 		Py_DECREF(temp2);
 		Py_DECREF(temp3);
-		
-		CL_Delete(columnNames);
-		CL_Delete(resultSet);
 		
 		return output;
 	}
@@ -1205,7 +1185,7 @@ MGA_Client_list_backups(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 position=0, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
-	CLU_List *backups;
+	CLU_List backups;
 	PyObject *output;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|iOOOOi:list_backups", kwlist, &position, &success, &error, &progress, &userdata, &timeout))
@@ -1228,8 +1208,7 @@ MGA_Client_list_backups(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(backups);
-		CL_Delete(backups);
+		output = MGA::List_FromCLU(&backups);
 		
 		return output;
 	}
@@ -1420,7 +1399,7 @@ MGA_Client_list_clients(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	}
 	else {
 		MGA_Status result;
-		CLU_List *list;
+		CLU_List list;
 		PyObject *output;
 		
 		Py_BEGIN_ALLOW_THREADS
@@ -1429,8 +1408,7 @@ MGA_Client_list_clients(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(list);
-		CL_Delete(list);
+		output = MGA::List_FromCLU(&list);
 		
 		return output;
 	}
@@ -1471,7 +1449,7 @@ MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kw
 		return (PyObject *)request;
 	}
 	else {
-		CLU_Table *info;
+		CLU_Table info;
 		PyObject *output;
 		
 		Py_BEGIN_ALLOW_THREADS
@@ -1483,8 +1461,7 @@ MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kw
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(info);
-		CL_Delete(info);
+		output = MGA::Table_FromCLU(&info);
 		
 		return output;
 	}
@@ -1547,7 +1524,7 @@ MGA_Client_authenticate(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	string userName, password, newPassword;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *newPasswordObj = NULL;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
-	CLU_Table *userInfo;
+	CLU_Table userInfo;
 	PyObject *output;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&|OOOOiO:authenticate", kwlist, MGA::ConvertString, &userName, MGA::ConvertString, &password, &success, &error, &progress, &userdata, &timeout, &newPasswordObj))
@@ -1581,8 +1558,7 @@ MGA_Client_authenticate(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(userInfo);
-		CL_Delete(userInfo);
+		output = MGA::Table_FromCLU(&userInfo);
 		
 		return output;
 	}

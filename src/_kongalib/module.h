@@ -205,9 +205,9 @@ extern void untrackClient(MGA::ClientObject *client);
 extern int ConvertString(PyObject *object, string *string);
 extern int ConvertDecimal(PyObject *object, DecimalObject **decimal);
 extern PyObject *List_FromCLU(CLU_List *list);
-extern CLU_List *List_FromPy(PyObject *object);
+extern void List_FromPy(PyObject *object, CLU_List *list);
 extern PyObject *Table_FromCLU(CLU_Table *table);
-extern CLU_Table *Table_FromPy(PyObject *object);
+extern void Table_FromPy(PyObject *object, CLU_Table *table);
 
 extern void InitUtilities();
 extern void InitJSON();

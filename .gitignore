@@ -11,5 +11,4 @@ VERSION
 src/constants.py
 src/_kongalib*.so
 src/_kongalib*.pyd
-src/_kongalib/amalgamation
 

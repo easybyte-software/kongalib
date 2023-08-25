@@ -119,17 +119,10 @@ if sys.platform == 'win32':
 	defines.append(('WIN32', None))
 cflags.append('-I%s' % os.path.join(root, 'src', '_kongalib'))
 
-
-amalgamation = os.path.join('src', '_kongalib', 'amalgamation')
-os.makedirs(amalgamation, exist_ok=True)
-with open(os.path.join(amalgamation, 'kongalib.cpp'), 'w') as dest:
-	for module in ('client', 'decimal', 'json', 'module', 'utility'):
-		with open(os.path.join('src', '_kongalib', '%s.cpp' % module), 'r') as source:
-			dest.write(source.read())
 	
 setup(
     ext_modules = [ Extension('_kongalib',
-    	sources = [ os.path.join(amalgamation, 'kongalib.cpp') ],
+    	sources = [ os.path.join('src', '_kongalib', 'amalgamation', 'kongalib.cpp') ],
     	include_dirs = [ os.path.join('src', '_kongalib') ],
     	define_macros = defines,
     	extra_compile_args = cflags,

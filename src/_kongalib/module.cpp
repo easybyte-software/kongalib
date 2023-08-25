@@ -437,7 +437,7 @@ static PyObject *
 save_xml(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "dict", NULL };
-	CLU_Table *table = NULL;
+	CLU_Table table;
 	PyObject *dict, *result;
 	CL_XML_Document doc;
 	CL_Blob stream;
@@ -446,14 +446,12 @@ save_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist, &PyDict_Type, &dict))
 		return NULL;
 	
-	table = MGA::Table_FromPy(dict);
-	if (PyErr_Occurred()) {
-		CL_Delete(table);
+	MGA::Table_FromPy(dict, &table);
+	if (PyErr_Occurred())
 		return NULL;
-	}
+	
 	Py_BEGIN_ALLOW_THREADS
-	doc.SetRoot(table->SaveXML(&doc));
-	CL_Delete(table);
+	doc.SetRoot(table.SaveXML(&doc));
 	doc.Save(stream);
 	stream.Rewind();
 	xml << stream;
