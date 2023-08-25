@@ -163,10 +163,9 @@ Entry_FromCLU(CLU_Entry *entry)
  *	\param	object				The Python object to be converted to #CLU_Entry.
  *	\return						The converted #CLU_Entry representing the Python object.
  */
-static CLU_Entry *
-Entry_FromPy(PyObject *object)
+static void
+Entry_FromPy(PyObject *object, CLU_Entry *entry)
 {
-	CLU_Entry *entry = CLU_Entry::Allocate();
 	char *text;
 	Py_buffer buffer;
 	Py_ssize_t size;
@@ -231,11 +230,11 @@ Entry_FromPy(PyObject *object)
 			entry->Set(temps);
 			Py_DECREF(temp);
 		}
-		else
+		else {
 			PyErr_Clear();
+			entry->Set(CLU_Null);
+		}
 	}
-	
-	return entry;
 }
 
 
@@ -277,7 +276,7 @@ MGA::List_FromCLU(CLU_List *_list)
 void
 MGA::List_FromPy(PyObject *object, CLU_List *list)
 {
-	CLU_Entry *entry;
+	CLU_Entry entry;
 	PyObject *item;
 	int32 size;
 	Py_ssize_t pos;
@@ -287,7 +286,7 @@ MGA::List_FromPy(PyObject *object, CLU_List *list)
 		size = PyTuple_GET_SIZE(object);
 		for (pos = 0; (pos < size) && (!PyErr_Occurred()); pos++) {
 			item = PyTuple_GET_ITEM(object, pos);
-			entry = Entry_FromPy(item);
+			Entry_FromPy(item, &entry);
 			list->Append(entry);
 		}
 	}
@@ -295,7 +294,7 @@ MGA::List_FromPy(PyObject *object, CLU_List *list)
 		size = PyList_GET_SIZE(object);
 		for (pos = 0; (pos < size) && (!PyErr_Occurred()); pos++) {
 			item = PyList_GET_ITEM(object, pos);
-			entry = Entry_FromPy(item);
+			Entry_FromPy(item, &entry);
 			list->Append(entry);
 		}
 	}
@@ -340,7 +339,7 @@ MGA::Table_FromCLU(CLU_Table *table)
 void
 MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 {
-	CLU_Entry *entry;
+	CLU_Entry entry;
 	PyObject *key, *value, *okey;
 	Py_ssize_t pos = 0;
 	string skey;
@@ -357,7 +356,7 @@ MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 				skey = PyUnicode_AsUTF8(okey);
 				Py_DECREF(okey);
 			}
-			entry = Entry_FromPy(value);
+			Entry_FromPy(value, &entry);
 			table->Set(skey, entry);
 		}
 	}

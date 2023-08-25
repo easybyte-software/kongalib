@@ -598,7 +598,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		CLU_Table output;
 		
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->Connect(&spec, &output, *options, timeout);
+		result = self->fClient->Connect(&spec, &output, options, timeout);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(result);
