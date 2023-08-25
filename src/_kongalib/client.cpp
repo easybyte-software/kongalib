@@ -365,7 +365,7 @@ _ErrorCB(MGA_Status error_no, const string& error, MGA::DeferredObject *request)
 
 
 static MGA_Status
-_ProgressCB(MGA_ProgressType type, double completeness, const string& message, CLU_Table *output, MGA::DeferredObject *request)
+_ProgressCB(MGA_ProgressType type, double completeness, const string& message, MGA::DeferredObject *request)
 {
 	MGA_Status result = MGA_ERROR;
 	if (!Py_IsInitialized())
@@ -387,15 +387,9 @@ _ProgressCB(MGA_ProgressType type, double completeness, const string& message, C
 			PyErr_Clear();
 			state = PyUnicode_FromString("");
 		}
-		PyObject *dict = MGA::Table_FromCLU(output);
-		if (!dict) {
-			PyErr_Clear();
-			dict = PyDict_New();
-		}
 		Py_INCREF(request->fProgress);
 		Py_XINCREF(request->fUserData);
-		PyObject *obj = PyObject_CallFunction(request->fProgress, "idOOO", type, completeness, state, dict, request->fUserData);
-		Py_DECREF(dict);
+		PyObject *obj = PyObject_CallFunction(request->fProgress, "idOO", type, completeness, state, request->fUserData);
 		Py_DECREF(state);
 		Py_DECREF(request->fProgress);
 		Py_XDECREF(request->fUserData);

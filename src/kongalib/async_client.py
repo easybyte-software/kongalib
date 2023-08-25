@@ -50,7 +50,7 @@ class AsyncClient(Client):
 			future.set_exception(e)
 	
 	def _make_progress(self, future, progress, userdata):
-		def callback(ptype, completeness, state, data, dummy):
+		def callback(ptype, completeness, state, dummy):
 			loop = future.get_loop()
 			try:
 				if future.cancelled() or (progress is None):
