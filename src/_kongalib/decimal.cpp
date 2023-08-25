@@ -764,93 +764,11 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 
 	// fprintf(stderr, "Format %s (mon: %s), locale: { name: %s, isoname: %s, decsep: %s, tsep: %s, mondecsep: %s, montsep: %s }\n", self->fValue.ToString().c_str(), monetary?"Y":"N", info.fName.c_str(), info.fISOName.c_str(), info.fDecimalSep.c_str(), info.fThousandSep.c_str(), info.fMonDecimalSep.c_str(), info.fMonThousandSep.c_str());
 
-	wchar_t dsep, tsep;
-	wchar_t buffer[64], *p = buffer;
-	int64 iPart = self->fValue;
-	int64 fPart = iPart % CL_DECIMAL_UNIT;
-	int32 len = 0;
-	
-	bool neg = (iPart < 0);
-	iPart /= CL_DECIMAL_UNIT;
-	iPart = CL_ABS64(iPart);
-
-	if (monetary) {
-		dsep = CL_FromUTF8(info.fMonDecimalSep)[0];
-		tsep = CL_FromUTF8(info.fMonThousandSep)[0];
+	string output = self->fValue.ToString(precision, monetary ? true : false);
+	if ((width) && (width > output.size())) {
+		output = string(width - output.size(), padzero ? '0' : ' ') + output;
 	}
-	else {
-		if (sep) {
-			dsep = CL_FromUTF8(info.fDecimalSep)[0];
-			tsep = CL_FromUTF8(info.fThousandSep)[0];
-		}
-		else {
-			dsep = '.';
-			tsep = ',';
-		}
-	}
-	
-	if (sep) {
-		int32 i, digits = iPart ? ((int32)log10((double)iPart) + 1) : 1;
-		int32 iPos = digits + ((digits - 1) / 3);
-		for (i = 0; i < iPos; i++) {
-			if ((i % 4) == 3) {
-				buffer[iPos - i - 1] = tsep;
-			}
-			else {
-				buffer[iPos - i - 1] = (iPart % 10) + '0';
-				iPart /= 10LL;
-			}
-		}
-		p += iPos;
-		*p = '\0';
-		len = iPos;
-	}
-	else {
-#ifdef __CL_WIN32__
-		len = swprintf(buffer, 63, L"%I64d", iPart);
-#else
-		len = swprintf(buffer, 63, L"%lld", iPart);
-#endif
-		p += len;
-	}
-	
-	if (precision) {
-		int64 mask = fPart >> 63LL;
-		fPart = (fPart ^ mask) - mask;
-
-		*p++ = dsep;
-		int32 fPos = 0;
-		mask = CL_DECIMAL_UNIT / 10;
-		do {
-			*p++ = '0' + ((fPart / mask) % 10);
-			if (((fPart % mask) == 0) || (++fPos >= precision))
-				break;
-			mask /= 10;
-		} while (fPos < 6);
-		while (fPos < precision) {
-			*p++ = '0';
-			fPos++;
-		}
-		len += fPos + 1;
-		*p = '\0';
-	}
-	if ((width) && (width > len)) {
-		memmove(buffer + (width - len), buffer, (len + 1) * sizeof(wchar_t));
-		for (int32 i = 0; i < width - len; i++) {
-			buffer[i] = padzero ? '0' : ' ';
-		}
-		len = width;
-	}
-	if (((int64)self->fValue != 0) && (neg)) {
-		memmove(buffer + 1, buffer, (len + 1) * sizeof(wchar_t));
-		p = buffer;
-		while (*(p + 1) == ' ')
-			p++;
-		*p = '-';
-		len++;
-	}
-	
-	return PyUnicode_FromWideChar(buffer, len);
+	return PyUnicode_FromStringAndSize(output.data(), output.size());
 }
 
 
