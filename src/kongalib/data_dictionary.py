@@ -23,16 +23,7 @@ TYPE_INT					= 3				#: Tipo di campo SQL INT; i valori ottenuti dalla :meth:`~ko
 TYPE_BIGINT					= 4				#: Tipo di campo SQL BIGINT; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``int``.
 TYPE_FLOAT					= 5				#: Tipo di campo SQL FLOAT; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``float``.
 TYPE_DOUBLE					= 6				#: Tipo di campo SQL DOUBLE; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``float``.
-TYPE_DECIMAL				= 7
-"""Tipo di campo SQL DECIMAL; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo :class:`kongalib.Decimal`.
-
-.. warning:: Konga Server traduce automaticamente questo tipo di dato in BIGINT sul database SQL, e salva i valori decimali come se
-	fossero interi moltiplicati per 1000000. Questo consente una precisione fino a 6 cifre decimali, e permette a Konga Server di operare anche
-	con driver SQL che non supportano nativamente il tipo dato DECIMAL (come SQLite). La traduzione è completamente trasparente per kongalib, in
-	quanto i metodi della classe :class:`kongalib.Client` ricevono e restituiscono oggetti di clase :class:`kongalib.Decimal` per gestire
-	i decimali.
-"""
-
+TYPE_DECIMAL				= 7				#: Tipo di campo SQL DECIMAL; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo :class:`kongalib.Decimal`.
 TYPE_DATE					= 8				#: Tipo di campo SQL DATE; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``datetime.date``.
 TYPE_TIME					= 9				#: Tipo di campo SQL TIME; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``datetime.time``.
 TYPE_TIMESTAMP				= 10			#: Tipo di campo SQL TIMESTAMP; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``datetime.datetime``.
