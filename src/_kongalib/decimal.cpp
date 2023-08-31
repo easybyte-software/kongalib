@@ -667,7 +667,7 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	PyObject *value = NULL, *number;
 	bool overflow = false, bad = false;
 	
-	self->fValue = 0LL;
+	self->fValue = 0;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &value))
 		return -1;
