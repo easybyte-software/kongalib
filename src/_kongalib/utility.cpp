@@ -67,9 +67,9 @@ Entry_FromCLU(CLU_Entry *entry)
 	MGA::DecimalObject *decimal;
 	string text;
 	
-	switch (entry->fType) {
+	switch (entry->GetType()) {
 	case CLU_BOOL:
-		if (entry->fBool)
+		if (entry->Bool())
 			object = Py_True;
 		else
 			object = Py_False;
@@ -77,22 +77,22 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 	
 	case CLU_INTEGER:
-		object = PyLong_FromLongLong(entry->fInteger);
+		object = PyLong_FromLongLong(entry->Integer());
 		break;
 	
 	case CLU_DECIMAL:
 		decimal = MGA::DecimalObject::Allocate();
-		decimal->fValue = entry->fDecimal;
+		decimal->fValue = entry->Decimal();
 		object = (PyObject *)decimal;
 		break;
 	
 	case CLU_FLOAT:
-		object = PyFloat_FromDouble(entry->fFloat);
+		object = PyFloat_FromDouble(entry->Float());
 		break;
 	
 	case CLU_DATE:
-		if ((entry->fDate.IsValid()) && (entry->fDate.GetYear() >= 1900) && (entry->fDate.GetYear() <= 9999)) {
-			object = PyDate_FromDate(entry->fDate.GetYear(), entry->fDate.GetMonth(), entry->fDate.GetDay());
+		if ((entry->Date().IsValid()) && (entry->Date().GetYear() >= 1900) && (entry->Date().GetYear() <= 9999)) {
+			object = PyDate_FromDate(entry->Date().GetYear(), entry->Date().GetMonth(), entry->Date().GetDay());
 		}
 		else {
 			object = Py_None;
@@ -101,8 +101,8 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 
 	case CLU_TIME:
-		if (entry->fTime.IsValid()) {
-			object = PyTime_FromTime(entry->fTime.GetHour(), entry->fTime.GetMin(), entry->fTime.GetSec(), 0);
+		if (entry->Time().IsValid()) {
+			object = PyTime_FromTime(entry->Time().GetHour(), entry->Time().GetMin(), entry->Time().GetSec(), 0);
 		}
 		else {
 			object = Py_None;
@@ -111,8 +111,8 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 	
 	case CLU_TIMESTAMP:
-		if ((entry->fTimeStamp.IsValid()) && (entry->fTimeStamp.GetYear() >= 1900) && (entry->fTimeStamp.GetYear() <= 9999)) {
-			CL_TimeStamp timeStamp = entry->fTimeStamp.ToLocal();
+		if ((entry->TimeStamp().IsValid()) && (entry->TimeStamp().GetYear() >= 1900) && (entry->TimeStamp().GetYear() <= 9999)) {
+			CL_TimeStamp timeStamp = entry->TimeStamp().ToLocal();
 			object = PyDateTime_FromDateAndTime(timeStamp.GetYear(), timeStamp.GetMonth(), timeStamp.GetDay(), timeStamp.GetHour(), timeStamp.GetMin(), timeStamp.GetSec(), 0);
 		}
 		else {
@@ -122,19 +122,19 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 	
 	case CLU_TEXT:
-		object = PyUnicode_DecodeUTF8(entry->fString.data(), entry->fString.size(), "replace");
+		object = PyUnicode_DecodeUTF8(entry->String().data(), entry->String().size(), "replace");
 		break;
 	
 	case CLU_BLOB:
-		object = PyBytes_FromStringAndSize((const char *)entry->fBlob.GetData(), (Py_ssize_t)entry->fBlob.GetSize());
+		object = PyBytes_FromStringAndSize((const char *)entry->Blob()->GetData(), (Py_ssize_t)entry->Blob()->GetSize());
 		break;
 	
 	case CLU_LIST:
-		object = MGA::List_FromCLU(&entry->fList);
+		object = MGA::List_FromCLU(entry->List());
 		break;
 	
 	case CLU_TABLE:
-		object = MGA::Table_FromCLU(&entry->fTable);
+		object = MGA::Table_FromCLU(entry->Table());
 		break;
 	
 	case CLU_NULL:
