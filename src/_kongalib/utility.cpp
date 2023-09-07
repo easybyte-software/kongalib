@@ -80,6 +80,7 @@ Entry_FromCLU(CLU_Entry *entry)
 		object = PyLong_FromLongLong(entry->Integer());
 		break;
 	
+	case CLU_NEW_DECIMAL:
 	case CLU_DECIMAL:
 		decimal = MGA::DecimalObject::Allocate();
 		decimal->fValue = entry->Decimal();
