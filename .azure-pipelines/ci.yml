@@ -25,7 +25,7 @@ variables:
   CIBW_BUILD_VERBOSITY: 2
   CIBW_ENVIRONMENT_LINUX: KONGASDK="/usr/local/konga_sdk"
   CIBW_ENVIRONMENT_PASS_LINUX: KONGASDK
-  CIBW_ENVIRONMENT_WINDOWS: KONGASDK="C:\Program Files\EasyByte\Konga SDK"
+  CIBW_ENVIRONMENT_WINDOWS: KONGASDK="C:\\Program Files\\EasyByte\\Konga SDK"
 
 jobs:
 - job: linux

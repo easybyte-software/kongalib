@@ -765,7 +765,7 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	// fprintf(stderr, "Format %s (mon: %s), locale: { name: %s, isoname: %s, decsep: %s, tsep: %s, mondecsep: %s, montsep: %s }\n", self->fValue.ToString().c_str(), monetary?"Y":"N", info.fName.c_str(), info.fISOName.c_str(), info.fDecimalSep.c_str(), info.fThousandSep.c_str(), info.fMonDecimalSep.c_str(), info.fMonThousandSep.c_str());
 
 	string output = self->fValue.ToString(precision, monetary ? true : false);
-	if ((width) && (width > output.size())) {
+	if ((width) && (width > (int)output.size())) {
 		output = string(width - output.size(), padzero ? '0' : ' ') + output;
 	}
 	return PyUnicode_FromStringAndSize(output.data(), output.size());
