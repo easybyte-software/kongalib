@@ -17,7 +17,7 @@ parameters:
   default: '*'
 
 variables:
-  CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && cd /usr/local && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
+  CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
   CIBW_BUILD: 'cp37-macosx_x86_64 *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
   CIBW_SKIP: 'cp36-* pp*'
   CIBW_ARCHS_MACOS: 'x86_64 universal2'
@@ -38,6 +38,8 @@ jobs:
       displayName: Prepare build environment
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
+	  env:
+	  	KONGASDK: '/usr/local/konga_sdk'
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
