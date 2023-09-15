@@ -38,8 +38,8 @@ jobs:
       displayName: Prepare build environment
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
-	  env:
-	  	KONGASDK: '/usr/local/konga_sdk'
+      env:
+          KONGASDK: '/usr/local/konga_sdk'
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
