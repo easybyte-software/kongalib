@@ -23,6 +23,9 @@ variables:
   CIBW_ARCHS_MACOS: 'x86_64 universal2'
   CIBW_ARCHS_LINUX: 'x86_64 aarch64'
   CIBW_BUILD_VERBOSITY: 2
+  CIBW_ENVIRONMENT_LINUX: KONGASDK="/usr/local/konga_sdk"
+  CIBW_ENVIRONMENT_PASS_LINUX: KONGASDK
+  CIBW_ENVIRONMENT_WINDOWS: KONGASDK="C:\Program Files\EasyByte\Konga SDK"
 
 jobs:
 - job: linux
@@ -38,8 +41,6 @@ jobs:
       displayName: Prepare build environment
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
-      env:
-          KONGASDK: '/usr/local/konga_sdk'
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
@@ -80,8 +81,6 @@ jobs:
       displayName: Install Konga SDK
     - bash: cibuildwheel --output-dir wheelhouse .
       displayName: Build wheels
-      env:
-        KONGASDK: 'C:\Program Files\EasyByte\Konga SDK'
     - task: PublishBuildArtifacts@1
       inputs:
         pathtoPublish: 'wheelhouse'
