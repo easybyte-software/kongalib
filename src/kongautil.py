@@ -423,7 +423,7 @@ def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 	:func:`print_layout`, passando i parametri *target* e *filename*; viceversa se si esegue fuori da Konga, il log verrà stampato su terminale."""
 	if _proxy.is_valid():
 		template = """<?xml version='1.0' encoding='utf-8'?>
-			<layout version="2" name="%(title)s" title="%(title)s" orientation="vertical" margin_top="75" margin_right="75" margin_bottom="75" margin_left="75">
+			<layout version="3" name="%(title)s" title="%(title)s" orientation="vertical" margin_top="75" margin_right="75" margin_bottom="75" margin_left="75">
 				<init>
 					<![CDATA[set_datasource(Datasource(['id', 'type', 'message'], DATA, 'Master'))
 ]]></init>
