@@ -42,8 +42,8 @@
 #include <konga_client/client.h>
 #include <konga_client/common.h>
 
-#include <ebpr/messages.h>
-#include <konga_client/messages.h>
+#include <ebpr/errors.h>
+#include <konga_client/errors.h>
 
 
 #if (defined(__GNUC__) || defined(__clang__))
@@ -161,7 +161,6 @@ typedef struct MODULE_STATE
 	PyObject						*fResumeCB;
 	volatile bool					fInitialized;
 	PyObject						*fException;
-	CL_Translator					*fTranslator;
 	CL_Mutex						fTimerLock;
 	PyObject						*fTimerList;
 	std::list<MGA_Client *>			fClientList;

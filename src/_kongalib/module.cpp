@@ -17,13 +17,8 @@
 
 #include "Python.h"
 
-#define __DEFINE_DICTIONARY__
-#include <ebpr/messages.h>
-#undef __DEFINE_DICTIONARY__
-
-#define __DEFINE_DICTIONARY__
-#include <konga_client/messages.h>
-#undef __DEFINE_DICTIONARY__
+#include <ebpr/errors.h>
+#include <konga_client/errors.h>
 
 #define __DEFINE_COMMANDS__
 #include <konga_client/commands.h>
@@ -81,10 +76,7 @@ onDestroyWorker(CL_ThreadID tid, void *context)
 string
 MGA::translate(MGA_Status error)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
-	if (!state)
-		return "";
-	return state->fTranslator->Get(error);
+	return MGA::GetError(error);
 }
 
 
@@ -94,7 +86,7 @@ MGA::setException(MGA_Status error_code, const string& error_msg)
 	MGA::MODULE_STATE *state = GET_STATE();
 	std::string string = error_msg;
 	if (string.empty() && state)
-		string = state->fTranslator->Get(error_code);
+		string = MGA::GetError(error_code);
 	PyObject *args = Py_BuildValue("is", error_code, (const char *)string.c_str());
 	if (state)
 		PyErr_SetObject(state->fException, args);
@@ -123,13 +115,13 @@ MGA::setException(MGA_Status error_code, CLU_Table *output)
 	if (result == MGA_OK) {
 		result = error_code;
 		if (state)
-			error = state->fTranslator->Get(result);
+			error = MGA::GetError(result);
 	}
 	else {
 		if (output->Exists(MGA_OUT_ERROR))
 			error = output->Get(MGA_OUT_ERROR).String();
 		else if (state)
-			error = state->fTranslator->Get(result);
+			error = MGA::GetError(result);
 	}
 	return MGA::setException(result, error);
 }
@@ -149,7 +141,7 @@ MGA::setException(MGA::ClientObject *client, MGA_Status result)
 		return NULL;
 	}
 
-	return MGA::setException(result, state->fTranslator->Get(result));
+	return MGA::setException(result, MGA::GetError(result));
 }
 
 
@@ -1131,8 +1123,6 @@ module_free(PyObject *m)
 		CL_AutoLocker locker(&s->fThreadsLock);
 		s->fInitialized = false;
 	}
-	CL_Delete(s->fTranslator);
-	s->fTranslator = NULL;
 	CL_Dispatcher *dispatcher = s->fDispatcher;
 	s->fDispatcher = NULL;
 	if (Py_IsInitialized()) {
@@ -1245,10 +1235,6 @@ MOD_INIT(_kongalib)
 	new (state) MGA::MODULE_STATE();
 #endif
 
-	state->fTranslator = CL_New(CL_Translator);
-	state->fTranslator->Load(CL_LANG_EN, sDefaultDictionary_CL_MESSAGES);
-	state->fTranslator->Load(CL_LANG_EN, sDefaultDictionary_MGA_MESSAGES, false);
-	
 	Py_BEGIN_ALLOW_THREADS
 	state->fDispatcher = CL_New(CL_Dispatcher(8, 128, &onCreateWorker, &onDestroyWorker));
 	Py_END_ALLOW_THREADS
