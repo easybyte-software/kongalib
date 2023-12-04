@@ -80,7 +80,9 @@ Entry_FromCLU(CLU_Entry *entry)
 		object = PyLong_FromLongLong(entry->Integer());
 		break;
 	
+#if CLU_DECIMAL != CLU_NEW_DECIMAL
 	case CLU_NEW_DECIMAL:
+#endif
 	case CLU_DECIMAL:
 		decimal = MGA::DecimalObject::Allocate();
 		decimal->fValue = entry->Decimal();
@@ -103,7 +105,11 @@ Entry_FromCLU(CLU_Entry *entry)
 
 	case CLU_TIME:
 		if (entry->Time().IsValid()) {
+#ifdef CLU_TIMESTAMP_HIRES
+			object = PyTime_FromTime(entry->Time().GetHour(), entry->Time().GetMin(), entry->Time().GetSec(), entry->Time().GetMSecs() * 1000);
+#else
 			object = PyTime_FromTime(entry->Time().GetHour(), entry->Time().GetMin(), entry->Time().GetSec(), 0);
+#endif
 		}
 		else {
 			object = Py_None;
@@ -114,7 +120,11 @@ Entry_FromCLU(CLU_Entry *entry)
 	case CLU_TIMESTAMP:
 		if ((entry->TimeStamp().IsValid()) && (entry->TimeStamp().GetYear() >= 1900) && (entry->TimeStamp().GetYear() <= 9999)) {
 			CL_TimeStamp timeStamp = entry->TimeStamp().ToLocal();
+#ifdef CLU_TIMESTAMP_HIRES
+			object = PyDateTime_FromDateAndTime(timeStamp.GetYear(), timeStamp.GetMonth(), timeStamp.GetDay(), timeStamp.GetHour(), timeStamp.GetMin(), timeStamp.GetSec(), timeStamp.GetMSecs() * 1000);
+#else
 			object = PyDateTime_FromDateAndTime(timeStamp.GetYear(), timeStamp.GetMonth(), timeStamp.GetDay(), timeStamp.GetHour(), timeStamp.GetMin(), timeStamp.GetSec(), 0);
+#endif
 		}
 		else {
 			object = Py_None;
@@ -188,13 +198,21 @@ Entry_FromPy(PyObject *object, CLU_Entry *entry)
 	}
 	else if (PyDateTime_Check(object)) {
 		entry->Set(CL_TimeStamp(PyDateTime_GET_DAY(object), PyDateTime_GET_MONTH(object), PyDateTime_GET_YEAR(object),
-								PyDateTime_DATE_GET_HOUR(object), PyDateTime_DATE_GET_MINUTE(object), PyDateTime_DATE_GET_SECOND(object)).ToUTC());
+#ifdef CLU_TIMESTAMP_HIRES
+								PyDateTime_DATE_GET_HOUR(object), PyDateTime_DATE_GET_MINUTE(object), PyDateTime_DATE_GET_SECOND(object), PyDateTime_DATE_GET_MICROSECOND(object) / 1000).ToUTC());
+#else
+								PyDateTime_DATE_GET_HOUR(object), PyDateTime_DATE_GET_MINUTE(object), PyDateTime_DATE_GET_SECOND(object), 0).ToUTC());
+#endif
 	}
 	else if (PyDate_Check(object)) {
 		entry->Set(CL_Date(PyDateTime_GET_DAY(object), PyDateTime_GET_MONTH(object), PyDateTime_GET_YEAR(object)));
 	}
 	else if (PyTime_Check(object)) {
-		entry->Set(CL_Time(PyDateTime_TIME_GET_HOUR(object), PyDateTime_TIME_GET_MINUTE(object), PyDateTime_TIME_GET_SECOND(object)));
+#ifdef CLU_TIMESTAMP_HIRES
+		entry->Set(CL_Time(PyDateTime_TIME_GET_HOUR(object), PyDateTime_TIME_GET_MINUTE(object), PyDateTime_TIME_GET_SECOND(object), PyDateTime_TIME_GET_MICROSECOND(object) / 1000));
+#else
+		entry->Set(CL_Time(PyDateTime_TIME_GET_HOUR(object), PyDateTime_TIME_GET_MINUTE(object), PyDateTime_TIME_GET_SECOND(object), 0));
+#endif
 	}
 	else if ((PyBytes_Check(object)) && (!PyBytes_AsStringAndSize(object, &text, &size))) {
 		entry->Set(string(text, size));
