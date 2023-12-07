@@ -1,6 +1,7 @@
 [build-system]
 requires = [ "setuptools >= 61.0.0" ]
-build-backend = "setuptools.build_meta"
+build-backend = "_version:build_meta"
+backend-path = [ '.' ]
 
 
 [project]
@@ -61,4 +62,4 @@ zip-safe = true
 
 
 [tool.setuptools.dynamic]
-version = { attr = "kongalib.__version__" }
+version = { attr = "_version.__version__" }

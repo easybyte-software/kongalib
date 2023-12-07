@@ -50,8 +50,6 @@ BACKUP_ON_COMPUTER			= 0x1			#: Il backup è posizionato in locale sulla macchin
 BACKUP_ON_CLOUD				= 0x2			#: Il backup è posizionato nel cloud
 
 
-__version__ = '2.0.0'
-
 
 class Log(object):
 	"""La classe Log serve ad immagazzinare i messaggi prodotti dal server durante un'operazione; oggetti di questa classe
