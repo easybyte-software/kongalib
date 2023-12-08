@@ -39,16 +39,16 @@ Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 
 **Windows**
 
-Sono supportate le versioni di Windows dalla 7 in su. Come prerequisiti è
+Sono supportate le versioni di Windows dalla 10 in su. Come prerequisiti è
 necessario installare:
 
-	- Microsoft Visual Studio 2017
+	- Microsoft Visual Studio 2017 o successiva
 	- `SDK di Konga`_
 
 
 **MacOS X**
 
-Sono supportate le versioni di macOS dalla 10.8 in su. Come prerequisiti è
+Sono supportate le versioni di macOS dalla 10.9 in su. Come prerequisiti è
 necessario installare:
 
 	- XCode (assicurarsi di aver installato anche i tool da linea di comando)
@@ -60,7 +60,7 @@ necessario installare:
 Benchè il pacchetto binario wheel per Linux supporti tutte le distribuzioni
 Linux moderne (specifica `manylinux`), al momento la compilazione da parte di
 terzi è supportata ufficialmente solo se si usa una distribuzione Linux basata su
-Debian, in particolare Ubuntu Linux dalla versione 16.04 in su. Sono necessari i
+Debian, in particolare Ubuntu Linux dalla versione 18.04 in su. Sono necessari i
 seguenti pacchetti *deb*:
 
 	- build-essential
@@ -75,11 +75,7 @@ La compilazione è possibile tramite la usuale procedura dei pacchetti Python::
 
 .. note:: Sotto piattaforma Windows per la corretta compilazione è necessario
 	impostare la variabile d'ambiente `KONGASDK` alla directory d'installazione
-	dell'`SDK di Konga`_. Notare inoltre che l'SDK di Konga è compilato con
-	Visual Studio 2017 e non è compatibile con Python 2.x (che sotto Windows
-	richiede Visual Studio 2008); se si desidera usare *kongalib* con Python 2.x
-	sotto Windows, è necessario usare la *wheel* precompilata installabile
-	tramite *pip*.
+	dell'`SDK di Konga`_.
 
 
 Risorse
