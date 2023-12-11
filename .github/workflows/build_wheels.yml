@@ -1,0 +1,60 @@
+name: Build wheels
+
+on:
+	workflow_dispatch:
+		inputs:
+			publish:
+				description: 'Publish wheels by uploading to PyPI'
+				type: boolean
+				default: false
+				required: false
+			sdk_version:
+				description: 'Version of the Konga SDK to be used'
+				# this should be changed back to 'current' after 2.0.0 release
+				default: 'stable/2.0.0-beta'
+				required: true
+			platform:
+				description: 'Platform filter'
+				type: choice
+				options:
+				- windows
+				- darwin
+				- linux
+				- all
+				required: true
+				default: 'all'
+
+jobs:
+	build_wheels:
+		name: Build wheels on ${{ matrix.os }}
+		runs-on: ${{ matrix.os }}
+		strategy:
+			matrix:
+				os: [ubuntu-latest, windows-latest, macos-latest]
+		if: inputs.platform == 'all' || (inputs.platform == 'windows' && matrix.os == 'windows-latest') || (inputs.platform == 'darwin' && matrix.os == 'macos-latest') || (inputs.platform == 'linux' && matrix.os == 'ubuntu-latest')
+		steps:
+			- uses: actions/checkout@v4
+
+			- name: Set up QEMU
+				if: runner.os == 'Linux'
+				uses: docker/setup-qemu-action@v3
+				with:
+					platforms: all
+
+			- name: Build wheels
+				uses: pypa/cibuildwheel@v2.16.2
+				env:
+					CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
+					CIBW_BUILD: 'cp38-macosx_x86_64 *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
+					CIBW_SKIP: 'cp36-* cp37* pp*'
+					CIBW_ARCHS_MACOS: 'x86_64 universal2'
+					CIBW_ARCHS_LINUX: 'x86_64 aarch64'
+					CIBW_BUILD_VERBOSITY: '2'
+					CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
+					CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
+					CIBW_ENVIRONMENT_WINDOWS: "KONGASDK=${{ inputs.sdk_version == 'nightly' && 'C:\\Program Files\\EasyByte\\Konga SDK Nightly' || 'C:\\Program Files\\EasyByte\\Konga SDK' }}"
+			
+			- uses: actions/upload-artifact@v3
+				with:
+					path: ./wheelhouse/*.whl
+
