@@ -17,9 +17,9 @@ on:
         description: 'Platform filter'
         type: choice
         options:
-        - windows
-        - darwin
-        - linux
+        - Windows
+        - macOS
+        - Linux
         - all
         required: true
         default: 'all'
@@ -31,7 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    if: inputs.platform == 'all' || (inputs.platform == 'windows' && matrix.os == 'windows-latest') || (inputs.platform == 'darwin' && matrix.os == 'macos-latest') || (inputs.platform == 'linux' && matrix.os == 'ubuntu-latest')
+    if: inputs.platform == 'all' || (inputs.platform == runner.os)
     steps:
       - uses: actions/checkout@v4
 
