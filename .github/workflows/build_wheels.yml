@@ -31,17 +31,17 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    if: inputs.platform == 'all' || (inputs.platform == runner.os)
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up QEMU
-        if: runner.os == 'Linux'
+        if: (runner.os == 'Linux') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
+        if: inputs.platform == 'all' || (inputs.platform == runner.os)
         uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
@@ -55,6 +55,7 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: "KONGASDK=${{ inputs.sdk_version == 'nightly' && 'C:\\Program Files\\EasyByte\\Konga SDK Nightly' || 'C:\\Program Files\\EasyByte\\Konga SDK' }}"
       
       - uses: actions/upload-artifact@v3
+        if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
           path: ./wheelhouse/*.whl
 
