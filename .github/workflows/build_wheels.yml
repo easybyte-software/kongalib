@@ -43,8 +43,8 @@ jobs:
       - name: Setup (Windows)
         if: (runner.os == 'Windows') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         run: |
-          Invoke-WebRequest https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
-          Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
+          Invoke-WebRequest https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=win -OutFile ${{ github.workspace }}\KongaSDK.exe
+          Start-Process ${{ github.workspace }}\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
         shell: pwsh
   
       - name: Setup (macOS)
