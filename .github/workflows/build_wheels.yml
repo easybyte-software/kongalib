@@ -40,18 +40,18 @@ jobs:
         with:
           platforms: all
   
-      - name: Setup (Windows):
+      - name: Setup (Windows)
         if: (runner.os == 'Windows') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         run: |
-        Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
-        Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
+          Invoke-WebRequest https://public.easybyte.it/downloads/${{ parameters.sdk_version_param }}/sdk?spec=win -OutFile $(System.DefaultWorkingDirectory)\KongaSDK.exe
+          Start-Process $(System.DefaultWorkingDirectory)\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
         shell: pwsh
   
-      - name: Setup (macOS):
+      - name: Setup (macOS)
         if: (runner.os == 'macOS') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         run: |
-        curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
-        7z e -aoa KongaSDK.dmg && sudo installer -pkg *.pkg -target /
+          curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
+          7z e -aoa KongaSDK.dmg && sudo installer -pkg *.pkg -target /
         shell: bash
 
       - name: Build wheels
