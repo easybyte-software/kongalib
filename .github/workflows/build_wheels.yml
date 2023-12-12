@@ -41,6 +41,7 @@ jobs:
 
   build_wheels:
     name: Build for ${{ matrix.os }}
+    needs: [id]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -89,3 +90,18 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
+  upload_all:
+    name: Upload to PyPI
+    needs: [build_wheels]
+    environment: pypi
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    if: inputs.publish
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: artifact
+        path: dist
+
+    - uses: pypa/gh-action-pypi-publish@release/v1
