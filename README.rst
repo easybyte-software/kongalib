@@ -10,9 +10,9 @@ Kongalib
 .. image:: https://img.shields.io/badge/License-LGPLv3-blue.svg
    :alt: LGPL v3 License
    :target: https://www.gnu.org/licenses/lgpl-3.0.en.html
-.. image:: https://dev.azure.com/easybyte-software/kongalib/_apis/build/status/easybyte-software.kongalib?branchName=master
+.. image:: https://github.com/easybyte-software/kongalib/actions/workflows/build_wheels.yml/badge.svg?event=workflow_dispatch
    :alt: Build Status
-   :target: https://dev.azure.com/easybyte-software/kongalib
+   :target: https://github.com/easybyte-software/kongalib/actions/workflows/build_wheels.yml
 
 Libreria Python di comunicazione con i server `EasyByte Konga`_. Tramite
 *kongalib* è possibile connettersi ad un server Konga (integrato in Konga Pro o
