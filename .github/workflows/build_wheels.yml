@@ -38,7 +38,23 @@ jobs:
     steps:
       - name: ${{ github.event.inputs.id }}
         run: echo Run identifier is ${{ inputs.id }}
-
+  
+  build_sdist:
+    name: Build SDist
+    needs: [id]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || 'master' }}
+      
+      - name: Build SDist
+        run: pipx run build --sdist
+    
+      - uses: actions/upload-artifact@v3
+        with:
+          path: dist/*.tar.gz
+      
   build_wheels:
     name: Build for ${{ matrix.os }}
     needs: [id]
@@ -92,7 +108,7 @@ jobs:
 
   upload_all:
     name: Upload to PyPI
-    needs: [build_wheels]
+    needs: [build_wheels, build_sdist]
     environment: pypi
     permissions:
       id-token: write
