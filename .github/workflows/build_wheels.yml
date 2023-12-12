@@ -3,6 +3,10 @@ name: Build wheels
 on:
   workflow_dispatch:
     inputs:
+      id:
+          description: 'Unique identifier for this run'
+        default: '00000000-0000-0000-0000-000000000000'
+        required: false
       publish:
         description: 'Publish wheels by uploading to PyPI'
         type: boolean
@@ -25,8 +29,15 @@ on:
         default: 'all'
 
 jobs:
+  id:
+    name: Workflow ID provider
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: ${{ github.event.inputs.id }}
+        run: echo Run identifier is ${{ inputs.id }}
+
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
