@@ -58,9 +58,9 @@ necessario installare:
 **Linux**
 	
 Benchè il pacchetto binario wheel per Linux supporti tutte le distribuzioni
-Linux moderne (specifica `manylinux`), al momento la compilazione da parte di
+Linux moderne (specifica `manylinux_2_28`), al momento la compilazione da parte di
 terzi è supportata ufficialmente solo se si usa una distribuzione Linux basata su
-Debian, in particolare Ubuntu Linux dalla versione 18.04 in su. Sono necessari i
+Debian, in particolare Ubuntu Linux dalla versione 20.04 in su. Sono necessari i
 seguenti pacchetti *deb*:
 
 	- build-essential
@@ -68,13 +68,14 @@ seguenti pacchetti *deb*:
 	- python-dev
 	- `easybyte-konga-dev`_
 
-La compilazione è possibile tramite la usuale procedura dei pacchetti Python::
+La compilazione come da standard Python è possibile sempre tramite *pip*, eseguendo
+dalla directory dei sorgenti::
 
-	python setup.py install
+	pip install .
 
 
 .. note:: Sotto piattaforma Windows per la corretta compilazione è necessario
-	impostare la variabile d'ambiente `KONGASDK` alla directory d'installazione
+	impostare la variabile d'ambiente `KONGASDK` alla directory d'installazione
 	dell'`SDK di Konga`_.
 
 
@@ -105,5 +106,5 @@ Risorse
 .. _Script di utilità comune per Konga: https://github.com/easybyte-software/konga_scripts
 .. _SDK di Konga: http://public.easybyte.it/downloads/current
 .. _easybyte-konga-dev: http://public.easybyte.it/downloads/current
-.. _manylinux: https://github.com/pypa/manylinux
+.. _manylinux_2_28: https://github.com/pypa/manylinux
 

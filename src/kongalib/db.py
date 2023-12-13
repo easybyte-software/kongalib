@@ -250,14 +250,14 @@ def TimeFromTicks(ticks):
 def TimestampFromTicks(ticks):
 	return Timestamp(*time.localtime(ticks)[:6])
 
-def connect(host, port=0, driver=None, database=None, user=None, password=None):
-	"""Esegue una connessione al server Konga identificato da *host* e *port*, apre *database* usando il *driver* specificato,
-	ed infine si autentica usando *user* e *password*. Restituisce un oggetto :class:`Connection`; da questo è possibile ottenere un oggetto
-	:class:`Cursor` che permette di eseguire query SQL sul database aperto sulla connessione.
+def connect(host, port=0, driver=None, database=None, user=None, password=None, tenant_key=None):
+	"""Esegue una connessione al server Konga identificato da *host* e *port*, usando l'eventuale chiave tenant *tenant_key*, apre *database*
+	usando il *driver* specificato, ed infine si autentica usando *user* e *password*. Restituisce un oggetto :class:`Connection`; da questo
+	è possibile ottenere un oggetto :class:`Cursor` che permette di eseguire query SQL sul database aperto sulla connessione.
 	"""
 	conn = Connection()
 	try:
-		conn.connect({ 'host': host, 'port': port })
+		conn.connect({ 'host': host, 'port': port }, options={ 'tenant_key': tenant_key })
 		conn.open_database(driver, database)
 		conn.authenticate(user, password)
 	except _Error as e:
