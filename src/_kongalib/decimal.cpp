@@ -112,35 +112,6 @@ MGA_Decimal_mul(PyObject *_self, PyObject *_other)
 }
 
 
-#if !PY3K
-
-/**
- *	Deprecated (old) division operator for the MGA.Decimal type.
- *	\param	self				First MGA.Decimal operand.
- *	\param	other				Second MGA.Decimal operand.
- *	\return						A new reference to a MGA.Decimal object with the result of the operation.
- */
-static MGA::DecimalObject *
-MGA_Decimal_classic_div(MGA::DecimalObject *self, MGA::DecimalObject *other)
-{
-	MGA::DecimalObject *result;
-	
-	if ((Py_DivisionWarningFlag >= 2) && (PyErr_Warn(PyExc_DeprecationWarning, "decimal classic division") < 0))
-		return NULL;
-	
-	if (other->fValue == 0) {
-		PyErr_SetString(PyExc_ZeroDivisionError, "decimal division");
-		return NULL;
-	}
-	result = MGA::DecimalObject::Allocate();
-	result->fValue = self->fValue / other->fValue;
-	
-	return result;
-}
-
-#endif
-
-
 /**
  *	Remainder operator for the MGA.Decimal type.
  *	\param	self				First MGA.Decimal operand.
@@ -343,58 +314,6 @@ MGA_Decimal_nonzero(MGA::DecimalObject *self)
 }
 
 
-#if !PY3K
-
-/**
- *	Coerces operand in \a pw to MGA.Decimal operand in \a pv.
- *	\param	pv					First operand (MGA.Decimal).
- *	\param	pw					Second operand (can be int, long or float), to be converted to MGA.Decimal.
- *	\retval	0					Coersion successful; \a pw converted to MGA.Decimal.
- *	\retval	1					Coersion failed.
- */
-static int
-MGA_Decimal_coerce(PyObject **pv, PyObject **pw)
-{
-	MGA::DecimalObject *object;
-	
-	if (PyFloat_Check(*pw)) {
-		double value = PyFloat_AS_DOUBLE(*pw);
-		object = MGA::DecimalObject::Allocate();
-		object->fValue = value;
-		*pw = (PyObject *)object;
-		Py_XINCREF(*pv);
-		return 0;
-	}
-	else if (PyObject_TypeCheck(*pw, &MGA::DecimalType)) {
-		Py_XINCREF(*pv);
-		Py_INCREF(*pw);
-		return 0;
-	}
-	else {
-		bool invalid, overflow;
-		PyObject *o = PyObject_Str(*pw);
-		if (!o) {
-			PyErr_Clear();
-			return 1;
-		}
-		object = MGA::DecimalObject::Allocate();
-		object->fValue = CL_Decimal::FromString(PyString_AS_STRING(o), &invalid, &overflow);
-		Py_DECREF(o);
-		if ((invalid) || (overflow)) {
-			Py_DECREF(object);
-			return 1;
-		}
-		*pw = (PyObject *)object;
-		Py_XINCREF(*pv);
-		return 0;
-	}
-
-	return 1;
-}
-
-#endif
-
-
 /**
  *	Casts the MGA.Decimal object in \a self to an int.
  *	\param	self				MGA.Decimal object to be casted to int.
@@ -427,23 +346,6 @@ MGA_Decimal_index(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	else
 		return PyLong_FromLongLong(value);
 }
-
-
-#if !PY3K
-
-/**
- *	Casts the MGA.Decimal object in \a self to a long.
- *	\param	self				MGA.Decimal object to be casted to long.
- *	\return						A long object representing \a self.
- */
-static PyObject *
-MGA_Decimal_long(MGA::DecimalObject *self)
-{
-	string s = self->fValue.Floor().ToString();
-	return PyLong_FromString((char *)s.c_str(), NULL, 10);
-}
-
-#endif
 
 
 /**
@@ -544,11 +446,7 @@ static PyObject *
 MGA_Decimal_str(MGA::DecimalObject *self)
 {
 	string s = self->fValue.ToString();
-#if PY3K
 	return PyUnicode_FromString(s.c_str());
-#else
-	return PyString_FromString(s.c_str());
-#endif
 }
 
 
@@ -576,26 +474,9 @@ MGA_Decimal_richcompare(MGA::DecimalObject *self, PyObject *other, int op)
 		case Py_GT: result = self->fValue > value->fValue; break;
 		}
 	}
-#if !PY3K
-	else if (PyInt_Check(other)) {
-		long value = PyInt_AS_LONG(other);
-		switch (op) {
-		case Py_EQ: result = self->fValue == value; break;
-		case Py_NE: result = self->fValue != value; break;
-		case Py_LE: result = self->fValue <= value; break;
-		case Py_GE: result = self->fValue >= value; break;
-		case Py_LT: result = self->fValue < value; break;
-		case Py_GT: result = self->fValue > value; break;
-		}
-	}
-#endif
 	else if (PyLong_Check(other)) {
 		PyObject *o = PyObject_Str(other);
-#if PY3K
 		CL_Decimal value(string(PyUnicode_AsUTF8(o)));
-#else
-		CL_Decimal value(string(PyString_AS_STRING(o)));
-#endif
 		Py_DECREF(o);
 		switch (op) {
 		case Py_EQ: result = self->fValue == value; break;
@@ -676,18 +557,9 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		if (PyObject_TypeCheck(value, &MGA::DecimalType)) {
 			self->fValue = ((MGA::DecimalObject *)value)->fValue;
 		}
-#if !PY3K
-		else if (PyInt_Check(value)) {
-			self->fValue = (int32)PyInt_AS_LONG(value);
-		}
-#endif
 		else if (PyLong_Check(value)) {
 			PyObject *o = PyObject_Str(value);
-#if PY3K
 			self->fValue = CL_Decimal::FromString(string(PyUnicode_AsUTF8(o)), &bad, &overflow);
-#else
-			self->fValue = CL_Decimal::FromString(string(PyString_AS_STRING(o)), &bad, &overflow);
-#endif
 			Py_DECREF(o);
 		}
 		else if (PyFloat_Check(value)) {
@@ -1014,9 +886,6 @@ static PyNumberMethods MGA_Decimal_as_number = {
 	(binaryfunc)MGA_Decimal_add,			/* nb_add */
 	(binaryfunc)MGA_Decimal_sub,			/* nb_subtract */
 	(binaryfunc)MGA_Decimal_mul,			/* nb_multiply */
-#if !PY3K
-	(binaryfunc)MGA_Decimal_classic_div,	/* nb_divide */
-#endif
 	(binaryfunc)MGA_Decimal_rem,			/* nb_remainder */
 	(binaryfunc)MGA_Decimal_divmod,			/* nb_divmod */
 	(ternaryfunc)MGA_Decimal_pow,			/* nb_power */
@@ -1030,26 +899,12 @@ static PyNumberMethods MGA_Decimal_as_number = {
 	0,										/* nb_and */
 	0,										/* nb_xor */
 	0,										/* nb_or */
-#if !PY3K
-	(coercion)MGA_Decimal_coerce,			/* nb_coerce */
-#endif
 	(unaryfunc)MGA_Decimal_int,				/* nb_int */
-#if PY3K
 	0,										/* nb_reserved */
-#else
-	(unaryfunc)MGA_Decimal_long,			/* nb_long */
-#endif
 	(unaryfunc)MGA_Decimal_float,			/* nb_float */
-#if !PY3K
-	0,										/* nb_oct */
-	0,										/* nb_hex */
-#endif
 	0,										/* nb_inplace_add */
 	0,										/* nb_inplace_subtract */
 	0,										/* nb_inplace_multiply */
-#if !PY3K
-	0,										/* nb_inplace_divide */
-#endif
 	0,										/* nb_inplace_remainder */
 	0,										/* nb_inplace_power */
 	0,										/* nb_inplace_lshift */
@@ -1140,19 +995,10 @@ MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 		Py_INCREF(object);
 		return 1;
 	}
-#if !PY3K
-	else if (PyInt_Check(object)) {
-		value = (int32)PyInt_AS_LONG(object);
-	}
-#endif
 	else if (PyLong_Check(object)) {
 		PyObject *o = PyObject_Str(object);
 		bool invalid;
-#if PY3K
 		value = CL_Decimal::FromString(string(PyUnicode_AsUTF8(o)), &invalid);
-#else
-		value = CL_Decimal::FromString(string(PyString_AS_STRING(o)), &invalid);
-#endif
 		Py_DECREF(o);
 		if (invalid) {
 			PyErr_SetString(PyExc_ValueError, "Invalid Decimal object");

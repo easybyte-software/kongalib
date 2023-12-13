@@ -34,13 +34,8 @@
 #endif
 
 
-#if PY3K
 PyModuleDef					*MGA::gModuleDefPtr = NULL;
-#else
-MGA::MODULE_STATE			MGA::gState;
-#endif
-
-unsigned long						sMainThreadID = -1;
+unsigned long				sMainThreadID = -1;
 
 
 
@@ -796,24 +791,12 @@ checksum(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	CL_Blob data;
-#if PY3K
-	{
-#else
-	if PyBuffer_Check(object) {
-		const void *source;
-		Py_ssize_t size;
-		if (PyObject_AsReadBuffer(object, &source, &size))
-			return 0;
-		data.Set(source, (uint32)size);
-	}
-	else {
-#endif
-		Py_buffer view;
-		if (PyObject_GetBuffer(object, &view, PyBUF_CONTIG_RO))
-			return 0;
-		data.Set((const char *)view.buf, (uint32)view.len);
-		PyBuffer_Release(&view);
-	}
+	Py_buffer view;
+	if (PyObject_GetBuffer(object, &view, PyBUF_CONTIG_RO))
+		return 0;
+	data.Set((const char *)view.buf, (uint32)view.len);
+	PyBuffer_Release(&view);
+
 	return PyInt_FromLong(data.CheckSum());
 }
 
@@ -1137,13 +1120,9 @@ module_free(PyObject *m)
 	}
 
 	CL_RemovePowerCallback(_power_callback);
-#if PY3K
 	s->~MODULE_STATE();
-#endif
 }
 
-
-#if PY3K
 
 static int
 module_traverse(PyObject *m, visitproc visit, void *arg)
@@ -1189,23 +1168,6 @@ static struct PyModuleDef sModuleDef = {
 #else
 #define MOD_INIT(name)	PyMODINIT_FUNC EXPORT PyInit_##name(void)
 #endif
-#else
-
-
-/**
- *	Cleanup function to be called on module exit. Closes any connection to the MGA server previously enstablished.
- */
-static void
-MGA_Cleanup()
-{
-	module_free(NULL);
-}
-
-
-#define MOD_ERROR
-#define MOD_SUCCESS(v)
-#define MOD_INIT(name)	PyMODINIT_FUNC EXPORT init##name(void)
-#endif
 
 
 /**
@@ -1222,18 +1184,11 @@ MOD_INIT(_kongalib)
 	PyEval_InitThreads();
 #endif
 
-#if PY3K
 	MGA::gModuleDefPtr = &sModuleDef;
 	module = PyModule_Create(&sModuleDef);
-#else
-	module = Py_InitModule3("_kongalib", sMGA_Methods, "kongalib support module");
-	Py_AtExit(&MGA_Cleanup);
-#endif
 
 	state = GET_STATE_EX(module);
-#if PY3K
 	new (state) MGA::MODULE_STATE();
-#endif
 
 	Py_BEGIN_ALLOW_THREADS
 	state->fDispatcher = CL_New(CL_Dispatcher(8, 128, &onCreateWorker, &onDestroyWorker));

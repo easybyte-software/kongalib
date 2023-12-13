@@ -538,7 +538,6 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 			PyErr_SetString(PyExc_KeyError, "missing 'port' entry in server dictionary");
 			return NULL;
 		}
-#if PY3K
 		if (!PyLong_Check(object)) {
 			if (MGA::ConvertString(object, &portStr)) {
 				spec.fPort = CL_ATOI(portStr) & 0xFFFF;
@@ -549,21 +548,6 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 				return NULL;
 			}
 		}
-#else
-		if (!PyInt_Check(object)) {
-			if (PyLong_Check(object)) {
-				spec.fPort = (uint16)PyLong_AsLong(object);
-			}
-			else if (MGA::ConvertString(object, &portStr)) {
-				spec.fPort = CL_ATOI(portStr) & 0xFFFF;
-			}
-			else {
-				PyErr_Clear();
-				PyErr_SetString(PyExc_TypeError, "'port' entry in 'server' dictionary must be an integer object");
-				return NULL;
-			}
-		}
-#endif
 		else {
 			spec.fPort = (uint16)PyInt_AS_LONG(object);
 		}

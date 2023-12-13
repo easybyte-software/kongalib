@@ -149,12 +149,6 @@ encode_object(MGA::JSONEncoderObject *self, PyObject *object)
 		if (!checkGen(yajl_gen_bool(self->fHandle, PyObject_IsTrue(object) ? 1 : 0)))
 			return false;
 	}
-#if !(PY3K)
-	else if (PyInt_Check(object)) {
-		if (!checkGen(yajl_gen_integer(self->fHandle, (long long)PyInt_AS_LONG(object))))
-			return false;
-	}
-#endif
 	else if (PyLong_Check(object)) {
 		if (!checkGen(yajl_gen_integer(self->fHandle, PyLong_AsLongLong(object))))
 			return false;

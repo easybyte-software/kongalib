@@ -21,12 +21,6 @@
 #include "Python.h"
 #include "marshal.h"
 
-#if PY_MAJOR_VERSION >= 3
-#define PY3K		1
-#else
-#define PY3K		0
-#endif
-
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
 
@@ -179,11 +173,7 @@ typedef struct MODULE_STATE
 } MODULE_STATE;
 
 
-#if PY3K
 extern PyModuleDef					*gModuleDefPtr;
-#else
-extern MODULE_STATE					gState;
-#endif
 
 extern PyTypeObject ClientType;
 extern PyTypeObject DeferredType;
@@ -214,17 +204,11 @@ extern void InitJSON();
 };
 
 
-#if PY3K
 #define GET_STATE_EX(m)				((MGA::MODULE_STATE *)PyModule_GetState(m))
 #define GET_STATE()					(PyState_FindModule(MGA::gModuleDefPtr) ? GET_STATE_EX(PyState_FindModule(MGA::gModuleDefPtr)) : NULL)
 #define PyInt_FromLong				PyLong_FromLong
 #define PyInt_AsLong				PyLong_AsLong
 #define PyInt_AS_LONG				PyLong_AsLong
-#else
-#define GET_STATE_EX(m)				(&MGA::gState)
-#define GET_STATE()					(&MGA::gState)
-#define Py_RETURN_NOTIMPLEMENTED	return Py_INCREF(Py_NotImplemented), Py_NotImplemented
-#endif
 
 
 #endif
