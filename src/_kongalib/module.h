@@ -144,6 +144,17 @@ typedef struct JSONDecoderObject
 } JSONDecoderObject;
 
 
+typedef struct NamedSemaphoreObject
+{
+	PyObject_HEAD
+
+	NamedSemaphoreObject(const string& name)
+		: fSem(name)
+	{}
+
+	CL_NamedSemaphore		fSem;
+} NamedSemaphoreObject;
+
 
 typedef struct MODULE_STATE
 {
@@ -180,6 +191,7 @@ extern PyTypeObject DeferredType;
 extern PyTypeObject DecimalType;
 extern PyTypeObject JSONEncoderType;
 extern PyTypeObject JSONDecoderType;
+extern PyTypeObject NamedSemaphoreType;
 
 
 extern string translate(MGA_Status error);

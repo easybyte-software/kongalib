@@ -382,6 +382,113 @@ MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 }
 
 
+
+static MGA::NamedSemaphoreObject *
+sem_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	string name;
+
+	if (!PyArg_ParseTuple(args, "O&", MGA::ConvertString, &name))
+		return NULL;
+	
+	return new (type->tp_alloc(type, 0)) MGA::NamedSemaphoreObject(name);
+}
+
+
+static void
+sem_dealloc(MGA::NamedSemaphoreObject *self)
+{
+	self->~NamedSemaphoreObject();
+	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+
+static PyObject *
+sem_acquire(MGA::NamedSemaphoreObject *self, PyObject *args)
+{
+	self->fSem.Acquire();
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+sem_release(MGA::NamedSemaphoreObject *self, PyObject *args)
+{
+	self->fSem.Release();
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+sem___enter__(MGA::NamedSemaphoreObject *self, PyObject *args, PyObject *kwargs)
+{
+	self->fSem.Acquire();
+	Py_INCREF(self);
+	return (PyObject *)self;
+}
+
+
+static PyObject *
+sem___exit__(MGA::NamedSemaphoreObject *self, PyObject *args, PyObject *kwargs)
+{
+	self->fSem.Release();
+	Py_RETURN_NONE;
+}
+
+
+
+static PyMethodDef sem_methods[] = {
+	{	"acquire",					(PyCFunction)sem_acquire,			METH_NOARGS,					"acquire()\n\nAcquires semaphore" },
+	{	"release",					(PyCFunction)sem_release,			METH_NOARGS,					"release()\n\nReleases semaphore" },
+	{	"__enter__",				(PyCFunction)sem___enter__,			METH_VARARGS | METH_KEYWORDS, 	"__enter__()\n\nContext manager enter, acquires semaphore" },
+	{	"__exit__",					(PyCFunction)sem___exit__,			METH_VARARGS | METH_KEYWORDS, 	"__exit__()\n\nContext manager exit, releases semaphore" },
+	{	NULL }
+};
+
+
+PyTypeObject MGA::NamedSemaphoreType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+    "_kongalib.NamedSemaphore",				/* tp_name */
+    sizeof(MGA::NamedSemaphoreType),		/* tp_basicsize */
+	0,										/* tp_itemsize */
+	(destructor)sem_dealloc,				/* tp_dealloc */
+	0,										/* tp_print */
+	0,										/* tp_getattr */
+	0,										/* tp_setattr */
+	0,										/* tp_compare */
+	0,										/* tp_repr */
+	0,										/* tp_as_number */
+	0,										/* tp_as_sequence */
+	0,										/* tp_as_mapping */
+	0,										/* tp_hash */
+	0,										/* tp_call */
+	0,										/* tp_str */
+	0,										/* tp_getattro */
+	0,										/* tp_setattro */
+	0,										/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,	/* tp_flags */
+	"NamedSemaphore objects",				/* tp_doc */
+	0,										/* tp_traverse */
+	0,										/* tp_clear */
+	0,										/* tp_richcompare */
+	0,										/* tp_weaklistoffset */
+	0,										/* tp_iter */
+	0,										/* tp_iternext */
+	sem_methods,							/* tp_methods */
+	0,										/* tp_members */
+	0,										/* tp_getset */
+	0,										/* tp_base */
+	0,										/* tp_dict */
+	0,										/* tp_descr_get */
+	0,										/* tp_descr_set */
+	0,										/* tp_dictoffset */
+	0,										/* tp_init */
+	0,										/* tp_alloc */
+	(newfunc)sem_new,						/* tp_new */
+};
+
+
+
 void
 MGA::InitUtilities()
 {

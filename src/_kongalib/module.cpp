@@ -1228,6 +1228,12 @@ MOD_INIT(_kongalib)
 	if (PyModule_AddObject(module, "JSONDecoder", (PyObject *)&MGA::JSONDecoderType) < 0)
 		return MOD_ERROR;
 	
+	if (PyType_Ready(&MGA::NamedSemaphoreType) < 0)
+		return MOD_ERROR;
+	Py_INCREF(&MGA::NamedSemaphoreType);
+	if (PyModule_AddObject(module, "NamedSemaphore", (PyObject *)&MGA::NamedSemaphoreType) < 0)
+		return MOD_ERROR;
+
 	MGA::InitJSON();
 	MGA::InitUtilities();
 	
