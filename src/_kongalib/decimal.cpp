@@ -625,9 +625,6 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiii", kwlist, &precision, &width, &sep, &padzero, &monetary))
 		return NULL;
 	
-	if (precision < 0)
-		precision = 5;
-	
 	if (padzero)
 		sep = 0;
 	
