@@ -622,8 +622,8 @@ class Expression(_HasLogic):
 				if self.children[index + 1].logic_op & _HasLogic.LOGIC_NOT:
 					op += ' NOT'
 			else:
-				if (len(self.children) == 1) and (self.children[-1].logic_op & _HasLogic.LOGIC_NOT):
-					l[-1].append(True)
+				# if (len(self.children) == 1) and (self.children[-1].logic_op & _HasLogic.LOGIC_NOT):
+				# 	l[-1].append(True)
 				op = None
 			l.append(op)
 		return l
