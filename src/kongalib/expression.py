@@ -593,6 +593,7 @@ class Expression(_HasLogic):
 		e.logic_op = self.logic_op
 		for child in self.children:
 			e.children.append(child.copy())
+			child.parent = e
 		return e
 	
 	def append(self, operand, logic_op):
