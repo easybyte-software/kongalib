@@ -489,6 +489,18 @@ def print_log(log, title, target=PRINT_TARGET_PREVIEW, filename=None):
 
 
 
+def show_log(log, title, size=None, iconsize=32):
+	"""Visualizza il contenuto dell'oggetto *log* di classe :class:`kongalib.Log`; se si esegue questa funzione dall'interno di Konga, il log verrà
+	visualizzato in una finestra dedicata; viceversa se si esegue fuori da Konga, il comportamento di questa funzione equivale a chiamare
+	:func:`print_log` con gli stessi argomenti. La finestra del log mostrerà *title* come messaggio informativo e se specificato avrà dimensione *size*;
+	è possibile specificare anche la dimensione delle icone dei singoli messaggi tramite il parametro *iconsize*."""
+	if _proxy.is_valid():
+		log = _proxy.util.show_log(log.get_messages(), title, size, iconsize)
+	else:
+		print_log(log, title)
+
+
+
 def suspend_timeout():
 	"""Sospende il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():

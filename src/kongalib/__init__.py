@@ -126,6 +126,10 @@ class Log(object):
 			return self.messages
 		return [ msg for msg in self.messages if msg[0] == type ]
 
+	def add_messages(self, messages):
+		for msg in messages:
+			self.add_message(*msg)
+
 	def get_exception(self, klass=RuntimeError):
 		error = self.get_messages(Log.ERROR)[0][1]
 		return klass(error)
