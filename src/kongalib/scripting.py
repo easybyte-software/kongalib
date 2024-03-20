@@ -443,7 +443,11 @@ class Interpreter(object):
 	def set_timeout(self, timeout=None, restore=False):
 		with self.lock:
 			if self.proxy is not None:
-				return self.proxy.set_timeout(timeout, restore)
+				func = self.proxy.set_timeout
+			else:
+				func = None
+		if func is not None:
+			return func(timeout, restore)
 
 	def get_time_left(self):
 		with self.lock:
