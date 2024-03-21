@@ -19,7 +19,7 @@ def _new_compiler(*args, **kwargs):
 			def _wrapper(obj, src, ext, cc_args, extra_postargs, pp_opts):
 				if ext == '.c':
 					extra_postargs = list(extra_postargs)
-					extra_postargs.remove('-std=c++11')
+					extra_postargs.remove('-std=c++17')
 					if '-stdlib=libc++' in extra_postargs:
 						extra_postargs.remove('-stdlib=libc++')
 				elif (ext == '.cpp') and (sys.platform.startswith('linux')):
@@ -79,14 +79,14 @@ if sys.platform == 'darwin':
 		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
 	cflags = '-g -ggdb -Wno-deprecated-register -Wno-sometimes-uninitialized -Wno-write-strings -fvisibility=hidden -mmacosx-version-min=%s -isysroot %s -I%s/include' % (macosx_version_min, sdk, konga_sdk)
 	ldflags = '-Wl,-syslibroot,%s -L%s/lib -framework Cocoa -lkonga_client_s -lebpr_s -liconv -mmacosx-version-min=%s -headerpad_max_install_names' % (sdk, konga_sdk, macosx_version_min)
-	cflags += ' -stdlib=libc++ -std=c++11 -DPY_SSIZE_T_CLEAN'
+	cflags += ' -stdlib=libc++ -std=c++17 -DPY_SSIZE_T_CLEAN'
 	ldflags += ' -stdlib=libc++'
 	cflags = cflags.split(' ')
 	ldflags = ldflags.split(' ')
 	extra_libs = []
 
 elif sys.platform == 'win32':
-	cflags = '/EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267 /d2FH4-'.split(' ')
+	cflags = '/std:c++17 /EHsc /D_CRT_SECURE_NO_WARNINGS /DPSAPI_VERSION=1 /DPY_SSIZE_T_CLEAN /Zi /wd4244 /wd4005 /wd4267 /d2FH4-'.split(' ')
 	ldflags = '/DEBUG /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD /ignore:4197 /ignore:4099'.split(' ')
 	extra_libs = 'ebpr_s konga_client_s shell32 user32 netapi32 iphlpapi shlwapi advapi32 secur32 ws2_32 psapi bcrypt'.split(' ')
 	if konga_sdk is not None:
@@ -105,7 +105,7 @@ else:
 	constants = '%s/share/kongalib/constants.json' % konga_sdk
 	if os.path.exists(constants):
 		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
-	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
+	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++17 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
 	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre -ldbus-1' % konga_sdk
 	cflags = cflags.split(' ')
 	ldflags = ldflags.split(' ')
