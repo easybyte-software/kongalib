@@ -979,11 +979,12 @@ class Client(object):
 				return output[OUT_FILENAME]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def translate(self, field, value, language):
+	def translate(self, field, value, language, code_azienda=None):
 		output = self.execute(CMD_TRANSLATE, {
 			IN_FIELD: field,
 			IN_VALUE: value,
-			IN_LANGUAGE: language
+			IN_LANGUAGE: language,
+			IN_CODE_AZIENDA: code_azienda,
 		})
 		if output[OUT_ERRNO] != OK:
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])

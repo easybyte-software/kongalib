@@ -766,11 +766,12 @@ class AsyncClient(Client):
 			IN_FORCE_DELETE: force_delete,
 		}, OUT_FILENAME, progress=progress)
 
-	def translate(self, field, value, language):
+	def translate(self, field, value, language, code_azienda=None):
 		return self._execute(CMD_TRANSLATE, {
 			IN_FIELD: field,
 			IN_VALUE: value,
-			IN_LANGUAGE: language
+			IN_LANGUAGE: language,
+			IN_CODE_AZIENDA: code_azienda,
 		}, OUT_TEXT)
 
 	def set_database_language(self, language, progress=None):
