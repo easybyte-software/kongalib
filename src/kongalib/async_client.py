@@ -697,19 +697,21 @@ class AsyncClient(Client):
 			IN_TX: tx,
 		}, OUT_DATA, progress=progress, log=log)
 
-	def list_binaries(self, field_or_tablename, id, type=None, progress=None):
+	def list_binaries(self, field_or_tablename, id, type=None, progress=None, full=False):
 		"""Ottiene la lista dei dati binari associati ad una scheda del database, identificata da *field_or_tablename* (che può essere un nome
 		tabella o un campo da cui risolvere il nome tabella) e *id*. La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato
 		una volta completato sarà una lista di tuple, in cui la n-esima tupla ha la forma ``( Tipo, NomeAllegato, NomeOriginale )``; *Tipo*
 		è un intero ed è uno dei valori della *Choice* ``Resources``, *NomeAllegato* è il nome assegnato internamente a Konga per identificare
 		univocamente il contenuto binario, mentre *NomeOriginale* è il nome del file originale da cui è stato caricato il contenuto. Se *type*
-		è specificato, la funzione filtrerà i risultati in baso ad esso, ritornando solo le tuple con il *Tipo* corretto.
+		è specificato, la funzione filtrerà i risultati in baso ad esso, ritornando solo le tuple con il *Tipo* corretto. Se *full* è ``True``
+		la n-esima tupla ritornata avrà un valore in più corrispondente all'etichetta dell'immagine aggiuntiva se specificata.
 		"""
 		def get_result(output):
 			return [ tuple(row) for row in output[OUT_LIST] if ((type is None) or (row[0] == type)) ]
 		return self._execute(CMD_LIST_BINARIES, {
 			IN_FIELD_NAME: field_or_tablename,
 			IN_ROW_ID: id,
+			IN_FULL: full,
 		}, get_result, progress=progress)
 
 	def fetch_image(self, fieldname, id, type, progress=None):
@@ -722,10 +724,11 @@ class AsyncClient(Client):
 			IN_TYPE: type,
 		}, OUT_DATA, progress=progress)
 
-	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None):
+	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None):
 		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
-		``Resources``, mentre *filename* ha senso solo per identificare le risorse di tipo documento.
+		``Resources``, mentre *filename* e *label* hanno senso solo per identificare rispettivamente le risorse di tipo documento ed immagine
+		aggiuntiva.
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà una tupla di quattro elementi:
 		( *dati*, *filename*, *original_filename*, *checksum* ). *dati* sono i dati binari che sono stati caricati dal server; *filename* è
 		il nome file interno con cui è identificata la risorsa, *original_filename* è il nome del file originale che è stato specificato
@@ -740,15 +743,17 @@ class AsyncClient(Client):
 			IN_ROW_ID: id,
 			IN_TYPE: type,
 			IN_FILENAME: filename,
+			IN_LABEL: label,
 			IN_CHECK: check_only,
 		}, ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM ), progress=progress)
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
 		automaticamente); *original_filename* è il nome file originale i cui dati si stanno salvando sul server; *data* sono i dati binari
-		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando.
+		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando. Per le
+		risorse di tipo immagine aggiuntiva è necessario specificare una *label* da abbinare all'immagine per identificarla univocamente.
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà il nome del file interno usato dal
 		server per identificare la risorsa, che come detto sopra è uguale a *filename* se quest'ultimo è diverso da ``None``, altrimenti sarà
 		il nome file generato dal server.
@@ -764,6 +769,7 @@ class AsyncClient(Client):
 			IN_DATA: data,
 			IN_DESC: desc,
 			IN_FORCE_DELETE: force_delete,
+			IN_LABEL: label,
 		}, OUT_FILENAME, progress=progress)
 
 	def translate(self, field, value, language, code_azienda=None):
