@@ -286,8 +286,7 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 	logger.setLevel(logging.DEBUG)
 	logger.debug('entering interpreter process')
 	try:
-		if foreground:
-			_set_process_foreground()
+		_set_process_foreground(foreground)
 		for path in dll_paths:
 			try:
 				os.add_dll_directory(path)

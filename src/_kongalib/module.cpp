@@ -942,7 +942,12 @@ get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 _set_process_foreground(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	CL_SetProcessForeground(true);
+	char *kwlist[] = { "foreground", NULL };
+	PyObject *foreground;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &foreground))
+		return NULL;
+	
+	CL_SetProcessForeground(PyObject_IsTrue(foreground) ? true : false);
 	Py_RETURN_NONE;
 }
 
@@ -1063,7 +1068,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
 	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
 	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
-	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_NOARGS,					"_set_process_foreground()\n\nBrings process to the foreground." },
+	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_VARARGS | METH_KEYWORDS,	"_set_process_foreground(foreground)\n\nSets process foreground status." },
 	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
 	{	"_check_all",					(PyCFunction)_check_all, 					METH_VARARGS | METH_KEYWORDS,	"_check_all(ids) -> Returns true if all elements of array ids are non-zero." },
 	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
