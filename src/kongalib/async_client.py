@@ -714,7 +714,7 @@ class AsyncClient(Client):
 			IN_FULL: full,
 		}, get_result, progress=progress)
 
-	def fetch_image(self, fieldname, id, type, progress=None):
+	def fetch_image(self, fieldname, id, type, progress=None, label=None):
 		"""Piccolo wrapper alla funzione :meth:`.fetch_binary`, dedicato alle immagini, con l'unica differenza che l'oggetto ``asyncio.Future``
 		restituito una volta completato avrà come valore di ritorno direttamente il contenuto binario dell'immagine.
 		"""
@@ -722,6 +722,7 @@ class AsyncClient(Client):
 			IN_FIELD_NAME: fieldname,
 			IN_ROW_ID: id,
 			IN_TYPE: type,
+			IN_LABEL: label,
 		}, OUT_DATA, progress=progress)
 
 	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None):

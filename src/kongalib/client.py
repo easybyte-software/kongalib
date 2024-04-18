@@ -55,6 +55,7 @@ GET_FLAG_DEFAULT				= GET_FLAG_GET_IMAGES | GET_FLAG_GET_ATTACHMENTS | GET_FLAG_
 IMAGE_NORMAL					= 1
 IMAGE_WEB						= 2
 IMAGE_THUMBNAIL					= 3
+IMAGE_EXTRA						= 4
 
 
 def make_callbacks(success, error, log=None):
@@ -863,7 +864,7 @@ class Client(object):
 				return [ tuple(row) for row in output[OUT_LIST] if ((type is None) or (row[0] == type)) ]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def fetch_image(self, fieldname, id, type, success=None, error=None, progress=None):
+	def fetch_image(self, fieldname, id, type, success=None, error=None, progress=None, label=None):
 		"""Piccolo wrapper alla funzione :meth:`.fetch_binary`, dedicato alle immagini, con l'unica differenza che il valore di ritorno sarà
 		direttamente il contenuto binario dell'immagine in caso di successo (e questo sarà anche l'unico parametro passato alla callback
 		*success*)"""
@@ -881,12 +882,14 @@ class Client(object):
 				IN_FIELD_NAME: fieldname,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
+				IN_LABEL: label,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_FETCH_BINARY, {
 				IN_FIELD_NAME: fieldname,
 				IN_ROW_ID: id,
 				IN_TYPE: type,
+				IN_LABEL: label,
 			})
 			if output[OUT_ERRNO] == OK:
 				return output[OUT_DATA]
