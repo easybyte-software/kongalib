@@ -278,7 +278,7 @@ class _Controller(threading.Thread):
 
 
 
-def _trampoline(conn, sem, foreground, dll_paths, queue):
+def _trampoline(conn, sem, foreground, env, dll_paths, queue):
 	logger = logging.getLogger('script._trampoline')
 	handler = logging.handlers.QueueHandler(queue)
 	handler.setLevel(logging.DEBUG)
@@ -294,6 +294,11 @@ def _trampoline(conn, sem, foreground, dll_paths, queue):
 			except:
 				if sys.platform == 'win32':
 					logger.error('error adding DLL directory: %s' % path)
+		for key, value in (env or {}).items():
+			key = str(key)
+			value = str(value)
+			os.environ[key] = value
+			logger.debug('added env variable %s=%s' % (key, value))
 
 		_State.controller = _Controller(conn, sem)
 		_State.controller.start()
@@ -355,7 +360,7 @@ class _ControllerProxy(Proxy):
 
 
 class Interpreter(object):
-	def __init__(self, foreground=True):
+	def __init__(self, foreground=True, env=None):
 		self.proc = None
 		self.exc_info = None
 		self.conn = None
@@ -364,6 +369,7 @@ class Interpreter(object):
 		self.queue = multiprocessing.Queue()
 		self.proxy = None
 		self.foreground = foreground
+		self.env = env
 		self.logger_listener = logging.handlers.QueueListener(self.queue, *logging.getLogger().handlers)
 
 	def __del__(self):
@@ -385,7 +391,7 @@ class Interpreter(object):
 				self.conn, self.client_conn = multiprocessing.Pipe()
 				self.proxy = _ControllerProxy(self.conn).controller
 				self.logger_listener.start()
-				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, _DLL_PATHS, self.queue), daemon=True)
+				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, self.env, _DLL_PATHS, self.queue), daemon=True)
 				self.proc.start()
 				exitcode = self.proc.exitcode
 				if exitcode is not None:
