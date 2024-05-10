@@ -990,22 +990,38 @@ static PyObject *
 regexp_find_all(PyObject *self, PyObject *args)
 {
 	CL_Status status;
-	PyObject *result = NULL, *mo;
+	PyObject *result = NULL, *to, *mo;
 	string pattern, text;
-
-	if (!PyArg_ParseTuple(args, "O&O&", MGA::ConvertString, &pattern, MGA::ConvertString, &text))
+	string_view text_view;
+	Py_buffer buffer;
+	
+	if (!PyArg_ParseTuple(args, "O&O", MGA::ConvertString, &pattern, &to))
+		return NULL;
+	if (MGA::ConvertString(to, &text)) {
+		text_view = string_view(text.data(), text.size());
+		buffer.buf = NULL;
+	}
+	else if (PyObject_CheckBuffer(to)) {
+		PyErr_Clear();
+		if (PyObject_GetBuffer(to, &buffer, PyBUF_SIMPLE))
+			return NULL;
+		text_view = string_view((const char *)buffer.buf, buffer.len);
+	}
+	else
 		return NULL;
 
 	CL_RegEx re(pattern);
 	CL_Match match, *prev = NULL;
 	if (!re.IsOk()) {
 		PyErr_SetString(PyExc_ValueError, re.GetError().c_str());
+		if (buffer.buf)
+			PyBuffer_Release(&buffer);
 		return NULL;
 	}
 	result = PyList_New(0);
 	for (;;) {
 		Py_BEGIN_ALLOW_THREADS
-		status = re.Find(text, &match, prev);
+		status = re.Find(text_view, &match, prev);
 		Py_END_ALLOW_THREADS
 		if (status != CL_OK)
 			break;
@@ -1024,6 +1040,8 @@ regexp_find_all(PyObject *self, PyObject *args)
 		Py_DECREF(mo);
 		prev = &match;
 	}
+	if (buffer.buf)
+		PyBuffer_Release(&buffer);
 	return result;
 }
 
