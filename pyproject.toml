@@ -39,7 +39,8 @@ classifiers = [
 	"Topic :: Software Development :: Libraries"
 ]
 dependencies = [
-	"colorama"
+	"colorama",
+	"nest_asyncio"
 ]
 dynamic = [ "version" ]
 

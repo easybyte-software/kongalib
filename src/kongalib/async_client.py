@@ -16,9 +16,13 @@
 from __future__ import absolute_import
 
 import asyncio
+import nest_asyncio
 import inspect
 
 from kongalib import *
+
+
+nest_asyncio.apply()
 
 
 class AsyncClient(Client):
