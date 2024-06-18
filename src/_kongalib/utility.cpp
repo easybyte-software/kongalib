@@ -65,7 +65,7 @@ Entry_FromCLU(CLU_Entry *entry)
 {
 	PyObject *object;
 	MGA::DecimalObject *decimal;
-	string text;
+	string_view text;
 	
 	switch (entry->GetType()) {
 	case CLU_BOOL:
@@ -133,7 +133,8 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 	
 	case CLU_TEXT:
-		object = PyUnicode_DecodeUTF8(entry->String().data(), entry->String().size(), "replace");
+		text = entry->StringView();
+		object = PyUnicode_DecodeUTF8(text.data(), text.size(), "replace");
 		break;
 	
 	case CLU_BLOB:
