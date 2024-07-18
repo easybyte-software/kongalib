@@ -1026,15 +1026,27 @@ regexp_find_all(PyObject *self, PyObject *args)
 		if (status != CL_OK)
 			break;
 		if (match.Count() == 1) {
-			mo = PyUnicode_DecodeUTF8(match.GetText(0).c_str(), (Py_ssize_t)match.GetText(0).size(), NULL);
+			mo = PyUnicode_DecodeUTF8(match.GetTextData(0), (Py_ssize_t)match.GetTextSize(0), NULL);
 		}
 		else if (match.Count() == 2) {
-			mo = PyUnicode_DecodeUTF8(match.GetText(1).c_str(), (Py_ssize_t)match.GetText(1).size(), NULL);
+			mo = PyUnicode_DecodeUTF8(match.GetTextData(1), (Py_ssize_t)match.GetTextSize(1), NULL);
 		}
 		else {
 			mo = PyTuple_New(match.Count() - 1);
-			for (int i = 1; i < match.Count(); i++)
-				PyTuple_SET_ITEM(mo, i - 1, PyUnicode_DecodeUTF8(match.GetText(i).c_str(), (Py_ssize_t)match.GetText(i).size(), NULL));
+			for (int i = 1; i < match.Count(); i++) {
+				to = PyUnicode_DecodeUTF8(match.GetTextData(i), (Py_ssize_t)match.GetTextSize(i), NULL);
+				if (!to) {
+					Py_DECREF(mo);
+					mo = NULL;
+					break;
+				}
+				PyTuple_SET_ITEM(mo, i - 1, to);
+			}
+		}
+		if (!mo) {
+			Py_DECREF(result);
+			result = NULL;
+			break;
 		}
 		PyList_Append(result, mo);
 		Py_DECREF(mo);
