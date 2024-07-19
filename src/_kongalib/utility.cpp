@@ -384,23 +384,30 @@ MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 
 
 
-static MGA::NamedSemaphoreObject *
-sem_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	string name;
-
-	if (!PyArg_ParseTuple(args, "O&", MGA::ConvertString, &name))
-		return NULL;
-	
-	return new (type->tp_alloc(type, 0)) MGA::NamedSemaphoreObject(name);
-}
-
-
 static void
 sem_dealloc(MGA::NamedSemaphoreObject *self)
 {
 	self->~NamedSemaphoreObject();
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+
+static MGA::NamedSemaphoreObject *
+sem_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	string name;
+	MGA::NamedSemaphoreObject *self;
+
+	if (!PyArg_ParseTuple(args, "O&", MGA::ConvertString, &name))
+		return NULL;
+	
+	self = new (type->tp_alloc(type, 0)) MGA::NamedSemaphoreObject(name);
+	if (self->fSem.GetStatus() != CL_OK) {
+		PyErr_Format(PyExc_ValueError, "Cannot create semaphore named '%s'", name.c_str());
+		sem_dealloc(self);
+		self = NULL;
+	}
+	return self;
 }
 
 
