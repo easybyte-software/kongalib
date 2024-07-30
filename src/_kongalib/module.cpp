@@ -1026,15 +1026,15 @@ regexp_find_all(PyObject *self, PyObject *args)
 		if (status != CL_OK)
 			break;
 		if (match.Count() == 1) {
-			mo = PyUnicode_DecodeUTF8(match.GetTextData(0), (Py_ssize_t)match.GetTextSize(0), NULL);
+			mo = PyUnicode_DecodeUTF8(match.GetTextData(0), (Py_ssize_t)match.GetTextSize(0), "replace");
 		}
 		else if (match.Count() == 2) {
-			mo = PyUnicode_DecodeUTF8(match.GetTextData(1), (Py_ssize_t)match.GetTextSize(1), NULL);
+			mo = PyUnicode_DecodeUTF8(match.GetTextData(1), (Py_ssize_t)match.GetTextSize(1), "replace");
 		}
 		else {
 			mo = PyTuple_New(match.Count() - 1);
 			for (int i = 1; i < match.Count(); i++) {
-				to = PyUnicode_DecodeUTF8(match.GetTextData(i), (Py_ssize_t)match.GetTextSize(i), NULL);
+				to = PyUnicode_DecodeUTF8(match.GetTextData(i), (Py_ssize_t)match.GetTextSize(i), "replace");
 				if (!to) {
 					Py_DECREF(mo);
 					mo = NULL;
