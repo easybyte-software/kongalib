@@ -148,7 +148,7 @@ def timeout_handler():
 
 
 
-def init_interpreter(init_logging=True):
+def init_interpreter():
 	_State.io.append((sys.stdout, sys.stderr, sys.stdin))
 	try:
 		proxy._initialize()
@@ -278,12 +278,12 @@ class _Controller(threading.Thread):
 
 
 
-def _trampoline(conn, sem, foreground, env, dll_paths, queue):
+def _trampoline(conn, sem, foreground, env, dll_paths, queue, level):
+	logging.getLogger().setLevel(level)
 	logger = logging.getLogger('script._trampoline')
 	handler = logging.handlers.QueueHandler(queue)
-	handler.setLevel(logging.DEBUG)
+	handler.setLevel(level)
 	logger.addHandler(handler)
-	logger.setLevel(logging.DEBUG)
 	logger.debug('entering interpreter process')
 	try:
 		_set_process_foreground(foreground)
@@ -336,6 +336,8 @@ def _trampoline(conn, sem, foreground, env, dll_paths, queue):
 		except:
 			pass
 		_State.controller.join()
+	except KeyboardInterrupt:
+		logger.debug('user issued a keyboard interrupt')
 	except Exception as e:
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
@@ -370,7 +372,7 @@ class Interpreter(object):
 		self.proxy = None
 		self.foreground = foreground
 		self.env = env
-		self.logger_listener = logging.handlers.QueueListener(self.queue, *logging.getLogger().handlers)
+		self.logger_listener = logging.handlers.QueueListener(self.queue, *logging.getLogger().handlers, respect_handler_level=True)
 
 	def __del__(self):
 		with self.lock:
@@ -391,7 +393,7 @@ class Interpreter(object):
 				self.conn, self.client_conn = multiprocessing.Pipe()
 				self.proxy = _ControllerProxy(self.conn).controller
 				self.logger_listener.start()
-				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, self.env, _DLL_PATHS, self.queue), daemon=True)
+				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.sem, self.foreground, self.env, _DLL_PATHS, self.queue, logging.getLogger().level), daemon=True)
 				self.proc.start()
 				exitcode = self.proc.exitcode
 				if exitcode is not None:
