@@ -139,7 +139,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 	parametri come variabili all'interno di un file di configurazione, nella sezione ``[kongautil.connect]``; tale file deve avere
 	il nome passato a questa funzione con il parametro ``config``, altrimenti verranno ricercati nell'ordine anche il file con lo
 	stesso nome dello script lanciato da terminale, ma con estensione ``.cfg``, il file ``kongalib.cfg`` sempre nella stessa directory
-	da cui si esegue lo script e infine il file ``~/.kongalib`` (sotto Unix) o ``%userprofile%\kongalib.cfg`` (sotto Windows)."""
+	da cui si esegue lo script e infine il file ``~/.kongalib`` (sotto Unix) o ``%userprofile%\\kongalib.cfg`` (sotto Windows)."""
 	if _proxy.is_valid():
 		info = _proxy.util.get_connection_info()
 		if info is not None:
