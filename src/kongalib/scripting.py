@@ -732,7 +732,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			else:
 				debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
 				type, value, tb = sys.exc_info()
-				tb = traceback.format_tb()
+				tb = traceback.format_tb(tb)
 			def do_filter(entry):
 				filename = entry[0].replace('\\', '/')
 				if filename.endswith('kongalib/scripting.py') or filename.endswith('__script_host__.py'):
