@@ -36,6 +36,7 @@ TYPE_LONGTEXT				= 16			#: Tipo di campo SQL LONGTEXT; i valori ottenuti dalla :
 TYPE_TINYBLOB				= 17			#: Tipo di campo SQL TINYBLOB; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``bytes``.
 TYPE_BLOB					= 18			#: Tipo di campo SQL BLOB; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``bytes``.
 TYPE_LONGBLOB				= 19			#: Tipo di campo SQL LONGBLOB; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``bytes``.
+TYPE_JSON					= 20			#: Tipo di campo SQL JSON; i valori ottenuti dalla :meth:`~kongalib.Client.select_data` saranno di tipo ``unicode``.
 
 
 TABLE_HAS_IMAGES			= 0x1			#: Flag informativo di tabella del data dictionary. Se specificato, i record della tabella possono avere immagini collegate.
