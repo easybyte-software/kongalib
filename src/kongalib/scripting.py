@@ -433,7 +433,10 @@ class Interpreter(object):
 				self.proc = None
 				self.lock.release()
 				try:
-					proc.terminate()
+					try:
+						proc.terminate()
+					except:
+						pass
 					proc.join(3)
 					if proc.is_alive():
 						try:
