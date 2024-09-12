@@ -223,7 +223,8 @@ class _Controller(threading.Thread):
 		name = None
 		while name != 'exit':
 			try:
-				if not self.conn.poll(0.5):
+				ready = multiprocessing.connection.wait([ self.conn ], 0.5)
+				if not ready:
 					if self.request == _Controller.QUIT_REQUEST:
 						break
 					continue
@@ -447,8 +448,9 @@ class Interpreter(object):
 					self.lock.acquire()
 
 	def is_running(self):
-		with self.lock:
-			return (self.conn is None) or ((self.proc is not None) and self.proc.is_alive())
+		conn = self.conn
+		proc = self.proc
+		return (conn is None) or ((proc is not None) and proc.is_alive())
 
 	def set_timeout(self, timeout=None, restore=False):
 		with self.lock:
@@ -527,6 +529,7 @@ class _Method(object):
 			if DEBUG:
 				debug_log('[Proxy] call sent in %f secs. Waiting reply: %s' % (time.time() - s, str((self.handler._name, self.name))))
 			
+			multiprocessing.connection.wait([ self.handler._conn ])
 			e, result = self.handler._conn.recv()
 			if DEBUG:
 				s = time.time()
@@ -574,7 +577,8 @@ class _ServerProxy(threading.Thread):
 			self.conn = self.listener.accept()
 			debug_log("[ServerProxy] got proxy")
 			while True:
-				if self.conn.poll(0.1):
+				ready = multiprocessing.connection.wait([ self.conn ], 0.5)
+				if ready:
 					data = self.conn.recv()
 					handler, name, args, kwargs = data
 					if handler in self.handlers:
