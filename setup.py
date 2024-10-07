@@ -7,36 +7,6 @@ import os.path
 
 from setuptools import setup, Extension
 
-import distutils.ccompiler
-
-
-new_compiler = distutils.ccompiler.new_compiler
-def _new_compiler(*args, **kwargs):
-	compiler = new_compiler(*args, **kwargs)
-	
-	if (sys.platform == 'darwin') or (sys.platform.startswith('linux')):
-		def _compile_wrapper(func):
-			def _wrapper(obj, src, ext, cc_args, extra_postargs, pp_opts):
-				if ext == '.c':
-					extra_postargs = list(extra_postargs)
-					extra_postargs.remove('-std=c++17')
-					if '-stdlib=libc++' in extra_postargs:
-						extra_postargs.remove('-stdlib=libc++')
-				elif (ext == '.cpp') and (sys.platform.startswith('linux')):
-					if '-Wstrict-prototypes' in compiler.compiler_so:
-						compiler.compiler_so.remove('-Wstrict-prototypes')
-				return func(obj, src, ext, cc_args, extra_postargs, pp_opts)
-			return _wrapper
-		compiler._compile = _compile_wrapper(compiler._compile)
-		compiler.language_map['.mm'] = "objc"
-		compiler.src_extensions.append(".mm")
-	elif sys.platform == 'win32':
-		compiler.initialize()
-		compiler.compile_options.append('/Zi')
-	return compiler
-
-distutils.ccompiler.new_compiler = _new_compiler
-
 
 konga_sdk = os.environ.get('KONGASDK', None)
 root = os.path.abspath(os.path.dirname(__file__))
@@ -71,7 +41,7 @@ if sys.platform == 'darwin':
 	else:
 		print('Error: no valid SDK found!')
 		sys.exit(1)
-	macosx_version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.10'
+	macosx_version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or '10.13'
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
 	constants = '%s/share/kongalib/constants.json' % konga_sdk
