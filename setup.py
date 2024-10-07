@@ -4,6 +4,7 @@ import glob
 import shutil
 import os
 import os.path
+import subprocess
 
 from setuptools import setup, Extension
 
@@ -26,14 +27,15 @@ if sys.platform == 'darwin':
 			sdk = arg[6:].strip()
 			del sys.argv[index]
 			break
-
+	sdk_base_path = os.path.dirname(subprocess.check_output('xcrun --show-sdk-path', shell=True, universal_newlines=True).split('\n')[0])
+	
 	if sdk is None:
 		try:
-			sdk = os.path.basename(sorted(glob.glob('/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX*.sdk'))[-1])[6:-4]
+			sdk = os.path.basename(sorted(glob.glob('%s/MacOSX*.sdk' % sdk_base_path))[-1])[6:-4]
 		except:
 			pass
 	if sdk is not None:
-		path = '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%s.sdk' % sdk
+		path = '%s/MacOSX%s.sdk' % (sdk_base_path, sdk)
 		if not os.path.exists(path):
 			print('Error: unknown SDK:', sdk)
 			sys.exit(1)
