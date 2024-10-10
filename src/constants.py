@@ -797,6 +797,7 @@ DATA_IVA_ERR_LIQIVA = 5457                                     #: La data di com
 EB_CAUS_CONT_AZIENDA_MISS = 5458                               #: Le causali contabili di tipo IVA devono essere AZIENDALI!
 EB_PRIMANOTA_AUTOSTORNO_MISS = 5459                            #: Non è stato possibile trovare la registrazione di storno automatica!
 EB_PRIMANOTA_AUTOSTORNO_NON_CANC = 5460                        #: Non è possibile cancellare una registrazione di storno automatica!
+ORD_CLI_COMMESSA_MISSING = 5461                                #: Non è possibile salvare un ordine cliente senza specificare la commessa in testata!
 DOCUMENTO_TRASPORTO = 6000                                     #: Documento di Trasporto
 FATTURA = 6001                                                 #: Fattura
 NOTA_CREDITO = 6002                                            #: Nota di credito
