@@ -775,23 +775,25 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	MGA_Status result;
 	CLU_List drivers;
 	PyObject *output;
+	bool is_configured;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOi:list_drivers", kwlist, &configured, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
 	
+	is_configured = PyObject_IsTrue(configured) ? true : false;
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->ListDrivers(PyObject_IsTrue(configured) ? true : false, (MGA_SuccessWithListCB)_SuccessWithListCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->ListDrivers(is_configured, (MGA_SuccessWithListCB)_SuccessWithListCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->ListDrivers(PyObject_IsTrue(configured) ? true : false, &drivers);
+		result = self->fClient->ListDrivers(is_configured, &drivers);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
@@ -926,16 +928,19 @@ MGA_Client_close_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	char *kwlist[] = { "backup", "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *backup = Py_False, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
+	bool is_backup;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOi:close_database", kwlist, &backup, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
 	
+	is_backup = PyObject_IsTrue(backup) ? true : false;
+
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->CloseDatabase(PyObject_IsTrue(backup) ? true : false, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->CloseDatabase(is_backup, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
@@ -943,7 +948,7 @@ MGA_Client_close_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	else {
 		MGA_Status result;
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->CloseDatabase(PyObject_IsTrue(backup) ? true : false);
+		result = self->fClient->CloseDatabase(is_backup);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
@@ -1096,23 +1101,28 @@ MGA_Client_backup_database(MGA::ClientObject *self, PyObject *args, PyObject *kw
 	string password, backupName, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *automatic = Py_True, *overWrite = Py_False, *storeIndex = Py_False;
 	uint32 position = 0, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
+	bool is_automatic, is_overWrite, is_storeIndex;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&O&|O&O&OOiOOOOOi:backup_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &backupName, MGA::ConvertString, &driver, MGA::ConvertString, &name, &automatic, &overWrite, &position, &storeIndex, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
 	
+	is_automatic = PyObject_IsTrue(automatic) ? true : false;
+	is_overWrite = PyObject_IsTrue(overWrite) ? true : false;
+	is_storeIndex = PyObject_IsTrue(storeIndex) ? true : false;
+
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->BackupDatabase(password, driver, name, backupName, PyObject_IsTrue(automatic) ? true : false, PyObject_IsTrue(overWrite) ? true : false, position, PyObject_IsTrue(storeIndex) ? true : false, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->BackupDatabase(password, driver, name, backupName, is_automatic, is_overWrite, position, is_storeIndex, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->BackupDatabase(password, driver, name, backupName, PyObject_IsTrue(automatic) ? true : false, PyObject_IsTrue(overWrite) ? true : false, position, PyObject_IsTrue(storeIndex) ? true : false);
+		result = self->fClient->BackupDatabase(password, driver, name, backupName, is_automatic, is_overWrite, position, is_storeIndex);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
@@ -1326,23 +1336,27 @@ MGA_Client_index_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	string password, driver, name;
 	PyObject *reset = Py_False, *run = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
+	bool is_reset, is_run;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&|O&O&OOOOOOi:index_database", kwlist, MGA::ConvertString, &password, MGA::ConvertString, &driver, MGA::ConvertString, &name, &reset, &run, &success, &error, &progress, &userdata, &timeout))
 		return NULL;
+	
+	is_reset = PyObject_IsTrue(reset) ? true : false;
+	is_run = PyObject_IsTrue(run) ? true : false;
 	
 	if ((success) && (success != Py_None)) {
 		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
-		self->fClient->IndexDatabase(password, driver, name, PyObject_IsTrue(reset) ? true : false, PyObject_IsTrue(run) ? true : false, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
+		self->fClient->IndexDatabase(password, driver, name, is_reset, is_run, (MGA_SuccessCB)_SuccessCB, (MGA_ErrorCB)_ErrorCB, (MGA_ProgressCB)_ProgressCB, request, timeout);
 		Py_END_ALLOW_THREADS
 		
 		return (PyObject *)request;
 	}
 	else {
 		Py_BEGIN_ALLOW_THREADS
-		result = self->fClient->IndexDatabase(password, driver, name, PyObject_IsTrue(reset) ? true : false, PyObject_IsTrue(run) ? true : false);
+		result = self->fClient->IndexDatabase(password, driver, name, is_reset, is_run);
 		Py_END_ALLOW_THREADS
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
