@@ -729,7 +729,7 @@ class AsyncClient(Client):
 			IN_LABEL: label,
 		}, OUT_DATA, progress=progress)
 
-	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None):
+	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None, with_metadata=False):
 		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
 		``Resources``, mentre *filename* e *label* hanno senso solo per identificare rispettivamente le risorse di tipo documento ed immagine
@@ -737,12 +737,17 @@ class AsyncClient(Client):
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà una tupla di quattro elementi:
 		( *dati*, *filename*, *original_filename*, *checksum* ). *dati* sono i dati binari che sono stati caricati dal server; *filename* è
 		il nome file interno con cui è identificata la risorsa, *original_filename* è il nome del file originale che è stato specificato
-		all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *check_only* è ``True``, i dati
-		binari della risorsa non verranno effettivamente caricati dal dispositivo di archiviazione in cui sono depositati, e *dati* sarà
-		``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il suo checksum senza effettivamente caricarla da remoto
-		(nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
+		all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *with_metadata* è ``True``, la funzione
+		ritorna cinque elementi, e l'elemento aggiuntivo è un ``dict`` con i metadata associati alla risorsa, o ``None`` se non ci sono
+		metadati associati. Se *check_only* è ``True``, i dati binari della risorsa non verranno effettivamente caricati dal dispositivo di
+		archiviazione in cui sono depositati, e *dati* sarà ``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il
+		suo checksum senza effettivamente caricarla da remoto (nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
 		if (type == 0) and (not filename):
 			raise ValueError('filename must be specified for document type resources')
+		if with_metadata:
+			out_params = ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM, OUT_METADATA )
+		else:
+			out_params = ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM )
 		return self._execute(CMD_FETCH_BINARY, {
 			IN_FIELD_NAME: field_or_tablename,
 			IN_ROW_ID: id,
@@ -750,15 +755,17 @@ class AsyncClient(Client):
 			IN_FILENAME: filename,
 			IN_LABEL: label,
 			IN_CHECK: check_only,
-		}, ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM ), progress=progress)
+		}, out_params, progress=progress)
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None, metadata=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
 		automaticamente); *original_filename* è il nome file originale i cui dati si stanno salvando sul server; *data* sono i dati binari
 		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando. Per le
 		risorse di tipo immagine aggiuntiva è necessario specificare una *label* da abbinare all'immagine per identificarla univocamente.
+		*metadata* può essere un ``dict`` in cui sia chiavi che valori siano delle semplici stringhe, e permette di specificare dei metadati
+		aggiuntivi associati alla risorsa binaria che si sta inserendo.
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà il nome del file interno usato dal
 		server per identificare la risorsa, che come detto sopra è uguale a *filename* se quest'ultimo è diverso da ``None``, altrimenti sarà
 		il nome file generato dal server.
@@ -775,6 +782,7 @@ class AsyncClient(Client):
 			IN_DESC: desc,
 			IN_FORCE_DELETE: force_delete,
 			IN_LABEL: label,
+			IN_METADATA: metadata,
 		}, OUT_FILENAME, progress=progress)
 
 	def translate(self, field, value, language, code_azienda=None):
