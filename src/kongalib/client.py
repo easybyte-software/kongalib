@@ -895,7 +895,7 @@ class Client(object):
 				return output[OUT_DATA]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 	
-	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, success=None, error=None, progress=None, label=None, with_metadata=False):
+	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, success=None, error=None, progress=None, label=None, with_extra=False):
 		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
 		``Resources``, mentre *filename* e *label* hanno senso solo per identificare rispettivamente le risorse di tipo documento ed immagine
@@ -903,9 +903,9 @@ class Client(object):
 		La funzione ritorna una tupla di quattro elementi: ( *dati*, *filename*, *original_filename*, *checksum* ). Questi quattro elementi
 		sono anche i parametri passati alla callback *success* in caso di successo. *dati* sono i dati binari che sono stati caricati dal
 		server; *filename* è il nome file interno con cui è identificata la risorsa, *original_filename* è il nome del file originale che è
-		stato specificato all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *with_metadata* è
-		``True``, la funzione ritorna cinque elementi, e l'elemento aggiuntivo è un ``dict`` con i metadata associati alla risorsa, o ``None``
-		se non ci sono metadati associati.
+		stato specificato all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *with_extra* è
+		``True``, la funzione ritorna sei elementi, e gli elementi aggiuntivi sono un ``dict`` con i metadata associati alla risorsa, o ``None``
+		se non ci sono metadati associati, e il codice della tipologia allegato se presente.
 		Se *check_only* è ``True``, i dati binari della risorsa non verranno effettivamente caricati dal dispositivo di archiviazione in cui
 		sono depositati, e *dati* sarà ``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il suo checksum senza
 		effettivamente caricarla da remoto (nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
@@ -914,8 +914,8 @@ class Client(object):
 		if success is not None:
 			def callback(output, dummy):
 				if output[OUT_ERRNO] == OK:
-					if with_metadata:
-						success(output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM], output[OUT_METADATA])
+					if with_extra:
+						success(output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM], output[OUT_METADATA], output[OUT_CODE_TIPOLOGIA])
 					else:
 						success(output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM])
 				elif error is not None:
@@ -942,13 +942,13 @@ class Client(object):
 				IN_CHECK: check_only,
 			})
 			if output[OUT_ERRNO] == OK:
-				if with_metadata:
-					return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM], output[OUT_METADATA]
+				if with_extra:
+					return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM], output[OUT_METADATA], output[OUT_CODE_TIPOLOGIA]
 				else:
 					return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, success=None, error=None, progress=None, label=None, metadata=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, success=None, error=None, progress=None, label=None, metadata=None, code_tipologia=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
@@ -984,6 +984,7 @@ class Client(object):
 				IN_FORCE_DELETE: force_delete,
 				IN_LABEL: label,
 				IN_METADATA: metadata,
+				IN_CODE_TIPOLOGIA: code_tipologia,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_STORE_BINARY, {
@@ -998,6 +999,7 @@ class Client(object):
 				IN_FORCE_DELETE: force_delete,
 				IN_LABEL: label,
 				IN_METADATA: metadata,
+				IN_CODE_TIPOLOGIA: code_tipologia,
 			})
 			if output[OUT_ERRNO] == OK:
 				return output[OUT_FILENAME]
