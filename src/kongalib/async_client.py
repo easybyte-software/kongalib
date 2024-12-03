@@ -729,7 +729,7 @@ class AsyncClient(Client):
 			IN_LABEL: label,
 		}, OUT_DATA, progress=progress)
 
-	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None, with_metadata=False):
+	def fetch_binary(self, field_or_tablename, id, type, filename=None, check_only=False, progress=None, label=None, with_extra=False):
 		"""Carica un contenuto binario dal server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda del database da cui caricare la risorsa; *type* è uno dei valori della *Choice*
 		``Resources``, mentre *filename* e *label* hanno senso solo per identificare rispettivamente le risorse di tipo documento ed immagine
@@ -737,15 +737,16 @@ class AsyncClient(Client):
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà una tupla di quattro elementi:
 		( *dati*, *filename*, *original_filename*, *checksum* ). *dati* sono i dati binari che sono stati caricati dal server; *filename* è
 		il nome file interno con cui è identificata la risorsa, *original_filename* è il nome del file originale che è stato specificato
-		all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *with_metadata* è ``True``, la funzione
-		ritorna cinque elementi, e l'elemento aggiuntivo è un ``dict`` con i metadata associati alla risorsa, o ``None`` se non ci sono
-		metadati associati. Se *check_only* è ``True``, i dati binari della risorsa non verranno effettivamente caricati dal dispositivo di
-		archiviazione in cui sono depositati, e *dati* sarà ``None``; questa modalità è utile per verificare l'esistenza di una risorsa e il
-		suo checksum senza effettivamente caricarla da remoto (nel caso di archiviazione su cloud il caricamento potrebbe essere lento)."""
+		all'atto del salvataggio della risorsa sul server, mentre *checksum* è un checksum dei dati. Se *with_extra* è ``True``, la funzione
+		ritorna sei elementi, e gli elementi aggiuntivi sono un ``dict`` con i metadata associati alla risorsa, o ``None`` se non ci sono
+		metadati associati, e il codice della tipologia allegato se presente. Se *check_only* è ``True``, i dati binari della risorsa non
+		verranno effettivamente caricati dal dispositivo di archiviazione in cui sono depositati, e *dati* sarà ``None``; questa modalità è
+		utile per verificare l'esistenza di una risorsa e il suo checksum senza effettivamente caricarla da remoto (nel caso di archiviazione
+		su cloud il caricamento potrebbe essere lento)."""
 		if (type == 0) and (not filename):
 			raise ValueError('filename must be specified for document type resources')
-		if with_metadata:
-			out_params = ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM, OUT_METADATA )
+		if with_extra:
+			out_params = ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM, OUT_METADATA, OUT_CODE_TIPOLOGIA )
 		else:
 			out_params = ( OUT_DATA, OUT_FILENAME, OUT_ORIGINAL_FILENAME, OUT_DATA_CHECKSUM )
 		return self._execute(CMD_FETCH_BINARY, {
