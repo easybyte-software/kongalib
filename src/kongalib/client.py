@@ -948,7 +948,7 @@ class Client(object):
 					return output[OUT_DATA], output[OUT_FILENAME], output[OUT_ORIGINAL_FILENAME], output[OUT_DATA_CHECKSUM]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, success=None, error=None, progress=None, label=None, metadata=None, code_tipologia=None, is_auto_generated=False, log=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, success=None, error=None, progress=None, label=None, metadata=None, code_tipologia=None, log=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
@@ -987,7 +987,6 @@ class Client(object):
 				IN_LABEL: label,
 				IN_METADATA: metadata,
 				IN_CODE_TIPOLOGIA: code_tipologia,
-				IN_AUTO_GENERATED: is_auto_generated,
 			}, success=callback, error=errback, progress=progress)
 		else:
 			output = self.execute(CMD_STORE_BINARY, {
@@ -1003,7 +1002,6 @@ class Client(object):
 				IN_LABEL: label,
 				IN_METADATA: metadata,
 				IN_CODE_TIPOLOGIA: code_tipologia,
-				IN_AUTO_GENERATED: is_auto_generated,
 			})
 			if output[OUT_ERRNO] == OK:
 				if log is not None:
