@@ -758,7 +758,7 @@ class AsyncClient(Client):
 			IN_CHECK: check_only,
 		}, out_params, progress=progress)
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None, metadata=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None, metadata=None, is_auto_generated=False, log=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
@@ -784,7 +784,8 @@ class AsyncClient(Client):
 			IN_FORCE_DELETE: force_delete,
 			IN_LABEL: label,
 			IN_METADATA: metadata,
-		}, OUT_FILENAME, progress=progress)
+			IN_AUTO_GENERATED: is_auto_generated,
+		}, OUT_FILENAME, progress=progress, log=log)
 
 	def translate(self, field, value, language, code_azienda=None):
 		return self._execute(CMD_TRANSLATE, {
