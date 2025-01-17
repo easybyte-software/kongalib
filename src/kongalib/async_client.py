@@ -758,15 +758,15 @@ class AsyncClient(Client):
 			IN_CHECK: check_only,
 		}, out_params, progress=progress)
 
-	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None, metadata=None, log=None):
+	def store_binary(self, field_or_tablename, id, type, filename=None, original_filename=None, data=None, desc=None, force_delete=False, code_azienda=None, progress=None, label=None, metadata=None, code_tipologia=None, log=None):
 		"""Salva un contenuto binario sul server. *field_or_tablename* può essere un nome tabella o un campo da cui risolvere il nome tabella;
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
 		automaticamente); *original_filename* è il nome file originale i cui dati si stanno salvando sul server; *data* sono i dati binari
-		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando. Per le
-		risorse di tipo immagine aggiuntiva è necessario specificare una *label* da abbinare all'immagine per identificarla univocamente.
-		*metadata* può essere un ``dict`` in cui sia chiavi che valori siano delle semplici stringhe, e permette di specificare dei metadati
-		aggiuntivi associati alla risorsa binaria che si sta inserendo.
+		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando, mentre
+		*code_tipologia* permette di specificare una tipologia da abbinare al dati. Per le risorse di tipo immagine aggiuntiva è necessario
+		specificare una *label* da abbinare all'immagine per identificarla univocamente. *metadata* può essere un ``dict`` in cui sia chiavi che
+		valori siano delle semplici stringhe, e permette di specificare dei metadati aggiuntivi associati alla risorsa binaria che si sta inserendo.
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà il nome del file interno usato dal
 		server per identificare la risorsa, che come detto sopra è uguale a *filename* se quest'ultimo è diverso da ``None``, altrimenti sarà
 		il nome file generato dal server.
@@ -784,6 +784,7 @@ class AsyncClient(Client):
 			IN_FORCE_DELETE: force_delete,
 			IN_LABEL: label,
 			IN_METADATA: metadata,
+			IN_CODE_TIPOLOGIA: code_tipologia,
 		}, OUT_FILENAME, progress=progress, log=log)
 
 	def translate(self, field, value, language, code_azienda=None):

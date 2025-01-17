@@ -953,10 +953,10 @@ class Client(object):
 		questa tabella unita a *id* identificano la scheda a cui abbinare la risorsa; *type* è uno dei valori della *Choice*``Resources``;
 		*filename* permette di specificare un nome file interno con cui identificare la risorsa (se ``None`` il server genererà un nome univoco
 		automaticamente); *original_filename* è il nome file originale i cui dati si stanno salvando sul server; *data* sono i dati binari
-		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando. Per le
-		risorse di tipo immagine aggiuntiva è necessario specificare una *label* da abbinare all'immagine per identificarla univocamente.
-		*metadata* può essere un ``dict`` in cui sia chiavi che valori siano delle semplici stringhe, e permette di specificare dei metadati
-		aggiuntivi associati alla risorsa binaria che si sta inserendo.
+		effettivi; *desc* è la descrizione da abbinare alla risorsa; *code_azienda* infine identifica l'azienda su cui si sta operando, mentre
+		*code_tipologia* permette di specificare una tipologia da abbinare al dati. Per le risorse di tipo immagine aggiuntiva è necessario
+		specificare una *label* da abbinare all'immagine per identificarla univocamente. *metadata* può essere un ``dict`` in cui sia chiavi che
+		valori siano delle semplici stringhe, e permette di specificare dei metadati aggiuntivi associati alla risorsa binaria che si sta inserendo.
 		La funzione ritorna il nome del file interno usato dal server per identificare la risorsa, che come detto sopra è uguale a *filename* se
 		quest'ultimo è diverso da ``None``, altrimenti verrà ritornato il nome file generato dal server. La callback *success* se specificata
 		riceverà *filename* come unico parametro.
