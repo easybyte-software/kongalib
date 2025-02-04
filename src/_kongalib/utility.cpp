@@ -216,7 +216,7 @@ Entry_FromPy(PyObject *object, CLU_Entry *entry)
 #endif
 	}
 	else if ((PyBytes_Check(object)) && (!PyBytes_AsStringAndSize(object, &text, &size))) {
-		entry->Set(string(text, size));
+		entry->Set(CL_Blob(text, size));
 	}
 	else if (PyUnicode_Check(object)) {
 		string temp;
