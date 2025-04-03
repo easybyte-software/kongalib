@@ -67,10 +67,6 @@ elif sys.platform == 'win32':
 		constants = '%s\\constants.json' % konga_sdk
 		if os.path.exists(constants):
 			shutil.copy(constants, '%s\\src\\kongalib\\constants.json' % root)
-	if os.environ.get('CFLAGS'):
-		cflags += os.environ['CFLAGS'].split(' ')
-	if os.environ.get('LDFLAGS'):
-		ldflags += os.environ['LDFLAGS'].split(' ')
 else:
 	if konga_sdk is None:
 		konga_sdk = '/usr/local'
@@ -82,6 +78,11 @@ else:
 	cflags = cflags.split(' ')
 	ldflags = ldflags.split(' ')
 	extra_libs = []
+
+if os.environ.get('CFLAGS'):
+	cflags += os.environ['CFLAGS'].split(' ')
+if os.environ.get('LDFLAGS'):
+	ldflags += os.environ['LDFLAGS'].split(' ')
 
 defines = [
 	('NOUNCRYPT', None),
