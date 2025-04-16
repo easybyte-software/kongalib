@@ -769,12 +769,13 @@ class Client(object):
 		})
 		return output['EXISTS']
 	
-	def get_next_available_code(self, tablename, code_azienda, num_esercizio, dry_run=False):
+	def get_next_available_code(self, tablename, code_azienda, num_esercizio, dry_run=False, force=False):
 		return self.execute(CMD_GET_NEXT_CODE, {
 			IN_TABLE_NAME: tablename,
 			IN_CODE_AZIENDA: code_azienda,
 			IN_NUM_ESERCIZIO: num_esercizio,
 			IN_DRY_RUN: dry_run,
+			IN_FORCE: force,
 		})[OUT_CODE]
 
 	def get_last_npfe(self, code_azienda, num_esercizio):
