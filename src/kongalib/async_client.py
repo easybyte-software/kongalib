@@ -111,7 +111,7 @@ class AsyncClient(Client):
 			answer = output[OUT_LOG] or []
 			error_list = ErrorList(answer)
 			if output[OUT_ERRNO] == OK:
-				if len(answer) > 0:
+				if error_list.errno != OK:
 					if log is None:
 						loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
 					else:
