@@ -119,13 +119,21 @@ class AsyncClient(Client):
 						if log.has_errors():
 							loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
 						else:
-							if finalize_output is not None:
-								output = finalize_output(output)
-							loop.call_soon_threadsafe(self._safe_set_result, future, output)
+							try:
+								if finalize_output is not None:
+									output = finalize_output(output)
+							except Exception as e:
+								loop.call_soon_threadsafe(self._safe_set_exception, future, e)
+							else:
+								loop.call_soon_threadsafe(self._safe_set_result, future, output)
 				else:
-					if finalize_output is not None:
-						output = finalize_output(output)
-					loop.call_soon_threadsafe(self._safe_set_result, future, output)
+					try:
+						if finalize_output is not None:
+							output = finalize_output(output)
+					except Exception as e:
+						loop.call_soon_threadsafe(self._safe_set_exception, future, e)
+					else:
+						loop.call_soon_threadsafe(self._safe_set_result, future, output)
 			else:
 				loop.call_soon_threadsafe(self._safe_set_exception, future, ErrorList.from_error(output[OUT_ERRNO], output[OUT_ERROR]))
 		return success
