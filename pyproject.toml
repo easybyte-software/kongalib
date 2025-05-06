@@ -13,7 +13,7 @@ description = "Konga client library"
 readme = "README.rst"
 requires-python = ">= 3.8"
 keywords = [ "konga", "client", "erp" ]
-license = { text = "LGPL" }
+license = "LGPL-3.0-or-later"
 classifiers = [
 	"Natural Language :: Italian",
 	"Programming Language :: Python",
@@ -24,13 +24,13 @@ classifiers = [
 	"Programming Language :: Python :: 3.10",
 	"Programming Language :: Python :: 3.11",
 	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
 	"Programming Language :: C++",
 	"Development Status :: 5 - Production/Stable",
 	"Environment :: Console",
 	"Intended Audience :: Developers",
 	"Intended Audience :: Information Technology",
 	"Intended Audience :: Financial and Insurance Industry",
-	"License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 	"Operating System :: MacOS :: MacOS X",
 	"Operating System :: Microsoft :: Windows",
 	"Operating System :: POSIX :: Linux",
