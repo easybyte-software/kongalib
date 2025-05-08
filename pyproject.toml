@@ -1,5 +1,5 @@
 [build-system]
-requires = [ "setuptools >= 75.0.0" ]
+requires = [ "setuptools >= 75.0.0", "packaging >= 25.0"  ]
 build-backend = "_version:build_meta"
 backend-path = [ '.' ]
 
