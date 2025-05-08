@@ -1,5 +1,5 @@
 [build-system]
-requires = [ "setuptools >= 78.0.0" ]
+requires = [ "setuptools >= 61.0.0" ]
 build-backend = "_version:build_meta"
 backend-path = [ '.' ]
 
@@ -13,7 +13,7 @@ description = "Konga client library"
 readme = "README.rst"
 requires-python = ">= 3.8"
 keywords = [ "konga", "client", "erp" ]
-license = "LGPL-3.0-or-later"
+license = { text = "LGPL-3.0-or-later" }
 classifiers = [
 	"Natural Language :: Italian",
 	"Programming Language :: Python",
