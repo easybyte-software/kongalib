@@ -97,7 +97,6 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
           CIBW_BUILD: 'cp38-macosx_x86_64 *-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
-          CIBW_SKIP: 'cp36-* cp37* pp*'
           CIBW_ARCHS_MACOS: 'universal2'
           CIBW_ARCHS_LINUX: 'x86_64 aarch64'
           CIBW_BUILD_VERBOSITY: '2'
