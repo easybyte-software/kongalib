@@ -653,7 +653,9 @@ class BuiltinHandler(object):
 	
 	def format_exception(self, type, value, tb):
 		import traceback
-		text = [ 'Traceback (most recent call last):\n' ] + traceback.format_list(tb) + traceback.format_exception_only(type, value)
+		if not all([ isinstance(x, str) for x in tb ]):
+			tb = traceback.format_list(tb)
+		text = [ 'Traceback (most recent call last):\n' ] + tb + traceback.format_exception_only(type, value)
 		return ''.join(text)
 	
 	def print_exception(self, type, value, tb):
