@@ -15,7 +15,7 @@ on:
       sdk_version:
         description: 'Version of the Konga SDK to be used'
         # this should be changed back to 'current' after 2.0.0 release
-        default: 'stable/2.0.0-beta'
+        default: 'current'
         required: true
       platform:
         description: 'Platform filter'
@@ -125,12 +125,14 @@ jobs:
     if: inputs.publish
     steps:
       - uses: actions/download-artifact@v4
+        if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
           name: binary-${{ matrix.os }}
           path: dist
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
           skip-existing: true
 
