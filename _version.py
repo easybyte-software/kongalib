@@ -1,7 +1,7 @@
 import os
 from setuptools import build_meta as build_meta
 
-_VERSION = '2.0.1'
+_VERSION = '2.0.2'
 
 
 def __getattr__(name):
