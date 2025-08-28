@@ -754,7 +754,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
 		finally:
 			_handlers['builtin']._set_interpreter(None)
-			del interpreter
+			interpreter = None
 			_handlers['builtin']._atexit()
 			try:
 				debug_log("[ServerProxy] done")
