@@ -836,8 +836,9 @@ class Client(object):
 		forma ``( Tipo, NomeAllegato, NomeOriginale )``; *Tipo* è un intero ed è uno dei valori della *Choice* ``Resources``, *NomeAllegato* è
 		il nome assegnato internamente a Konga per identificare univocamente il contenuto binario, mentre *NomeOriginale* è il nome del file
 		originale da cui è stato caricato il contenuto. Se *type* è specificato, la funzione filtrerà i risultati in baso ad esso, ritornando
-		solo le tuple con il *Tipo* corretto. Se *full* è ``True`` la n-esima tupla ritornata avrà un valore in più corrispondente all'etichetta
-		dell'immagine aggiuntiva se specificata.
+		solo le tuple con il *Tipo* corretto. Se *full* è ``True`` la n-esima tupla ritornata avrà tre valori in più corrispondenti all'etichetta
+		dell'immagine aggiuntiva (se specificata), al codice della tipologia dell'allegato e ai metadati associati (se presenti), e la tupla avrà
+		quindi la forma ``( Tipo, NomeAllegato, NomeOriginale, Etichetta, CodiceTipologia, Metadati )``.
 		Se *success* è diverso da ``None``, la callback verrà invocata in caso di successo con la lista di tuple di cui sopra.
 		"""
 		if success is not None:

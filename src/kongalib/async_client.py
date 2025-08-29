@@ -716,8 +716,10 @@ class AsyncClient(Client):
 		una volta completato sarà una lista di tuple, in cui la n-esima tupla ha la forma ``( Tipo, NomeAllegato, NomeOriginale )``; *Tipo*
 		è un intero ed è uno dei valori della *Choice* ``Resources``, *NomeAllegato* è il nome assegnato internamente a Konga per identificare
 		univocamente il contenuto binario, mentre *NomeOriginale* è il nome del file originale da cui è stato caricato il contenuto. Se *type*
-		è specificato, la funzione filtrerà i risultati in baso ad esso, ritornando solo le tuple con il *Tipo* corretto. Se *full* è ``True``
-		la n-esima tupla ritornata avrà un valore in più corrispondente all'etichetta dell'immagine aggiuntiva se specificata.
+		è specificato, la funzione filtrerà i risultati in base ad esso, ritornando solo le tuple con il *Tipo* corretto. Se *full* è ``True``
+		la n-esima tupla ritornata avrà tre valori in più corrispondenti all'etichetta dell'immagine aggiuntiva (se specificata), al codice
+		della tipologia dell'allegato e ai metadati associati (se presenti), e la tupla avrà quindi la forma
+		``( Tipo, NomeAllegato, NomeOriginale, Etichetta, CodiceTipologia, Metadati )``.
 		"""
 		def get_result(output):
 			return [ tuple(row) for row in output[OUT_LIST] if ((type is None) or (row[0] == type)) ]
