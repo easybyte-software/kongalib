@@ -118,21 +118,21 @@ jobs:
       url: https://pypi.org/p/kongalib
     permissions:
       id-token: write
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     if: inputs.publish
     steps:
       - uses: actions/download-artifact@v4
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           name: binary-${{ matrix.os }}
           path: dist
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           skip-existing: true
 
