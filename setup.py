@@ -74,7 +74,7 @@ else:
 	if os.path.exists(constants):
 		shutil.copy(constants, '%s/src/kongalib/constants.json' % root)
 	cflags = '-g -Wno-maybe-uninitialized -Wno-write-strings -Wno-multichar -fvisibility=hidden -I%s/include -std=c++17 -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS -DPY_SSIZE_T_CLEAN' % konga_sdk
-	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre -ldbus-1' % konga_sdk
+	ldflags = '-L%s/lib -lkonga_client_s -lebpr_s -lz -lpcre2-8 -ldbus-1' % konga_sdk
 	cflags = cflags.split(' ')
 	ldflags = ldflags.split(' ')
 	extra_libs = []
