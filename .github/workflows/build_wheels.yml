@@ -30,6 +30,24 @@ on:
       commit:
         description: 'SHA-1 of the commit to be built'
         required: false
+  
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        required: false
+      sdk_version:
+        type: string
+        default: 'current'
+        required: false
+      platform:
+        type: string
+        required: true
+      commit:
+        type: string
+        required: false
+
 
 jobs:
   id:
@@ -38,6 +56,7 @@ jobs:
     steps:
       - name: ${{ github.event.inputs.id }}
         run: echo Run identifier is ${{ inputs.id }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
   
   build_sdist:
     name: Build SDist
