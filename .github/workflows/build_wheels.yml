@@ -70,7 +70,7 @@ jobs:
       - name: Build SDist
         run: pipx run build --sdist
     
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: source-dist
           path: dist/*.tar.gz
@@ -123,7 +123,7 @@ jobs:
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
           CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ inputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
       
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
           name: binary-${{ matrix.os }}
