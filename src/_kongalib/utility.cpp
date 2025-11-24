@@ -414,7 +414,9 @@ sem_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static PyObject *
 sem_acquire(MGA::NamedSemaphoreObject *self, PyObject *args)
 {
+	Py_BEGIN_ALLOW_THREADS
 	self->fSem.Acquire();
+	Py_END_ALLOW_THREADS
 	Py_RETURN_NONE;
 }
 
@@ -430,7 +432,9 @@ sem_release(MGA::NamedSemaphoreObject *self, PyObject *args)
 static PyObject *
 sem___enter__(MGA::NamedSemaphoreObject *self, PyObject *args, PyObject *kwargs)
 {
+	Py_BEGIN_ALLOW_THREADS
 	self->fSem.Acquire();
+	Py_END_ALLOW_THREADS
 	Py_INCREF(self);
 	return (PyObject *)self;
 }
