@@ -22,8 +22,8 @@ on:
         - all
         required: true
         default: 'all'
-      ref:
-        description: 'Ref override'
+      path:
+        description: 'Path override'
         type: string
         default: ''
         required: false
@@ -41,7 +41,7 @@ on:
       platform:
         type: string
         required: true
-      ref:
+      path:
         type: string
         default: ''
         required: false
@@ -58,11 +58,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          repository: easybyte-software/kongalib
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
       
       - name: Build SDist
         run: pipx run build --sdist
+        working-directory: ${{ inputs.path || '.' }}
     
       - uses: actions/upload-artifact@v4
         with:
@@ -79,8 +79,7 @@ jobs:
       - uses: actions/checkout@v5
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
-          repository: easybyte-software/kongalib
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Setup (Linux)
         if: (runner.os == 'Linux') && (inputs.platform == 'all' || (inputs.platform == runner.os))
@@ -116,7 +115,9 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
           CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ inputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
-      
+        with:
+          package-dir: ${{ inputs.path || '.' }}
+
       - uses: actions/upload-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
