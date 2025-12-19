@@ -60,6 +60,11 @@ jobs:
         with:
           ref: ${{ github.ref }}
       
+      - name: Setup submodule
+        run: git submodule update --init
+        working-directory: ${{ inputs.path }}
+        if: (github.event_name == 'workflow_call') && inputs.path
+
       - name: Build SDist
         run: pipx run build --sdist
         working-directory: ${{ inputs.path || '.' }}
@@ -100,6 +105,11 @@ jobs:
           curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
           7z e -aoa KongaSDK.dmg && sudo installer -pkg *.pkg -target /
         shell: bash
+
+      - name: Setup submodule
+        run: git submodule update --init
+        working-directory: ${{ inputs.path }}
+        if: (github.event_name == 'workflow_call') && inputs.path
 
       - name: Build wheels
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
