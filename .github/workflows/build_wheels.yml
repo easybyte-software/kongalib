@@ -3,10 +3,6 @@ name: Build wheels
 on:
   workflow_dispatch:
     inputs:
-      id:
-        description: 'Unique identifier for this run'
-        default: '00000000-0000-0000-0000-000000000000'
-        required: false
       publish:
         description: 'Publish wheels by uploading to PyPI'
         type: boolean
@@ -14,8 +10,7 @@ on:
         required: false
       sdk_version:
         description: 'Version of the Konga SDK to be used'
-        # this should be changed back to 'current' after 2.0.0 release
-        default: 'current'
+        default: 'nightly'
         required: true
       platform:
         description: 'Platform filter'
@@ -27,9 +22,6 @@ on:
         - all
         required: true
         default: 'all'
-      commit:
-        description: 'SHA-1 of the commit to be built'
-        required: false
   
   workflow_call:
     inputs:
@@ -39,33 +31,25 @@ on:
         required: false
       sdk_version:
         type: string
-        default: 'current'
+        default: 'nightly'
         required: false
       platform:
         type: string
         required: true
-      commit:
-        type: string
-        required: false
+    secrets:
+      kss_private_key:
+        required: true
+
 
 
 jobs:
-  id:
-    name: Workflow ID provider
-    runs-on: ubuntu-latest
-    steps:
-      - name: ${{ github.event.inputs.id }}
-        run: echo Run identifier is ${{ inputs.id }}
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-  
   build_sdist:
     name: Build SDist
-    needs: [id]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.commit || 'master' }}
+          ref: ${{ github.ref }}
       
       - name: Build SDist
         run: pipx run build --sdist
@@ -77,7 +61,6 @@ jobs:
       
   build_wheels:
     name: Build on ${{ matrix.os }}
-    needs: [id]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -86,7 +69,7 @@ jobs:
       - uses: actions/checkout@v5
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
-          ref: ${{ inputs.commit || 'master' }}
+          ref: ${{ github.ref }}
 
       - name: Setup (Linux)
         if: (runner.os == 'Linux') && (inputs.platform == 'all' || (inputs.platform == runner.os))
@@ -130,7 +113,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   upload_all:
-    name: Upload to PyPI
+    name: Upload wheels
     needs: [build_wheels, build_sdist]
     environment:
       name: pypi
@@ -141,17 +124,21 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    if: inputs.publish
     steps:
       - uses: actions/download-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           name: binary-${{ matrix.os }}
           path: dist
+    
+      - name: Publish packages to KSS
+        if: (github.event_name == 'workflow_call') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        run: |
+          python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
-      - name: Publish package distributions to PyPI
+      - name: Publish packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
+        if: inputs.publish && (inputs.platform == 'all' || (inputs.platform == matrix.os))
         with:
           skip-existing: true
 
