@@ -22,6 +22,11 @@ on:
         - all
         required: true
         default: 'all'
+      ref:
+        description: 'Ref override'
+        type: string
+        default: ''
+        required: false
   
   workflow_call:
     inputs:
@@ -36,6 +41,10 @@ on:
       platform:
         type: string
         required: true
+      ref:
+        type: string
+        default: ''
+        required: false
     secrets:
       kss_private_key:
         required: true
@@ -49,7 +58,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref }}
+          repository: easybyte-software/kongalib
+          ref: ${{ inputs.ref || github.ref }}
       
       - name: Build SDist
         run: pipx run build --sdist
@@ -69,7 +79,8 @@ jobs:
       - uses: actions/checkout@v5
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
-          ref: ${{ github.ref }}
+          repository: easybyte-software/kongalib
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup (Linux)
         if: (runner.os == 'Linux') && (inputs.platform == 'all' || (inputs.platform == runner.os))
