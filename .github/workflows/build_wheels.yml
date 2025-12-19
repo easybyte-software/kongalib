@@ -22,6 +22,11 @@ on:
         - all
         required: true
         default: 'all'
+      working_directory:
+        description: 'Working directory'
+        type: string
+        required: true
+        default: ''
   
   workflow_call:
     inputs:
@@ -36,6 +41,10 @@ on:
       platform:
         type: string
         required: true
+      working_directory:
+        type: string
+        required: true
+        default: ${{ github.workspace }}
     secrets:
       kss_private_key:
         required: true
@@ -46,6 +55,9 @@ jobs:
   build_sdist:
     name: Build SDist
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,6 +77,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/checkout@v5
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
@@ -80,8 +95,8 @@ jobs:
       - name: Setup (Windows)
         if: (runner.os == 'Windows') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         run: |
-          Invoke-WebRequest https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=win -OutFile ${{ github.workspace }}\KongaSDK.exe
-          Start-Process ${{ github.workspace }}\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
+          Invoke-WebRequest https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=win -OutFile ${{ runner.temp }}\KongaSDK.exe
+          Start-Process ${{ runner.temp }}\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
         shell: pwsh
   
       - name: Setup (macOS)
@@ -124,6 +139,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/download-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == matrix.os)
