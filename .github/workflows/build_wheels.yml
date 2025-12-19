@@ -44,7 +44,7 @@ on:
       working_directory:
         type: string
         required: true
-        default: ${{ github.workspace }}
+        default: ''
     secrets:
       kss_private_key:
         required: true
@@ -55,21 +55,20 @@ jobs:
   build_sdist:
     name: Build SDist
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
+        if: (github.event_name != 'workflow_call')
       
       - name: Build SDist
         run: pipx run build --sdist
+        working-directory: .${{ inputs.working_directory }}
     
       - uses: actions/upload-artifact@v4
         with:
           name: source-dist
-          path: dist/*.tar.gz
+          path: .${{ inputs.working_directory }}/dist/*.tar.gz
       
   build_wheels:
     name: Build on ${{ matrix.os }}
@@ -77,12 +76,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    defaults:
-      run:
-        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/checkout@v5
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: (github.event_name != 'workflow_call') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         with:
           ref: ${{ github.ref }}
 
@@ -102,8 +98,8 @@ jobs:
       - name: Setup (macOS)
         if: (runner.os == 'macOS') && (inputs.platform == 'all' || (inputs.platform == runner.os))
         run: |
-          curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
-          7z e -aoa KongaSDK.dmg && sudo installer -pkg *.pkg -target /
+          curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o ${{ runner.temp }}/KongaSDK.dmg
+          7z e -aoa ${{ runner.temp }}/KongaSDK.dmg && sudo installer -pkg *.pkg -target /
         shell: bash
 
       - name: Build wheels
@@ -120,6 +116,8 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
           CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ inputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
+        with:
+          package-dir: .${{ inputs.working_directory }}
       
       - uses: actions/upload-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
@@ -139,9 +137,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    defaults:
-      run:
-        working-directory: ${{ inputs.working_directory || github.workspace }}
     steps:
       - uses: actions/download-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == matrix.os)
