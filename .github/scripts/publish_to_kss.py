@@ -25,6 +25,7 @@ def main():
 
 	for path in options.path:
 		for archive in glob.glob(path):
+			print("Uploading %s" % archive)
 			spec = archive.split('-')[-1]
 			if re.match(r'^macos_\d+_\d+_universal2.whl$', spec):
 				platform = 'u'
