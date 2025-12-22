@@ -107,9 +107,7 @@ jobs:
         shell: bash
 
       - name: Setup submodule
-        run: |
-          git submodule update --init .
-          python3 -m pip install rsa requests
+        run: git submodule update --init .
         working-directory: ${{ inputs.path }}
         if: (inputs.path != '')
 
@@ -130,10 +128,17 @@ jobs:
         with:
           package-dir: ${{ inputs.path || '.' }}
 
+      - name: Setup Python
+        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
       - name: Upload to KSS
         if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
-        run: python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
-        working-directory: ${{ inputs.path }}
+        run: |
+          pip install rsa requests
+          python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
       - uses: actions/upload-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
