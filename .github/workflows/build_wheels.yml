@@ -156,7 +156,7 @@ jobs:
       - name: Publish packages to KSS
         if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
         run: |
-          python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
+          python3 ${{ inputs.path || '.' }}/.github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
       - name: Publish packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
