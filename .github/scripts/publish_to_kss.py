@@ -42,7 +42,7 @@ def main():
 
 			if (not platform) and (spec.endswith('.tar.gz')):
 				buffer = io.BytesIO()
-				with tarfile.TarFile(archive, 'r|gz') as tf:
+				with tarfile.open(archive, 'r:gz') as tf:
 					with zipfile.ZipFile(buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
 						for m in tf:
 							f = tf.extractfile(m)
