@@ -81,7 +81,7 @@ jobs:
           pip install rsa requests
           python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ${{ inputs.path || '.' }}/dist/*.tar.gz --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: source-dist
           path: ${{ inputs.path || '.' }}/dist/*.tar.gz
@@ -152,7 +152,7 @@ jobs:
           pip install rsa requests
           python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
           name: binary-${{ matrix.os }}
