@@ -69,6 +69,18 @@ jobs:
         run: pipx run build --sdist
         working-directory: ${{ inputs.path || '.' }}
     
+      - name: Setup Python
+        if: (inputs.path != '')
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Upload to KSS
+        if: (inputs.path != '')
+        run: |
+          pip install rsa requests
+          python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ${{ inputs.path || '.' }}/dist/*.tar.gz --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: source-dist

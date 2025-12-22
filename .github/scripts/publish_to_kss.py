@@ -5,6 +5,8 @@ import binascii
 import re
 import io
 import glob
+import tarfile
+import zipfile
 
 import requests
 import rsa
@@ -38,8 +40,20 @@ def main():
 			else:
 				platform = ''
 
-			with open(archive, 'rb') as file:
-				content = file.read()
+			if (not platform) and (spec.endswith('.tar.gz')):
+				buffer = io.BytesIO()
+				with tarfile.open(archive, 'r|gz') as tf:
+					with zipfile.ZipFile(buffer, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+						for m in tf:
+							f = tf.extractfile(m)
+							fl = f.read()
+							fn = f.name
+							zf.writestr(fn, fl)
+				content = buffer.getvalue()
+				archive = archive.replace('.tar.gz', '.zip')
+			else:
+				with open(archive, 'rb') as file:
+					content = file.read()
 			signature = rsa.sign(content, private_key, 'SHA-1')
 
 			if options.sdk_version == 'nightly':
