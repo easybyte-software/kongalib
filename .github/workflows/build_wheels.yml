@@ -107,7 +107,9 @@ jobs:
         shell: bash
 
       - name: Setup submodule
-        run: git submodule update --init .
+        run: |
+          git submodule update --init .
+          pip install rsa requests
         working-directory: ${{ inputs.path }}
         if: (inputs.path != '')
 
