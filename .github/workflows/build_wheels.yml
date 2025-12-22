@@ -60,6 +60,9 @@ jobs:
         with:
           ref: ${{ github.ref }}
       
+      - name: Debug
+        run: echo ${{ github.event_name }}
+    
       - name: Setup submodule
         run: git submodule update --init
         working-directory: ${{ inputs.path }}
