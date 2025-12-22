@@ -60,13 +60,10 @@ jobs:
         with:
           ref: ${{ github.ref }}
       
-      - name: Debug
-        run: echo ${{ github.event_name }}
-    
       - name: Setup submodule
         run: git submodule update --init
         working-directory: ${{ inputs.path }}
-        if: (github.event_name == 'workflow_call') && inputs.path
+        if: (inputs.path != '')
 
       - name: Build SDist
         run: pipx run build --sdist
@@ -112,7 +109,7 @@ jobs:
       - name: Setup submodule
         run: git submodule update --init
         working-directory: ${{ inputs.path }}
-        if: (github.event_name == 'workflow_call') && inputs.path
+        if: (inputs.path != '')
 
       - name: Build wheels
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
@@ -157,7 +154,7 @@ jobs:
           path: dist
     
       - name: Publish packages to KSS
-        if: (github.event_name == 'workflow_call') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
         run: |
           python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
 
