@@ -128,6 +128,11 @@ jobs:
         with:
           package-dir: ${{ inputs.path || '.' }}
 
+      - name: Upload to KSS
+        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        run: python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
+        working-directory: ${{ inputs.path }}
+
       - uses: actions/upload-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == runner.os)
         with:
@@ -143,31 +148,20 @@ jobs:
     permissions:
       id-token: write
     runs-on: ubuntu-latest
+    if: inputs.publish
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v5
-        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
-        with:
-          ref: ${{ github.ref }}
-
       - uses: actions/download-artifact@v4
         if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           name: binary-${{ matrix.os }}
           path: dist
     
-      - name: Publish packages to KSS
-        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
-        run: |
-          git submodule update --init .
-          python3 .github/scripts/publish_to_kss.py dist/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
-        working-directory: ${{ inputs.path }}
-
       - name: Publish packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.publish && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           skip-existing: true
 
