@@ -61,7 +61,7 @@ jobs:
           ref: ${{ github.ref }}
       
       - name: Setup submodule
-        run: git submodule update --init
+        run: git submodule update --init .
         working-directory: ${{ inputs.path }}
         if: (inputs.path != '')
 
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: source-dist
-          path: dist/*.tar.gz
+          path: ${{ inputs.path || '.' }}/dist/*.tar.gz
       
   build_wheels:
     name: Build on ${{ matrix.os }}
@@ -107,7 +107,7 @@ jobs:
         shell: bash
 
       - name: Setup submodule
-        run: git submodule update --init
+        run: git submodule update --init .
         working-directory: ${{ inputs.path }}
         if: (inputs.path != '')
 
