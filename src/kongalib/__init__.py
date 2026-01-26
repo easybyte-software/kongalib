@@ -144,8 +144,7 @@ class Log(object):
 
 		class Stripper(HTMLParser):
 			def __init__(self):
-				self.convert_charrefs = True
-				self.reset()
+				super().__init__()
 				self.fed = []
 				self.feed(html)
 			def handle_starttag(self, tag, attrs):
@@ -391,4 +390,3 @@ def escape(query):
 
 
 atexit.register(_cleanup)
-
