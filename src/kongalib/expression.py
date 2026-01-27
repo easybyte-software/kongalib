@@ -20,7 +20,10 @@ import re
 import io
 import tempfile
 import collections
-from xml.etree import ElementTree as ET
+try:
+	from lxml import etree as ET
+except:
+	from xml.etree import ElementTree as ET
 
 from kongalib import ensure_text
 
@@ -837,5 +840,3 @@ def dumps(expr):
 # 	print expr.as_list()
 # 	print type(expr)
 # 	print expr
-
-
