@@ -323,7 +323,7 @@ def _trampoline(conn, sem, foreground, env, dll_paths, queue, level):
 			except Exception as e:
 				import traceback
 				exc_type, exc_value, exc_tb = sys.exc_info()
-				exc_tb = traceback.extract_tb(exc_tb)
+				exc_tb = [ tuple(tb) for tb in traceback.extract_tb(exc_tb) ]
 				exc_info = ( exc_type, exc_value, exc_tb )
 			else:
 				exc_info = None
