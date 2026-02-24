@@ -22,8 +22,10 @@ import tempfile
 import collections
 try:
 	from lxml import etree as ET
+	_tree_builder = ET.XMLTreeBuilder()
 except:
 	from xml.etree import ElementTree as ET
+	_tree_builder = ET.XMLTreeBuilder(parse_comments=False)
 
 from kongalib import ensure_text
 
@@ -806,7 +808,7 @@ def loads(xml):
 	if isinstance(xml, bytes):
 		xml = io.BytesIO(xml)
 	if not ET.iselement(xml):
-		xml = document.parse(xml, ET.XMLTreeBuilder(parse_comments=False))
+		xml = document.parse(xml, _tree_builder)
 	if xml.tag == 'operand':
 		return Operand.unserialize_xml(xml)
 	elif xml.tag == 'expression':
