@@ -105,7 +105,7 @@ class Log(object):
 
 	def exception(self, e):
 		"""Aggiunge una eccezione come messaggio di errore sul log."""
-		self.error(Log.ERROR, ensure_text(e))
+		self.error(ensure_text(e))
 	
 	def has_messages(self):
 		"""Controlla la presenza di messaggi di qualsiasi tipo sul log."""
