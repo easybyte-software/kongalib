@@ -213,6 +213,11 @@ class Cursor(object):
 		return self.__connection
 	
 	@property
+	def description(self):
+		"""Proprietà in sola lettura che restituisce una lista di tuple nella forma ``(name, type_code, None, None, None, None, None)``."""
+		return self.__description
+	
+	@property
 	def rowcount(self):
 		"""Proprietà in sola lettura che restituisce il numero di righe del result set corrente."""
 		return self.__rowcount
@@ -263,5 +268,3 @@ def connect(host, port=0, driver=None, database=None, user=None, password=None, 
 	except _Error as e:
 		raise OperationalError(str(e))
 	return conn
-
-
