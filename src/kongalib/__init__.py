@@ -72,7 +72,7 @@ class Log(object):
 	
 	def restore(self):
 		"""Ripristina il log allo stesso stato in cui si trovava prima dell'ultima chiamata al metodo :meth:`save`."""
-		self.errors, self.warning, count = self.state_stack.pop()
+		self.errors, self.warnings, count = self.state_stack.pop()
 		self.messages[count:] = []
 	
 	def clear(self):
