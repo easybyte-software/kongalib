@@ -25,7 +25,7 @@ try:
 	_tree_builder = ET.XMLTreeBuilder()
 except:
 	from xml.etree import ElementTree as ET
-	_tree_builder = ET.XMLTreeBuilder(parse_comments=False)
+	_tree_builder = ET.XMLParser()
 
 from kongalib import ensure_text
 
