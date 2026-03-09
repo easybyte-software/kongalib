@@ -159,9 +159,9 @@ class AsyncClient(Client):
 	
 	async def __aexit__(self, exc_type, exc_value, exc_traceback):
 		if exc_type is None:
-			await self.commit_transaction()
+			await asyncio.shield(self.commit_transaction())
 		else:
-			await self.rollback_transaction()
+			await asyncio.shield(self.rollback_transaction())
 		
 	def as_sync(self):
 		"""Ritorna un oggetto :class:`~kongalib.Client` equivalente a questo client, preservando le connessioni già presenti.
@@ -810,4 +810,3 @@ class AsyncClient(Client):
 		return self._execute(CMD_SET_DATABASE_LANGUAGE, {
 			IN_LANGUAGE: language,
 		}, progress=progress)
-
