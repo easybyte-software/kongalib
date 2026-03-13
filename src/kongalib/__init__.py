@@ -13,9 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 import sys
 import traceback
 import atexit
@@ -51,7 +48,7 @@ BACKUP_ON_CLOUD				= 0x2			#: Il backup è posizionato nel cloud
 
 
 
-class Log(object):
+class Log:
 	"""La classe Log serve ad immagazzinare i messaggi prodotti dal server durante un'operazione; oggetti di questa classe
 	vengono popolati durante le chiamate asincrone della classe :class:`~kongalib.Client`.
 	"""
@@ -165,12 +162,12 @@ class Log(object):
 		che può includere codice HTML (che verrà soppresso nella formattazione)."""
 		type = ('INFO', 'WARNING', 'ERROR')
 		msg = ensure_text(self.strip_html(message[1]))
-		return u'[%s] %s' % (type[message[0]], msg)
+		return '[%s] %s' % (type[message[0]], msg)
 	
 	def dumps(self):
 		"""Esegue un dump dei messaggi presenti sul log e restituisce un'unica stringa. Eventuale codice HTML presente nei messaggi è eliminato
 		usando :meth:`strip_html`."""
-		return u'\n'.join([ self.format_message(message) for message in self.messages ])
+		return '\n'.join([ self.format_message(message) for message in self.messages ])
 	
 	def dump(self, logger=None):
 		"""Esattamente come :meth:`dumps` ma stampa il dump su ``stdout``. Se ``logger`` è un'istanza di ``logging.Logger``, verrà usata per l'output
@@ -240,7 +237,7 @@ class ErrorList(Error):
 				break
 	
 	def __str__(self):
-		return u'\n'.join([ ensure_text(e) for e in self.get_errors() ])
+		return '\n'.join([ ensure_text(e) for e in self.get_errors() ])
 
 	def __repr__(self):
 		return '<ErrorList: %s>' % repr(self.get_errors())
@@ -332,7 +329,7 @@ from .data_dictionary import *
 from .async_client import AsyncClient
 
 
-class ErrorMessage(object):
+class ErrorMessage:
 	def __init__(self, errno, error):
 		self.errno = errno
 		self.error = error

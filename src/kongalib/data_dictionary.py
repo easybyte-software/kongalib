@@ -63,12 +63,12 @@ FIELD_REQUIRED				= 0x100000
 
 
 
-class DataDictionary(object):
+class DataDictionary:
 	"""La classe DataDictionary contiene informazioni sul dizionario dei dati usato da un server Konga. Tramite questa classe è possibile
 	ottenere la lista delle tabelle e dei campi, e informazioni specifiche su ogni campo.
 	"""
 
-	class Choice(object):
+	class Choice:
 		"""Piccola classe che descrive le opzioni associate ad una scelta fissa del dizionario dei dati."""
 
 		def __init__(self, data):

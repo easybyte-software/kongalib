@@ -13,8 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-from __future__ import absolute_import
-
 import asyncio
 import nest_asyncio
 import inspect

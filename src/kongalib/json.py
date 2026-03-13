@@ -13,8 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-from __future__ import print_function
-
 from kongalib import JSONEncoder, JSONDecoder, Decimal
 
 

@@ -12,8 +12,6 @@
 #
 #	https://github.com/easybyte-software/kongalib
 
-from __future__ import print_function
-
 import sys
 import os, os.path
 import kongalib
@@ -54,14 +52,14 @@ class PrintError(RuntimeError):
 	def __init__(self, log):
 		self._log = log
 	def __str__(self):
-		return 'Log:\n%s' % ('\n'.join([ ('  %s' % line) for line in kongalib.ensure_text(self._log.dumps()).split(u'\n') ]))
+		return 'Log:\n%s' % ('\n'.join([ ('  %s' % line) for line in kongalib.ensure_text(self._log.dumps()).split('\n') ]))
 	def get_log(self):
 		"""Ottiene un oggetto di classe :class:`kongalib.Log` contenente gli errori di stampa."""
 		return self._log
 
 
 
-class ScriptContext(object):
+class ScriptContext:
 	"""	Classe per l'accesso al contesto di esecuzione delle azioni esterne lato client di Konga.
 	La classe prevede l'uso di proprietà per accedere alle informazioni in lettura e scrittura."""
 	def __init__(self, database, company, tablename, record_id, record_code, record_data, **kwargs):

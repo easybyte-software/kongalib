@@ -63,23 +63,23 @@ class NotSupportedError(DatabaseError):
 	pass
 
 
-class STRING(object):
+class STRING:
 	def __init__(self, string):
 		self.string = string
 
-class BINARY(object):
+class BINARY:
 	def __init__(self, binary):
 		self.binary = binary
 
-class NUMBER(object):
+class NUMBER:
 	def __init__(self, number):
 		self.number = number
 
-class DATETIME(object):
+class DATETIME:
 	def __init__(self, datetime):
 		self.datetime = datetime
 
-class ROWID(object):
+class ROWID:
 	pass
 
 
@@ -104,7 +104,7 @@ class Connection(Client):
 		return Cursor(self)
 
 
-class Cursor(object):
+class Cursor:
 	"""Questa classe permette di eseguire query SQL sulla connessione *conn* ad essa associata. Per instanziare oggetti di classe :class:`Cursor`
 	si usa il metodo :meth:`.Connection.cursor`.
 	La classe può essere anche usato come iteratore; in tal caso per ogni ciclo verrà restituita la prossima riga del result set derivante
@@ -198,9 +198,6 @@ class Cursor(object):
 			raise StopIteration
 		return row
 
-	def next(self):
-		return self.__next__()
-	
 	def setinputsizes(self, sizes):
 		pass
 	

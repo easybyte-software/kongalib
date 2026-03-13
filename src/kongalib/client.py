@@ -13,8 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-from __future__ import absolute_import
-
 import sys
 import threading
 
@@ -101,7 +99,7 @@ def _check_result(output, result_callback=None):
 
 
 
-class Client(object):
+class Client:
 	"""La classe Client permette di connettersi ad un server Konga e di eseguire comandi sullo stesso.
 	
 	Molti dei metodi di questa classe possono eseguire operazioni sia in maniera sincrona (bloccante) che asincrona tramite

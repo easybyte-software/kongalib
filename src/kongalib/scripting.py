@@ -13,9 +13,6 @@
 # https://github.com/easybyte-software/kongalib
 
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 from kongalib import Error
 from _kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
 
@@ -71,7 +68,7 @@ def debug_log(text):
 
 
 
-class _TimeoutBlocker(object):
+class _TimeoutBlocker:
 	def __init__(self):
 		self.timeout = 0
 		self.lock = threading.RLock()
@@ -93,7 +90,7 @@ class _TimeoutBlocker(object):
 			_State.restore_timeout = True
 
 
-class Proxy(object):
+class Proxy:
 	def __init__(self):
 		self._conn = None
 		self._lock = _TimeoutBlocker()
@@ -128,7 +125,7 @@ class Proxy(object):
 		return _MethodHandler(self._conn, self._lock, name)
 
 
-class _State(object):
+class _State:
 	handler = None
 	controller = None
 	io = []
@@ -352,7 +349,7 @@ def _trampoline(conn, sem, foreground, env, dll_paths, queue, level):
 	
 
 class _ControllerProxy(Proxy):
-	class NullLocker(object):
+	class NullLocker:
 		def __enter__(self):
 			pass
 		def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -362,7 +359,7 @@ class _ControllerProxy(Proxy):
 		self._lock = _ControllerProxy.NullLocker()
 
 
-class Interpreter(object):
+class Interpreter:
 	def __init__(self, foreground=True, env=None):
 		self.proc = None
 		self.exc_info = None
@@ -504,7 +501,7 @@ class _ProxyStdErr(io.StringIO):
 
 
 
-class _MethodHandler(object):
+class _MethodHandler:
 	def __init__(self, conn, lock, name):
 		self._conn = conn
 		self._lock = lock
@@ -515,7 +512,7 @@ class _MethodHandler(object):
 
 
 
-class _Method(object):
+class _Method:
 	def __init__(self, handler, name):
 		self.handler = handler
 		self.name = name
@@ -618,7 +615,7 @@ class _ServerProxy(threading.Thread):
 			debug_log("[ServerProxy] exiting")
 
 
-class BuiltinHandler(object):
+class BuiltinHandler:
 	def __init__(self):
 		self.__interpreter = None
 		self.__exit_funcs = []

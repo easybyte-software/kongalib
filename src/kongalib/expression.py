@@ -13,9 +13,6 @@
 #	https://github.com/easybyte-software/kongalib
 
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 import re
 import io
 import tempfile
@@ -31,7 +28,7 @@ from kongalib import ensure_text
 
 
 
-class LRUCache(object):
+class LRUCache:
 	def __init__(self, capacity, destructor=None):
 		self.capacity = capacity
 		self.destructor = destructor
@@ -301,7 +298,7 @@ def parse(sql):
 
 
 
-class _HasLogic(object):
+class _HasLogic:
 	LOGIC_NONE				= 0
 	LOGIC_AND				= 1
 	LOGIC_OR				= 2
@@ -360,7 +357,7 @@ class Operand(_HasLogic):
 		if self.value is not None:
 			if isinstance(repl, dict):
 				for key, value in repl.items():
-					self.value = self.value.replace(u'$%s' % key, ensure_text(value))
+					self.value = self.value.replace('$%s' % key, ensure_text(value))
 			else:
 				self.value = repl(self.value)
 	
@@ -389,7 +386,7 @@ class Operand(_HasLogic):
 					value = self.value
 				else:
 					value = "'%s'" % self.value.replace("'", "''")
-		return (u'%s %s %s' % (ensure_text(self.column), ensure_text(self.operator), ensure_text(value)))
+		return '%s %s %s' % (ensure_text(self.column), ensure_text(self.operator), ensure_text(value))
 
 	def __repr__(self):
 		return str(self)
@@ -524,7 +521,7 @@ class OperandIsNotNull(Operand):
 class OperandIN(OperandNE):
 	def __init__(self, column, value):
 		if not isinstance(value, str):
-			value = u"('%s')" % (u"', '".join([ ensure_text(x).replace("'", "''") for x in value]))
+			value = "('%s')" % ("', '".join([ ensure_text(x).replace("'", "''") for x in value]))
 		Operand.__init__(self, column, 'IN', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
 
 
@@ -532,7 +529,7 @@ class OperandIN(OperandNE):
 class OperandNotIN(OperandNE):
 	def __init__(self, column, value):
 		if not isinstance(value, str):
-			value = u"('%s')" % (u"', '".join([ ensure_text(x).replace("'", "''") for x in value]))
+			value = "('%s')" % ("', '".join([ ensure_text(x).replace("'", "''") for x in value]))
 		Operand.__init__(self, column, 'NOT IN', value, _HasLogic.LOGIC_NONE, _HasLogic.FLAG_NO_ESCAPE)
 
 
@@ -651,11 +648,11 @@ class Expression(_HasLogic):
 		return hash(str(self))
 
 	def __str__(self):
-		s = u''
+		s = ''
 		for child in self.children:
 			if child.logic_op & _HasLogic.LOGIC_NOT:
 				s += 'NOT '
-			s += u'(%s)' % ensure_text(child)
+			s += '(%s)' % ensure_text(child)
 			if child is not self.children[-1]:
 				if child.logic_op & _HasLogic.LOGIC_AND:
 					s += ' AND '
@@ -829,16 +826,3 @@ def dumps(expr):
 		expr.serialize_xml(node)
 		return ET.tostring(node)
 	raise ValueError('expected valid expression object')
-	
-	
-
-
-# if __name__ == '__main__':
-# 	sql = """(EB_Ciccio.a < 1) AND (EB_Pluto.b IN (0, 1, 2))"""
-# # 	sql = """((EB_ClientiFornitori.Codice >= 'C00100') AND (EB_ClientiFornitori.Codice <= 'C00101')) AND ((EB_ClientiFornitori.ref_Azienda = 1) OR (EB_ClientiFornitori.ref_Azienda IS NULL)) AND (EB_ClientiFornitori.Tipo = 1)"""
-# # 	sql = """(EB_Ciccio.a < 1) and (EB_Pluto.b != 'Antani')"""
-# 	expr = parse(sql)
-# 	print sql
-# 	print expr.as_list()
-# 	print type(expr)
-# 	print expr

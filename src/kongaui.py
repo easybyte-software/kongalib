@@ -12,8 +12,6 @@
 #
 #	https://github.com/easybyte-software/kongalib
 
-from __future__ import print_function
-
 import sys
 import os, os.path
 import atexit
@@ -237,7 +235,7 @@ def open_progress(title=None, cancellable=True):
 	"""Mostra una finestra di progresso con titolo *title*, potenzialmente annullabile dall'utente se *cancellable* è ``True``; la funzione ritorna immediatamente.
 	Se eseguita fuori da Konga, questa funzione ignora il parametro *cancellable*."""
 	if _proxy.is_valid():
-		_proxy.ui.open_progress(title or u'Operazione in corso…', cancellable)
+		_proxy.ui.open_progress(title or 'Operazione in corso…', cancellable)
 	else:
 		if title:
 			print(colorama.Style.BRIGHT + textwrap.fill(title, width=_get_term_width() - 1) + colorama.Style.RESET_ALL)
