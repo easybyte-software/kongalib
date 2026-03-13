@@ -326,10 +326,9 @@ public:
 		}
 	}
 	
-	~TimerJob() {
-	}
-	
-	virtual CL_Status Run() {
+	~TimerJob() = default;
+
+	CL_Status Run() override {
 		if (Py_IsInitialized()) {
 			PyGILState_STATE gstate;
 			gstate = PyGILState_Ensure();
@@ -564,7 +563,7 @@ get_network_interfaces(PyObject *self, PyObject *args, PyObject *kwds)
 		PyDict_SetItemString(entry, "broadcast", temp);
 		Py_DECREF(temp);
 		
-		temp = PyInt_FromLong(IF->GetFeatures());
+		temp = PyLong_FromLong(IF->GetFeatures());
 		PyDict_SetItemString(entry, "features", temp);
 		Py_DECREF(temp);
 		
@@ -664,8 +663,7 @@ _cleanup(PyObject *self, PyObject *args)
 
 			Py_BEGIN_ALLOW_THREADS
 
-			for (std::list<MGA_Client *>::iterator it = state->fClientList.begin(); it != state->fClientList.end(); it++) {
-				MGA_Client *client = *it;
+			for (auto *client : state->fClientList) {
 				client->Disconnect();
 			}
 
@@ -702,8 +700,7 @@ _power_callback(int state, void *param)
 	if (s) {
 		if (state == CL_POWER_SLEEP) {
 			s->fThreadsLock.Lock();
-			for (std::list<MGA_Client *>::iterator it = s->fClientList.begin(); it != s->fClientList.end(); it++) {
-				MGA_Client *client = *it;
+			for (auto *client : s->fClientList) {
 				client->Disconnect();
 			}
 			s->fThreadsLock.Unlock();
@@ -797,7 +794,7 @@ checksum(PyObject *self, PyObject *args, PyObject *kwds)
 	data.Set((const char *)view.buf, (uint32)view.len);
 	PyBuffer_Release(&view);
 
-	return PyInt_FromLong(data.CheckSum());
+	return PyLong_FromLong(data.CheckSum());
 }
 
 
@@ -877,7 +874,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 		timeout = 0;
 	}
 	else {
-		timeout = PyInt_AsLong(object);
+		timeout = PyLong_AsLong(object);
 		if (PyErr_Occurred())
 			return NULL;
 	}
@@ -900,7 +897,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!oldTimeout)
 		Py_RETURN_NONE;
 	else
-		return PyInt_FromLong((long)oldTimeout);
+		return PyLong_FromLong((long)oldTimeout);
 }
 
 
@@ -914,7 +911,7 @@ get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	if (state->fTimeOut) {
-		return PyInt_FromLong((long)state->fTimeOut);
+		return PyLong_FromLong((long)state->fTimeOut);
 	}
 	else
 		Py_RETURN_NONE;
@@ -932,7 +929,7 @@ get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
 
 	if (state->fTimeOut) {
 		uint32 now = CL_GetTime();
-		return PyInt_FromLong(state->fTimeOut - CL_MIN(state->fTimeOut, (now - state->fStartTime)));
+		return PyLong_FromLong(state->fTimeOut - CL_MIN(state->fTimeOut, (now - state->fStartTime)));
 	}
 	else
 		Py_RETURN_NONE;
@@ -1214,10 +1211,6 @@ MOD_INIT(_kongalib)
 	MGA::MODULE_STATE *state;
 	
 	CL_Init();
-
-#if PY_VERSION_HEX < 0x03090000
-	PyEval_InitThreads();
-#endif
 
 	MGA::gModuleDefPtr = &sModuleDef;
 	module = PyModule_Create(&sModuleDef);

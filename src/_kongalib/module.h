@@ -82,7 +82,7 @@ typedef struct DeferredObject
 	DeferredObject(ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle);
 	~DeferredObject();
 	
-	static DeferredObject *Allocate(ClientObject *client, PyObject *userData, PyObject *success = NULL, PyObject *error = NULL, PyObject *progress = NULL, PyObject *idle = NULL);
+	static DeferredObject *Allocate(ClientObject *client, PyObject *userData, PyObject *success = nullptr, PyObject *error = nullptr, PyObject *progress = nullptr, PyObject *idle = nullptr);
 	
 	ClientObject	*fClient;
 	PyObject		*fSuccess;
@@ -219,9 +219,6 @@ extern void InitJSON();
 
 #define GET_STATE_EX(m)				((MGA::MODULE_STATE *)PyModule_GetState(m))
 #define GET_STATE()					(PyState_FindModule(MGA::gModuleDefPtr) ? GET_STATE_EX(PyState_FindModule(MGA::gModuleDefPtr)) : NULL)
-#define PyInt_FromLong				PyLong_FromLong
-#define PyInt_AsLong				PyLong_AsLong
-#define PyInt_AS_LONG				PyLong_AsLong
 
 
 #endif

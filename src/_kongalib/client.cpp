@@ -101,10 +101,10 @@ _DiscoverCB(MGA_ServerSpec *spec, uint32 numServers, MGA::DeferredObject *reques
 			PyObject *server = PyDict_New();
 			const char *uuid = spec[i].fUUID;
 			PyDict_SetItemString(server, "host", PyUnicode_DecodeUTF8(spec[i].fHost.c_str(), spec[i].fHost.size(), NULL));
-			PyDict_SetItemString(server, "port", PyInt_FromLong((long)spec[i].fPort));
+			PyDict_SetItemString(server, "port", PyLong_FromLong((long)spec[i].fPort));
 			PyDict_SetItemString(server, "name", PyUnicode_DecodeUTF8(spec[i].fName.c_str(), spec[i].fName.size(), NULL));
 			PyDict_SetItemString(server, "description", PyUnicode_DecodeUTF8(spec[i].fDescription.c_str(), spec[i].fDescription.size(), NULL));
-			PyDict_SetItemString(server, "data_version", PyInt_FromLong((long)spec[i].fDataVersion));
+			PyDict_SetItemString(server, "data_version", PyLong_FromLong((long)spec[i].fDataVersion));
 			PyDict_SetItemString(server, "uuid", PyUnicode_DecodeUTF8(uuid, strlen(uuid), NULL));
 			PyDict_SetItemString(server, "multitenant_enabled", spec[i].fMultiTenant ? Py_True : Py_False);
 			if (spec[i].fMultiTenant)
@@ -255,8 +255,8 @@ _SuccessWithUpgradeResultCB(CLU_Table *output, MGA::DeferredObject *request)
 
 	if ((request->fSuccess) && (request->fSuccess != Py_None)) {
 		PyObject *log = MGA::List_FromCLU(output->GetList("log"));
-		PyObject *old_version = PyInt_FromLong(output->GetInt32("old_version"));
-		PyObject *new_version = PyInt_FromLong(output->GetInt32("new_version"));
+		PyObject *old_version = PyLong_FromLong(output->GetInt32("old_version"));
+		PyObject *new_version = PyLong_FromLong(output->GetInt32("new_version"));
 		PyObject *result = PyObject_CallFunctionObjArgs(request->fSuccess, log, old_version, new_version, request->fUserData, NULL);
 		Py_DECREF(log);
 		Py_DECREF(old_version);
@@ -296,7 +296,7 @@ _SuccessWithResultSetCB(uint32 affectedRows, CLU_List *columnNames, CLU_List *re
 	if ((request->fSuccess) && (request->fSuccess != Py_None)) {
 		PyObject *_affectedRows, *_columnNames, *_resultSet;
 		
-		_affectedRows = PyInt_FromLong(affectedRows);
+		_affectedRows = PyLong_FromLong(affectedRows);
 		_columnNames = MGA::List_FromCLU(columnNames);
 		_resultSet = MGA::List_FromCLU(resultSet);
 		
@@ -466,10 +466,10 @@ MGA_Client_list_servers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 			PyObject *server = PyDict_New();
 			const char *uuid = spec[i].fUUID;
 			PyDict_SetItemString(server, "host", PyUnicode_DecodeUTF8(spec[i].fHost.c_str(), spec[i].fHost.size(), NULL));
-			PyDict_SetItemString(server, "port", PyInt_FromLong((long)spec[i].fPort));
+			PyDict_SetItemString(server, "port", PyLong_FromLong((long)spec[i].fPort));
 			PyDict_SetItemString(server, "name", PyUnicode_DecodeUTF8(spec[i].fName.c_str(), spec[i].fName.size(), NULL));
 			PyDict_SetItemString(server, "description", PyUnicode_DecodeUTF8(spec[i].fDescription.c_str(), spec[i].fDescription.size(), NULL));
-			PyDict_SetItemString(server, "data_version", PyInt_FromLong((long)spec[i].fDataVersion));
+			PyDict_SetItemString(server, "data_version", PyLong_FromLong((long)spec[i].fDataVersion));
 			PyDict_SetItemString(server, "uuid", PyUnicode_DecodeUTF8(uuid, strlen(uuid), NULL));
 			PyDict_SetItemString(server, "multitenant_enabled", spec[i].fMultiTenant ? Py_True : Py_False);
 			if (spec[i].fMultiTenant)
@@ -549,7 +549,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 			}
 		}
 		else {
-			spec.fPort = (uint16)PyInt_AS_LONG(object);
+			spec.fPort = (uint16)PyLong_AsLong(object);
 		}
 	}
 	else {
@@ -616,7 +616,7 @@ MGA_Client_disconnect(MGA::ClientObject *self, PyObject *args)
 static PyObject *
 MGA_Client_get_id(MGA::ClientObject *self, PyObject *args)
 {
-	return PyInt_FromLong(self->fClient->GetID());
+	return PyLong_FromLong(self->fClient->GetID());
 }
 
 
@@ -992,8 +992,8 @@ MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 		
 		info = PyTuple_New(3);
 		PyTuple_SET_ITEM(info, 0, MGA::List_FromCLU(&log));
-		PyTuple_SET_ITEM(info, 1, PyInt_FromLong(old_version));
-		PyTuple_SET_ITEM(info, 2, PyInt_FromLong(new_version));
+		PyTuple_SET_ITEM(info, 1, PyLong_FromLong(old_version));
+		PyTuple_SET_ITEM(info, 2, PyLong_FromLong(new_version));
 		
 		return info;
 	}
@@ -1080,7 +1080,7 @@ MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 		if (result != MGA_OK)
 			return MGA::setException(result, errorMsg);
 		
-		temp1 = PyInt_FromLong(affectedRows);
+		temp1 = PyLong_FromLong(affectedRows);
 		temp2 = MGA::List_FromCLU(&columnNames);
 		temp3 = MGA::List_FromCLU(&resultSet);
 		output = PyTuple_Pack(3, temp1, temp2, temp3);
@@ -1422,7 +1422,7 @@ MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kw
 	
 	if (!MGA::ConvertString(client, &sid)) {
 		PyErr_Clear();
-		clientId = PyInt_AsLong(client);
+		clientId = PyLong_AsLong(client);
 		if (PyErr_Occurred())
 			return NULL;
 	}
@@ -1475,7 +1475,7 @@ MGA_Client_kill_client(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	
 	if (!MGA::ConvertString(client, &sid)) {
 		PyErr_Clear();
-		clientId = PyInt_AsLong(client);
+		clientId = PyLong_AsLong(client);
 		if (PyErr_Occurred())
 			return NULL;
 	}

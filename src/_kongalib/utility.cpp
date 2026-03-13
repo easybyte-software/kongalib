@@ -40,7 +40,7 @@ MGA::ConvertString(PyObject *object, string *string)
 		UnicodeToUTF8(object, string);
 		return 1;
 	}
-	PyErr_SetString(PyExc_ValueError, "Expected 'str' or 'unicode' object");
+	PyErr_SetString(PyExc_ValueError, "Expected 'str' or 'bytes' object");
 	return 0;
 }
 

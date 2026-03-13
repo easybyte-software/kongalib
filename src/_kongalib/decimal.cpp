@@ -324,7 +324,7 @@ MGA_Decimal_int(MGA::DecimalObject *self)
 {
 	int64 value = self->fValue.ToInt64();
 	if ((value >= -2147483647L - 1) && (value <= 2147483647L))
-		return PyInt_FromLong((long)value);
+		return PyLong_FromLong((long)value);
 	else
 		return PyLong_FromLongLong(value);
 }
@@ -342,7 +342,7 @@ MGA_Decimal_index(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return (PyObject *)self;
 	}
 	if ((value >= -2147483647L - 1) && (value <= 2147483647L))
-		return PyInt_FromLong((long)value);
+		return PyLong_FromLong((long)value);
 	else
 		return PyLong_FromLongLong(value);
 }
@@ -429,11 +429,7 @@ MGA_Decimal_div(PyObject *_self, PyObject *_other)
 static long
 MGA_Decimal_hash(MGA::DecimalObject *self)
 {
-#if (PY_VERSION_HEX >= 0x030a00f0)		// Python 3.10.0 and newer
 	return _Py_HashDouble((PyObject *)self, self->fValue);
-#else
-	return _Py_HashDouble(self->fValue);
-#endif
 }
 
 
