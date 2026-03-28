@@ -17,6 +17,7 @@
 
 #include "module.h"
 
+#define CLIENT_STATE()		((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))
 
 static MGA_Status
 _IdleCB(MGA::DeferredObject *request)
@@ -27,7 +28,7 @@ _IdleCB(MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return MGA_OK;
@@ -57,12 +58,12 @@ _SyncIdleCB(void *unused)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return MGA_OK;
 	}
-	
+
 	if ((state->fIdleCB) && (state->fIdleCB != Py_None)) {
 		PyObject *result = PyObject_CallFunctionObjArgs(state->fIdleCB, NULL);
 		if (!result) {
@@ -87,7 +88,7 @@ _DiscoverCB(MGA_ServerSpec *spec, uint32 numServers, MGA::DeferredObject *reques
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -139,7 +140,7 @@ _SuccessCB(MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -173,7 +174,7 @@ _SuccessWithTableCB(CLU_Table *output, MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -182,7 +183,7 @@ _SuccessWithTableCB(CLU_Table *output, MGA::DeferredObject *request)
 	request->fPending = false;
 
 	if ((request->fSuccess) && (request->fSuccess != Py_None)) {
-		PyObject *table = MGA::Table_FromCLU(output);
+		PyObject *table = MGA::Table_FromCLU(state, output);
 		PyObject *result = PyObject_CallFunctionObjArgs(request->fSuccess, table, request->fUserData, NULL);
 		Py_DECREF(table);
 		if (!result) {
@@ -209,7 +210,7 @@ _SuccessWithListCB(CLU_List *output, MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -218,7 +219,7 @@ _SuccessWithListCB(CLU_List *output, MGA::DeferredObject *request)
 	request->fPending = false;
 
 	if ((request->fSuccess) && (request->fSuccess != Py_None)) {
-		PyObject *list = MGA::List_FromCLU(output);
+		PyObject *list = MGA::List_FromCLU(state, output);
 		PyObject *result = PyObject_CallFunctionObjArgs(request->fSuccess, list, request->fUserData, NULL);
 		Py_DECREF(list);
 		if (!result) {
@@ -245,7 +246,7 @@ _SuccessWithUpgradeResultCB(CLU_Table *output, MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -254,7 +255,7 @@ _SuccessWithUpgradeResultCB(CLU_Table *output, MGA::DeferredObject *request)
 	request->fPending = false;
 
 	if ((request->fSuccess) && (request->fSuccess != Py_None)) {
-		PyObject *log = MGA::List_FromCLU(output->GetList("log"));
+		PyObject *log = MGA::List_FromCLU(state, output->GetList("log"));
 		PyObject *old_version = PyLong_FromLong(output->GetInt32("old_version"));
 		PyObject *new_version = PyLong_FromLong(output->GetInt32("new_version"));
 		PyObject *result = PyObject_CallFunctionObjArgs(request->fSuccess, log, old_version, new_version, request->fUserData, NULL);
@@ -285,7 +286,7 @@ _SuccessWithResultSetCB(uint32 affectedRows, CLU_List *columnNames, CLU_List *re
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -297,8 +298,8 @@ _SuccessWithResultSetCB(uint32 affectedRows, CLU_List *columnNames, CLU_List *re
 		PyObject *_affectedRows, *_columnNames, *_resultSet;
 		
 		_affectedRows = PyLong_FromLong(affectedRows);
-		_columnNames = MGA::List_FromCLU(columnNames);
-		_resultSet = MGA::List_FromCLU(resultSet);
+		_columnNames = MGA::List_FromCLU(state, columnNames);
+		_resultSet = MGA::List_FromCLU(state, resultSet);
 		
 		PyObject *result = PyObject_CallFunctionObjArgs(request->fSuccess, _affectedRows, _columnNames, _resultSet, request->fUserData, NULL);
 		
@@ -329,7 +330,7 @@ _ErrorCB(MGA_Status error_no, const string& error, MGA::DeferredObject *request)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!state) || (!state->fInitialized)) {
 		PyGILState_Release(gstate);
 		return;
@@ -374,7 +375,7 @@ _ProgressCB(MGA_ProgressType type, double completeness, const string& message, M
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 	
-	MGA::MODULE_STATE *s = GET_STATE();
+	MGA::MODULE_STATE *s = ((MGA::MODULE_STATE *)PyModule_GetState(request->fModule));
 	if ((!s) || (!s->fInitialized)) {
 		PyGILState_Release(gstate);
 		return result;
@@ -446,7 +447,7 @@ MGA_Client_list_servers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -558,7 +559,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	}
 	
 	if ((optionsObj) && (optionsObj != Py_None) && (PyDict_Check(optionsObj))) {
-		MGA::Table_FromPy(optionsObj, &options);
+		MGA::Table_FromPy(CLIENT_STATE(),optionsObj, &options);
 	}
 	if (PyErr_Occurred())
 		return NULL;
@@ -569,7 +570,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		spec.fRemoteAddress = options.GetString("remote_address");
 
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -587,7 +588,7 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(result);
 		
-		return MGA::Table_FromCLU(&output);
+		return MGA::Table_FromCLU(CLIENT_STATE(),&output);
 	}
 }
 
@@ -649,7 +650,7 @@ MGA_Client_get_connection_info(MGA::ClientObject *self, PyObject *args)
 	else
 		info.Set("user", user);
 	
-	return MGA::Table_FromCLU(&info);
+	return MGA::Table_FromCLU(CLIENT_STATE(),&info);
 }
 
 
@@ -686,13 +687,13 @@ MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (py_input) {
-		MGA::Table_FromPy(py_input, &input);
+		MGA::Table_FromPy(CLIENT_STATE(),py_input, &input);
 		if (PyErr_Occurred())
 			return NULL;
 	}
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress, idle);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress, idle);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -710,7 +711,7 @@ MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(result, &output);
 		
-		return MGA::Table_FromCLU(&output);
+		return MGA::Table_FromCLU(CLIENT_STATE(),&output);
 	}
 }
 
@@ -743,7 +744,7 @@ MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -759,7 +760,7 @@ MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(&dict);
+		output = MGA::Table_FromCLU(CLIENT_STATE(),&dict);
 		
 		return output;
 	}
@@ -782,7 +783,7 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	
 	is_configured = PyObject_IsTrue(configured) ? true : false;
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -798,7 +799,7 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(&drivers);
+		output = MGA::List_FromCLU(CLIENT_STATE(),&drivers);
 		
 		return output;
 	}
@@ -825,7 +826,7 @@ MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	
 	quick = PyObject_IsTrue(quickObj) ? true : false;
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -841,7 +842,7 @@ MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(&databases);
+		output = MGA::Table_FromCLU(CLIENT_STATE(),&databases);
 		
 		return output;
 	}
@@ -861,7 +862,7 @@ MGA_Client_create_database(MGA::ClientObject *self, PyObject *args, PyObject *kw
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -899,7 +900,7 @@ MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -915,7 +916,7 @@ MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(&info);
+		output = MGA::Table_FromCLU(CLIENT_STATE(),&info);
 		
 		return output;
 	}
@@ -936,7 +937,7 @@ MGA_Client_close_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	is_backup = PyObject_IsTrue(backup) ? true : false;
 
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -974,7 +975,7 @@ MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -991,7 +992,7 @@ MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 			return MGA::setException(self, result);
 		
 		info = PyTuple_New(3);
-		PyTuple_SET_ITEM(info, 0, MGA::List_FromCLU(&log));
+		PyTuple_SET_ITEM(info, 0, MGA::List_FromCLU(CLIENT_STATE(),&log));
 		PyTuple_SET_ITEM(info, 1, PyLong_FromLong(old_version));
 		PyTuple_SET_ITEM(info, 2, PyLong_FromLong(new_version));
 		
@@ -1018,7 +1019,7 @@ MGA_Client_delete_database(MGA::ClientObject *self, PyObject *args, PyObject *kw
 	}
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1058,7 +1059,7 @@ MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	collapse_blobs = PyObject_IsTrue(_collapse_blobs) ? true : false;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1081,8 +1082,8 @@ MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 			return MGA::setException(result, errorMsg);
 		
 		temp1 = PyLong_FromLong(affectedRows);
-		temp2 = MGA::List_FromCLU(&columnNames);
-		temp3 = MGA::List_FromCLU(&resultSet);
+		temp2 = MGA::List_FromCLU(CLIENT_STATE(),&columnNames);
+		temp3 = MGA::List_FromCLU(CLIENT_STATE(),&resultSet);
 		output = PyTuple_Pack(3, temp1, temp2, temp3);
 		Py_DECREF(temp1);
 		Py_DECREF(temp2);
@@ -1111,7 +1112,7 @@ MGA_Client_backup_database(MGA::ClientObject *self, PyObject *args, PyObject *kw
 	is_storeIndex = PyObject_IsTrue(storeIndex) ? true : false;
 
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1145,7 +1146,7 @@ MGA_Client_restore_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1180,7 +1181,7 @@ MGA_Client_list_backups(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1196,7 +1197,7 @@ MGA_Client_list_backups(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(&backups);
+		output = MGA::List_FromCLU(CLIENT_STATE(),&backups);
 		
 		return output;
 	}
@@ -1233,7 +1234,7 @@ MGA_Client_delete_backup(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 	}
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1273,7 +1274,7 @@ MGA_Client_optimize_database(MGA::ClientObject *self, PyObject *args, PyObject *
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1307,7 +1308,7 @@ MGA_Client_repair_database(MGA::ClientObject *self, PyObject *args, PyObject *kw
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1345,7 +1346,7 @@ MGA_Client_index_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 	is_run = PyObject_IsTrue(run) ? true : false;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1380,7 +1381,7 @@ MGA_Client_list_clients(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	full = PyObject_IsTrue(fullObj) ? true : false;
 	any = PyObject_IsTrue(anyObj) ? true : false;
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1400,7 +1401,7 @@ MGA_Client_list_clients(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::List_FromCLU(&list);
+		output = MGA::List_FromCLU(CLIENT_STATE(),&list);
 		
 		return output;
 	}
@@ -1428,7 +1429,7 @@ MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kw
 	}
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1453,7 +1454,7 @@ MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kw
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(&info);
+		output = MGA::Table_FromCLU(CLIENT_STATE(),&info);
 		
 		return output;
 	}
@@ -1481,7 +1482,7 @@ MGA_Client_kill_client(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 	}
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1528,7 +1529,7 @@ MGA_Client_authenticate(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1550,7 +1551,7 @@ MGA_Client_authenticate(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		if (result != MGA_OK)
 			return MGA::setException(self, result);
 		
-		output = MGA::Table_FromCLU(&userInfo);
+		output = MGA::Table_FromCLU(CLIENT_STATE(),&userInfo);
 		
 		return output;
 	}
@@ -1571,7 +1572,7 @@ MGA_Client_full_text_search(MGA::ClientObject *self, PyObject *args, PyObject *k
 		return NULL;
 	
 	if ((success) && (success != Py_None)) {
-		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(self, userdata, success, error, progress);
+		MGA::DeferredObject *request = MGA::DeferredObject::Allocate(PyType_GetModule(Py_TYPE(self)), (MGA::ClientObject *)self, userdata, success, error, progress);
 		
 		Py_INCREF(request);
 		Py_BEGIN_ALLOW_THREADS
@@ -1591,7 +1592,7 @@ MGA_Client_full_text_search(MGA::ClientObject *self, PyObject *args, PyObject *k
 			return MGA::setException(self, result);
 		}
 		
-		resultsObject = MGA::List_FromCLU(&results);
+		resultsObject = MGA::List_FromCLU(CLIENT_STATE(),&results);
 		
 		return resultsObject;
 	}
@@ -1619,14 +1620,11 @@ static void
 MGA_Client_dealloc(MGA::ClientObject *self)
 {
 	MGA::untrackClient(self);
-	
-// 	Py_BEGIN_ALLOW_THREADS
-// 	
+
+	PyTypeObject *type = Py_TYPE(self);
 	self->~ClientObject();
-// 	
-// 	Py_END_ALLOW_THREADS
-	
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
 
@@ -1663,55 +1661,29 @@ static PyMethodDef MGA_Client_methods[] = {
 };
 
 
-/** Vtable describing the MGA.Client type. */
-PyTypeObject MGA::ClientType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.Client",						/* tp_name */
-    sizeof(MGA::ClientObject),				/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)MGA_Client_dealloc,			/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	0,										/* tp_repr */
-	0,										/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	0,										/* tp_hash */
-	0,										/* tp_call */
-	0,										/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,						/* tp_flags */
-	"Client objects",						/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	0,										/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	MGA_Client_methods,						/* tp_methods */
-	0,										/* tp_members */
-	0,										/* tp_getset */
-	0,										/* tp_base */
-	0,										/* tp_dict */
-	0,										/* tp_descr_get */
-	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
-	0,										/* tp_init */
-	0,										/* tp_alloc */
-	(newfunc)MGA_Client_new,				/* tp_new */
+/** Slot definitions for the MGA.Client type. */
+static PyType_Slot Client_slots[] = {
+	{ Py_tp_dealloc, (void *)MGA_Client_dealloc },
+	{ Py_tp_doc, (void *)"Client objects" },
+	{ Py_tp_methods, (void *)MGA_Client_methods },
+	{ Py_tp_new, (void *)MGA_Client_new },
+	{ 0, NULL }
 };
 
+PyType_Spec Client_spec = {
+	"_kongalib.Client",
+	sizeof(MGA::ClientObject),
+	0,
+	Py_TPFLAGS_DEFAULT,
+	Client_slots,
+};
 
 namespace MGA {
-	
+
 	ClientObject::ClientObject()
 		: fClient(NULL)
 	{
 	}
-	
+
 };
 

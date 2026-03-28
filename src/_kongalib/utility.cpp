@@ -61,7 +61,7 @@ MGA::ConvertString(PyObject *object, string *string)
  *	\return						A Python object representing the converted entry.
  */
 static PyObject *
-Entry_FromCLU(CLU_Entry *entry)
+Entry_FromCLU(MGA::MODULE_STATE *state, CLU_Entry *entry)
 {
 	PyObject *object;
 	MGA::DecimalObject *decimal;
@@ -84,7 +84,7 @@ Entry_FromCLU(CLU_Entry *entry)
 	case CLU_NEW_DECIMAL:
 #endif
 	case CLU_DECIMAL:
-		decimal = MGA::DecimalObject::Allocate();
+		decimal = MGA::DecimalObject::Allocate(state);
 		decimal->fValue = entry->Decimal();
 		object = (PyObject *)decimal;
 		break;
@@ -142,11 +142,11 @@ Entry_FromCLU(CLU_Entry *entry)
 		break;
 	
 	case CLU_LIST:
-		object = MGA::List_FromCLU(entry->List());
+		object = MGA::List_FromCLU(state, entry->List());
 		break;
-	
+
 	case CLU_TABLE:
-		object = MGA::Table_FromCLU(entry->Table());
+		object = MGA::Table_FromCLU(state, entry->Table());
 		break;
 	
 	case CLU_NULL:
@@ -176,7 +176,7 @@ Entry_FromCLU(CLU_Entry *entry)
  *	\return						The converted #CLU_Entry representing the Python object.
  */
 static void
-Entry_FromPy(PyObject *object, CLU_Entry *entry)
+Entry_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_Entry *entry)
 {
 	char *text;
 	Py_buffer buffer;
@@ -191,7 +191,7 @@ Entry_FromPy(PyObject *object, CLU_Entry *entry)
 	else if (PyLong_Check(object)) {
 		entry->Set((int64)PyLong_AsLongLong(object));
 	}
-	else if (PyObject_TypeCheck(object, &MGA::DecimalType)) {
+	else if (state && PyObject_TypeCheck(object, state->fDecimalType)) {
 		entry->Set(((MGA::DecimalObject *)object)->fValue);
 	}
 	else if (PyFloat_Check(object)) {
@@ -225,12 +225,12 @@ Entry_FromPy(PyObject *object, CLU_Entry *entry)
 	}
 	else if ((PyList_Check(object)) || (PyTuple_Check(object))) {
 		CLU_List temp;
-		MGA::List_FromPy(object, &temp);
+		MGA::List_FromPy(state, object, &temp);
 		entry->Set(temp);
 	}
 	else if (PyDict_Check(object)) {
 		CLU_Table temp;
-		MGA::Table_FromPy(object, &temp);
+		MGA::Table_FromPy(state, object, &temp);
 		entry->Set(temp);
 	}
 	else if ((PyObject_CheckBuffer(object)) && (!PyObject_GetBuffer(object, &buffer, PyBUF_SIMPLE))) {
@@ -264,7 +264,7 @@ Entry_FromPy(PyObject *object, CLU_Entry *entry)
  *	\return						A Python object representing the converted list.
  */
 PyObject *
-MGA::List_FromCLU(CLU_List *_list)
+MGA::List_FromCLU(MGA::MODULE_STATE *state, CLU_List *_list)
 {
 	PyObject *object = PyList_New(_list->Count());
 	PyObject *item;
@@ -272,7 +272,7 @@ MGA::List_FromCLU(CLU_List *_list)
 	Py_ssize_t pos;
 	
 	for (pos = 0, it = _list->begin(); it != _list->end(); it++, pos++) {
-		item = Entry_FromCLU(it.ptr());
+		item = Entry_FromCLU(state, it.ptr());
 		if (!item) {
 			for (; pos < (signed)_list->Count(); pos++) {
 				Py_INCREF(Py_None);
@@ -294,7 +294,7 @@ MGA::List_FromCLU(CLU_List *_list)
  *	\return						A #CLU_List representing the converted list.
  */
 void
-MGA::List_FromPy(PyObject *object, CLU_List *list)
+MGA::List_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_List *list)
 {
 	CLU_Entry entry;
 	PyObject *item;
@@ -306,7 +306,7 @@ MGA::List_FromPy(PyObject *object, CLU_List *list)
 		size = PyTuple_GET_SIZE(object);
 		for (pos = 0; (pos < size) && (!PyErr_Occurred()); pos++) {
 			item = PyTuple_GET_ITEM(object, pos);
-			Entry_FromPy(item, &entry);
+			Entry_FromPy(state, item, &entry);
 			list->Append(entry);
 		}
 	}
@@ -314,7 +314,7 @@ MGA::List_FromPy(PyObject *object, CLU_List *list)
 		size = PyList_GET_SIZE(object);
 		for (pos = 0; (pos < size) && (!PyErr_Occurred()); pos++) {
 			item = PyList_GET_ITEM(object, pos);
-			Entry_FromPy(item, &entry);
+			Entry_FromPy(state, item, &entry);
 			list->Append(entry);
 		}
 	}
@@ -328,14 +328,14 @@ MGA::List_FromPy(PyObject *object, CLU_List *list)
  *	\return						A Python object representing the converted table.
  */
 PyObject *
-MGA::Table_FromCLU(CLU_Table *table)
+MGA::Table_FromCLU(MGA::MODULE_STATE *state, CLU_Table *table)
 {
 	PyObject *object = PyDict_New();
 	PyObject *value;
 	CLU_Table::iterator it;
 	
 	for (it = table->begin(); it != table->end(); it++) {
-		value = Entry_FromCLU(it.ptr());
+		value = Entry_FromCLU(state, it.ptr());
 		if (!value) {
 			Py_DECREF(object);
 			return NULL;
@@ -357,7 +357,7 @@ MGA::Table_FromCLU(CLU_Table *table)
  *	\return						A #CLU_Table representing the converted table.
  */
 void
-MGA::Table_FromPy(PyObject *object, CLU_Table *table)
+MGA::Table_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_Table *table)
 {
 	CLU_Entry entry;
 	PyObject *key, *value, *okey;
@@ -376,7 +376,7 @@ MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 				skey = PyUnicode_AsUTF8(okey);
 				Py_DECREF(okey);
 			}
-			Entry_FromPy(value, &entry);
+			Entry_FromPy(state, value, &entry);
 			table->Set(skey, entry);
 		}
 	}
@@ -387,8 +387,10 @@ MGA::Table_FromPy(PyObject *object, CLU_Table *table)
 static void
 sem_dealloc(MGA::NamedSemaphoreObject *self)
 {
+	PyTypeObject *type = Py_TYPE(self);
 	self->~NamedSemaphoreObject();
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
 
@@ -458,46 +460,23 @@ static PyMethodDef sem_methods[] = {
 };
 
 
-PyTypeObject MGA::NamedSemaphoreType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.NamedSemaphore",				/* tp_name */
-    sizeof(MGA::NamedSemaphoreType),		/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)sem_dealloc,				/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	0,										/* tp_repr */
-	0,										/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	0,										/* tp_hash */
-	0,										/* tp_call */
-	0,										/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	"NamedSemaphore objects",				/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	0,										/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	sem_methods,							/* tp_methods */
-	0,										/* tp_members */
-	0,										/* tp_getset */
-	0,										/* tp_base */
-	0,										/* tp_dict */
-	0,										/* tp_descr_get */
-	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
-	0,										/* tp_init */
-	0,										/* tp_alloc */
-	(newfunc)sem_new,						/* tp_new */
+static PyType_Slot NamedSemaphore_slots[] = {
+	{ Py_tp_dealloc, (void *)sem_dealloc },
+	{ Py_tp_doc, (void *)"NamedSemaphore objects" },
+	{ Py_tp_methods, (void *)sem_methods },
+	{ Py_tp_new, (void *)sem_new },
+	{ 0, NULL }
 };
+
+PyType_Spec NamedSemaphore_spec = {
+	"_kongalib.NamedSemaphore",
+	sizeof(MGA::NamedSemaphoreObject),
+	0,
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	NamedSemaphore_slots,
+};
+
+/* NamedSemaphoreType is now stored in MODULE_STATE */
 
 
 

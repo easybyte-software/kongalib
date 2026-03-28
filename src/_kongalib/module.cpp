@@ -34,9 +34,26 @@
 #endif
 
 
-PyModuleDef					*MGA::gModuleDefPtr = NULL;
-unsigned long				sMainThreadID = -1;
+extern PyType_Spec Decimal_spec;
+extern PyType_Spec Client_spec;
+extern PyType_Spec JSONEncoder_spec;
+extern PyType_Spec JSONDecoder_spec;
+extern PyType_Spec NamedSemaphore_spec;
 
+
+MGA::MODULE_STATE *
+MGA::getModuleState()
+{
+	static PyObject *name = PyUnicode_InternFromString("_kongalib");
+	PyObject *mod = PyImport_GetModule(name);
+	if (!mod)
+		return NULL;
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(mod));
+#if PY_VERSION_HEX >= 0x030D0000
+	Py_DECREF(mod);
+#endif
+	return state;
+}
 
 
 static void
@@ -78,7 +95,7 @@ MGA::translate(MGA_Status error)
 PyObject *
 MGA::setException(MGA_Status error_code, const string& error_msg)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	std::string string = error_msg;
 	if (string.empty() && state)
 		string = MGA::GetError(error_code);
@@ -101,10 +118,10 @@ MGA::setException(MGA_Status error_code, const string& error_msg)
 PyObject *
 MGA::setException(MGA_Status error_code, CLU_Table *output)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	MGA_Status result = error_code;
 	string error;
-	
+
 	if ((result == MGA_OK) && (output->Exists(MGA_OUT_ERRNO)))
 		result = output->Get(MGA_OUT_ERRNO).Int32();
 	if (result == MGA_OK) {
@@ -130,12 +147,6 @@ MGA::setException(MGA_Status error_code, CLU_Table *output)
 PyObject *
 MGA::setException(MGA::ClientObject *client, MGA_Status result)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
-	if (!state) {
-		PyErr_SetString(PyExc_RuntimeError, "No module state!");
-		return NULL;
-	}
-
 	return MGA::setException(result, MGA::GetError(result));
 }
 
@@ -143,7 +154,7 @@ MGA::setException(MGA::ClientObject *client, MGA_Status result)
 bool
 MGA::trackClient(MGA::ClientObject *client)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(client));
 	if (!state)
 		return false;
 	CL_AutoLocker locker(&state->fThreadsLock);
@@ -166,7 +177,7 @@ MGA::trackClient(MGA::ClientObject *client)
 void
 MGA::untrackClient(MGA::ClientObject *client)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(client));
 	if (state) {
 		CL_AutoLocker locker(&state->fThreadsLock);
 		if (state->fInitialized) {
@@ -178,9 +189,10 @@ MGA::untrackClient(MGA::ClientObject *client)
 }
 
 
-MGA::DeferredObject::DeferredObject(ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle)
-	: fClient(client), fSuccess(success), fError(error), fProgress(progress), fIdle(idle), fUserData(userData), fAborted(false), fExecuted(false), fPending(true)
+MGA::DeferredObject::DeferredObject(PyObject *module, ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle)
+	: fModule(module), fClient(client), fSuccess(success), fError(error), fProgress(progress), fIdle(idle), fUserData(userData), fAborted(false), fExecuted(false), fPending(true)
 {
+	Py_INCREF(module);
 	Py_XINCREF(client);
 	Py_INCREF(userData);
 	Py_XINCREF(success);
@@ -192,6 +204,7 @@ MGA::DeferredObject::DeferredObject(ClientObject *client, PyObject *userData, Py
 
 MGA::DeferredObject::~DeferredObject()
 {
+	Py_DECREF(fModule);
 	Py_XDECREF(fClient);
 	Py_XDECREF(fSuccess);
 	Py_XDECREF(fError);
@@ -202,24 +215,56 @@ MGA::DeferredObject::~DeferredObject()
 
 
 MGA::DeferredObject *
-MGA::DeferredObject::Allocate(MGA::ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle)
+MGA::DeferredObject::Allocate(PyObject *module, MGA::ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle)
 {
-	return new (DeferredType.tp_alloc(&DeferredType, 0)) DeferredObject(client, userData, success, error, progress, idle);
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(module));
+	return new (state->fDeferredType->tp_alloc(state->fDeferredType, 0)) DeferredObject(module, client, userData, success, error, progress, idle);
+}
+
+
+static int
+Deferred_traverse(MGA::DeferredObject *self, visitproc visit, void *arg)
+{
+	Py_VISIT(self->fModule);
+	Py_VISIT(self->fClient);
+	Py_VISIT(self->fSuccess);
+	Py_VISIT(self->fError);
+	Py_VISIT(self->fProgress);
+	Py_VISIT(self->fIdle);
+	Py_VISIT(self->fUserData);
+	return 0;
+}
+
+
+static int
+Deferred_clear(MGA::DeferredObject *self)
+{
+	Py_CLEAR(self->fModule);
+	Py_CLEAR(self->fClient);
+	Py_CLEAR(self->fSuccess);
+	Py_CLEAR(self->fError);
+	Py_CLEAR(self->fProgress);
+	Py_CLEAR(self->fIdle);
+	Py_CLEAR(self->fUserData);
+	return 0;
 }
 
 
 static void
 Deferred_dealloc(MGA::DeferredObject *self)
 {
+	PyTypeObject *type = Py_TYPE(self);
+	PyObject_GC_UnTrack(self);
 	self->~DeferredObject();
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
 
 static PyObject *
 Deferred_cancel(MGA::DeferredObject *self, PyObject *args)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self->fModule));
 	if (!self->fAborted) {
 		Py_BEGIN_ALLOW_THREADS
 		if (state)
@@ -230,7 +275,7 @@ Deferred_cancel(MGA::DeferredObject *self, PyObject *args)
 			state->fTimerLock.Unlock();
 		Py_END_ALLOW_THREADS
 	}
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -279,38 +324,23 @@ static PyGetSetDef Deferred_getset[] = {
 };
 
 
-/** Vtable describing the MGA.Deferred type. */
-PyTypeObject MGA::DeferredType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.Deferred",					/* tp_name */
-    sizeof(MGA::DeferredObject),			/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)Deferred_dealloc,			/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	0,										/* tp_repr */
-	0,										/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	0,										/* tp_hash */
-	0,										/* tp_call */
-	0,										/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,						/* tp_flags */
-	"Deferred objects",						/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	0,										/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	Deferred_methods,						/* tp_methods */
-	0,										/* tp_members */
-	Deferred_getset,						/* tp_getset */
+/** Slot definitions for the MGA.Deferred type. */
+static PyType_Slot Deferred_slots[] = {
+	{ Py_tp_dealloc, (void *)Deferred_dealloc },
+	{ Py_tp_traverse, (void *)Deferred_traverse },
+	{ Py_tp_clear, (void *)Deferred_clear },
+	{ Py_tp_doc, (void *)"Deferred objects" },
+	{ Py_tp_methods, (void *)Deferred_methods },
+	{ Py_tp_getset, (void *)Deferred_getset },
+	{ 0, NULL }
+};
+
+static PyType_Spec Deferred_spec = {
+	"_kongalib.Deferred",
+	sizeof(MGA::DeferredObject),
+	0,
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+	Deferred_slots,
 };
 
 
@@ -320,19 +350,19 @@ public:
 	TimerJob(uint32 timeout, MGA::DeferredObject *deferred)
 		: CL_Job(), fTimeOut(timeout), fDeferred(deferred)
 	{
-		MGA::MODULE_STATE *state = GET_STATE();
+		MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(deferred->fModule));
 		if (state) {
 			PyList_Append(state->fTimerList, (PyObject *)fDeferred);
 		}
 	}
-	
+
 	~TimerJob() = default;
 
 	CL_Status Run() override {
 		if (Py_IsInitialized()) {
 			PyGILState_STATE gstate;
 			gstate = PyGILState_Ensure();
-			MGA::MODULE_STATE *state = GET_STATE();
+			MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(fDeferred->fModule));
 			CL_Status status;
 
 			if (!state) {
@@ -382,10 +412,10 @@ public:
 			fDeferred->fPending = false;
 			fDeferred->fAborted = true;
 		}
-		
+
 		return CL_OK;
 	}
-	
+
 private:
 	uint32					fTimeOut;
 	MGA::DeferredObject		*fDeferred;
@@ -395,15 +425,15 @@ private:
 static PyObject *
 start_timer(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	char *kwlist[] = { "milliseconds", "callback", "userdata", NULL };
 	int32 ms;
 	PyObject *callback, *userdata = Py_None;
-	
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iO|O", kwlist, &ms, &callback, &userdata))
 		return NULL;
-	
-	MGA::DeferredObject *deferred = MGA::DeferredObject::Allocate(NULL, userdata, callback, NULL, NULL);
+
+	MGA::DeferredObject *deferred = MGA::DeferredObject::Allocate(self, NULL, userdata, callback, NULL, NULL);
 	if (state && state->fInitialized)
 		state->fDispatcher->AddJob(CL_New(TimerJob(CL_MAX(0, ms), deferred)), true);
 	return (PyObject *)deferred;
@@ -428,14 +458,14 @@ save_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	CL_XML_Document doc;
 	CL_Blob stream;
 	string xml;
-	
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist, &PyDict_Type, &dict))
 		return NULL;
-	
-	MGA::Table_FromPy(dict, &table);
+
+	MGA::Table_FromPy(((MGA::MODULE_STATE *)PyModule_GetState(self)), dict, &table);
 	if (PyErr_Occurred())
 		return NULL;
-	
+
 	Py_BEGIN_ALLOW_THREADS
 	doc.SetRoot(table.SaveXML(&doc));
 	doc.Save(stream);
@@ -443,7 +473,7 @@ save_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	xml << stream;
 	Py_END_ALLOW_THREADS
 	result = PyUnicode_DecodeUTF8(xml.c_str(), xml.size(), NULL);
-	
+
 	return result;
 }
 
@@ -467,10 +497,10 @@ load_xml(PyObject *self, PyObject *args, PyObject *kwds)
 	CL_XML_Document doc;
 	CL_XML_Node root;
 	bool load;
-	
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &xml))
 		return NULL;
-	
+
 	Py_BEGIN_ALLOW_THREADS
 	CL_Blob stream;
 	stream << xml;
@@ -481,14 +511,14 @@ load_xml(PyObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_ValueError, doc.GetError().c_str());
 		return NULL;
 	}
-	
+
 	root = doc.GetRoot();
 	if ((!root) || (!table.LoadXML(&doc, root))) {
 		PyErr_SetString(PyExc_ValueError, "malformed XML dictionary definition");
 		return NULL;
 	}
-	
-	return MGA::Table_FromCLU(&table);
+
+	return MGA::Table_FromCLU(((MGA::MODULE_STATE *)PyModule_GetState(self)), &table);
 }
 
 
@@ -508,14 +538,14 @@ host_lookup(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "address", NULL };
 	string address;
-	
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &address))
 		return NULL;
-	
+
 	Py_BEGIN_ALLOW_THREADS
 	address = CL_NetAddress::Lookup(address);
 	Py_END_ALLOW_THREADS
-	
+
 	return PyUnicode_DecodeUTF8(address.c_str(), address.size(), NULL);
 }
 
@@ -526,47 +556,47 @@ get_network_interfaces(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *result;
 	CL_NetInterface IFs[32];
 	uint32 i, numIFs;
-	
+
 	Py_BEGIN_ALLOW_THREADS
 	numIFs = CL_NetInterface::Enumerate(IFs, 32);
 	Py_END_ALLOW_THREADS
 	result = PyTuple_New(numIFs);
-	
+
 	for (i = 0; i < numIFs; i++) {
 		PyObject *entry = PyDict_New();
 		PyObject *temp;
 		CL_NetInterface *IF = &IFs[i];
 		CL_NetAddress address;
 		uint8 mac[6];
-		
+
 		temp = PyUnicode_FromStringAndSize(IF->GetName(), strlen(IF->GetName()));
 		PyDict_SetItemString(entry, "name", temp);
 		Py_DECREF(temp);
-		
+
 		IF->GetMAC(mac);
 		temp = PyBytes_FromStringAndSize((const char *)mac, 6);
 		PyDict_SetItemString(entry, "mac", temp);
 		Py_DECREF(temp);
-		
+
 		address = IF->GetAddress();
 		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
 		PyDict_SetItemString(entry, "address", temp);
 		Py_DECREF(temp);
-		
+
 		address = IF->GetNetmask();
 		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
 		PyDict_SetItemString(entry, "netmask", temp);
 		Py_DECREF(temp);
-		
+
 		address = IF->GetBroadcast();
 		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
 		PyDict_SetItemString(entry, "broadcast", temp);
 		Py_DECREF(temp);
-		
+
 		temp = PyLong_FromLong(IF->GetFeatures());
 		PyDict_SetItemString(entry, "features", temp);
 		Py_DECREF(temp);
-		
+
 		PyTuple_SetItem(result, (Py_ssize_t)i, entry);
 	}
 	return result;
@@ -603,10 +633,10 @@ hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "password", NULL };
 	string password;
-	
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &password))
 		return NULL;
-	
+
 	password = MGA::GetPassword(password);
 	return PyUnicode_DecodeUTF8(password.c_str(), password.size(), NULL);
 }
@@ -615,7 +645,7 @@ hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 lock(PyObject *self, PyObject *args)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 
 	if (state) {
 		Py_BEGIN_ALLOW_THREADS
@@ -630,7 +660,7 @@ lock(PyObject *self, PyObject *args)
 static PyObject *
 unlock(PyObject *self, PyObject *args)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 
 	if (state) {
 		Py_BEGIN_ALLOW_THREADS
@@ -645,16 +675,16 @@ unlock(PyObject *self, PyObject *args)
 static PyObject *
 _cleanup(PyObject *self, PyObject *args)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 
 	if ((Py_IsInitialized()) && (state) && (state->fInitialized)) {
 		PyThreadState *tstate = PyThreadState_Get();
-		if (((unsigned long)tstate->thread_id == sMainThreadID) && (state->fDispatcher)) {
+		if (((unsigned long)tstate->thread_id == state->fMainThreadID) && (state->fDispatcher)) {
 			{
 				CL_AutoLocker locker(&state->fThreadsLock);
 				state->fInitialized = false;
 			}
-			
+
 			for (int i = 0; i < PyList_GET_SIZE(state->fTimerList); i++) {
 				MGA::DeferredObject *deferred = (MGA::DeferredObject *)PyList_GET_ITEM(state->fTimerList, i);
 				deferred->fAborted = true;
@@ -670,7 +700,7 @@ _cleanup(PyObject *self, PyObject *args)
 			while (!state->fDispatcher->WaitForJobs(50)) {
 				PyGILState_STATE gstate;
 				gstate = PyGILState_Ensure();
-				
+
 				if ((state->fIdleCB) && (state->fIdleCB != Py_None)) {
 					PyObject *result = PyObject_CallFunctionObjArgs(state->fIdleCB, NULL);
 					if (!result) {
@@ -685,7 +715,7 @@ _cleanup(PyObject *self, PyObject *args)
 			Py_END_ALLOW_THREADS
 		}
 	}
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -696,7 +726,7 @@ _power_callback(int state, void *param)
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
 
-	MGA::MODULE_STATE *s = GET_STATE();
+	MGA::MODULE_STATE *s = ((MGA::MODULE_STATE *)PyModule_GetState((PyObject *)param));
 	if (s) {
 		if (state == CL_POWER_SLEEP) {
 			s->fThreadsLock.Lock();
@@ -736,7 +766,7 @@ _power_callback(int state, void *param)
 static PyObject *
 set_default_idle_callback(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
@@ -745,11 +775,11 @@ set_default_idle_callback(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *object;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &object))
 		return NULL;
-	
+
 	Py_INCREF(object);
 	Py_XDECREF(state->fIdleCB);
 	state->fIdleCB = object;
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -757,7 +787,7 @@ set_default_idle_callback(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
@@ -766,7 +796,7 @@ set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *suspend, *resume;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &suspend, &resume))
 		return NULL;
-	
+
 	Py_INCREF(suspend);
 	Py_XDECREF(state->fSuspendCB);
 	state->fSuspendCB = suspend;
@@ -774,7 +804,7 @@ set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 	Py_INCREF(resume);
 	Py_XDECREF(state->fResumeCB);
 	state->fResumeCB = resume;
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -786,7 +816,7 @@ checksum(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *object;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &object))
 		return NULL;
-	
+
 	CL_Blob data;
 	Py_buffer view;
 	if (PyObject_GetBuffer(object, &view, PyBUF_CONTIG_RO))
@@ -823,7 +853,7 @@ static int
 interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *arg)
 {
 	int result = 0;
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	if (!state)
 		return -1;
 
@@ -835,7 +865,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 			if (module) {
 				PyObject *dict = NULL;
 				PyObject *func = NULL;
-		
+
 				dict = PyModule_GetDict(module);
 				func = PyDict_GetItemString(dict, "timeout_handler");
 				if (func) {
@@ -843,7 +873,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 					Py_INCREF(func);
 					res = PyObject_CallFunctionObjArgs(func, NULL);
 					Py_DECREF(func);
-					
+
 					if (res) {
 						Py_DECREF(res);
 						result = 0;
@@ -869,7 +899,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	uint32 timeout, oldTimeout;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &object))
 		return NULL;
-	
+
 	if ((!object) || (object == Py_None)) {
 		timeout = 0;
 	}
@@ -878,7 +908,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 		if (PyErr_Occurred())
 			return NULL;
 	}
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
@@ -904,7 +934,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
@@ -921,7 +951,7 @@ get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
@@ -943,7 +973,7 @@ _set_process_foreground(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *foreground;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &foreground))
 		return NULL;
-	
+
 	CL_SetProcessForeground(PyObject_IsTrue(foreground) ? true : false);
 	Py_RETURN_NONE;
 }
@@ -991,7 +1021,7 @@ regexp_find_all(PyObject *self, PyObject *args)
 	string pattern, text;
 	string_view text_view;
 	Py_buffer buffer;
-	
+
 	if (!PyArg_ParseTuple(args, "O&O", MGA::ConvertString, &pattern, &to))
 		return NULL;
 	if (MGA::ConvertString(to, &text)) {
@@ -1106,10 +1136,11 @@ static PyMethodDef sMGA_Methods[] = {
 static int
 module_clear(PyObject *m)
 {
-	MGA::MODULE_STATE *s = GET_STATE_EX(m);
+	MGA::MODULE_STATE *s = ((MGA::MODULE_STATE *)PyModule_GetState(m));
 	if (!s)
 		return 1;
 
+	Py_CLEAR(s->fParentModule);
 	Py_CLEAR(s->fIdleCB);
 	Py_CLEAR(s->fSuspendCB);
 	Py_CLEAR(s->fResumeCB);
@@ -1123,6 +1154,12 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fMethodStartArray);
 	Py_CLEAR(s->fMethodEndArray);
 	Py_CLEAR(s->fMethodWrite);
+	Py_CLEAR(s->fClientType);
+	Py_CLEAR(s->fDeferredType);
+	Py_CLEAR(s->fDecimalType);
+	Py_CLEAR(s->fJSONEncoderType);
+	Py_CLEAR(s->fJSONDecoderType);
+	Py_CLEAR(s->fNamedSemaphoreType);
 
 	return 0;
 }
@@ -1131,7 +1168,7 @@ module_clear(PyObject *m)
 static void
 module_free(PyObject *m)
 {
-	MGA::MODULE_STATE *s = GET_STATE_EX(m);
+	MGA::MODULE_STATE *s = ((MGA::MODULE_STATE *)PyModule_GetState(m));
 	if (!s)
 		return;
 	{
@@ -1159,10 +1196,11 @@ module_free(PyObject *m)
 static int
 module_traverse(PyObject *m, visitproc visit, void *arg)
 {
-	MGA::MODULE_STATE *s = GET_STATE_EX(m);
+	MGA::MODULE_STATE *s = ((MGA::MODULE_STATE *)PyModule_GetState(m));
 	if (!s)
 		return 1;
 
+	Py_VISIT(s->fParentModule);
 	Py_VISIT(s->fIdleCB);
 	Py_VISIT(s->fSuspendCB);
 	Py_VISIT(s->fResumeCB);
@@ -1176,97 +1214,76 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fMethodStartArray);
 	Py_VISIT(s->fMethodEndArray);
 	Py_VISIT(s->fMethodWrite);
-	
+	Py_VISIT(s->fClientType);
+	Py_VISIT(s->fDeferredType);
+	Py_VISIT(s->fDecimalType);
+	Py_VISIT(s->fJSONEncoderType);
+	Py_VISIT(s->fJSONDecoderType);
+	Py_VISIT(s->fNamedSemaphoreType);
+
 	return 0;
 }
 
 
-static struct PyModuleDef sModuleDef = {
-	PyModuleDef_HEAD_INIT,
-	"_kongalib",
-	"kongalib support module",
-	sizeof(MGA::MODULE_STATE),
-	sMGA_Methods,
-	NULL,
-	module_traverse,
-	module_clear,
-	(freefunc)module_free,
-};
-
-#define MOD_ERROR		NULL
-#define MOD_SUCCESS(v)	v
-#ifdef __CL_UNIX__
-#define MOD_INIT(name)	extern "C" EXPORT PyObject *PyInit_##name(void)
-#else
-#define MOD_INIT(name)	PyMODINIT_FUNC EXPORT PyInit_##name(void)
-#endif
-
-
-/**
- *	Main module initialization function. Automatically called by Python on module import.
- */
-MOD_INIT(_kongalib)
+static int
+module_exec(PyObject *module)
 {
-	PyObject *module;
 	MGA::MODULE_STATE *state;
-	
+
 	CL_Init();
 
-	MGA::gModuleDefPtr = &sModuleDef;
-	module = PyModule_Create(&sModuleDef);
-
-	state = GET_STATE_EX(module);
+	state = ((MGA::MODULE_STATE *)PyModule_GetState(module));
 	new (state) MGA::MODULE_STATE();
 
 	Py_BEGIN_ALLOW_THREADS
 	state->fDispatcher = CL_New(CL_Dispatcher(8, 128, &onCreateWorker, &onDestroyWorker));
 	Py_END_ALLOW_THREADS
-	
+
 	state->fParentModule = PyImport_AddModule("kongalib");
+	Py_INCREF(state->fParentModule);
 	state->fException = PyDict_GetItemString(PyModule_GetDict(state->fParentModule), "Error");
 	Py_INCREF(state->fException);
-	
-	if (PyType_Ready(&MGA::DecimalType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::DecimalType);
-	if (PyModule_AddObject(module, "Decimal", (PyObject *)&MGA::DecimalType) < 0)
-		return MOD_ERROR;
-	
-	if (PyType_Ready(&MGA::ClientType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::ClientType);
-	if (PyModule_AddObject(module, "Client", (PyObject *)&MGA::ClientType) < 0)
-		return MOD_ERROR;
-	
-	if (PyType_Ready(&MGA::DeferredType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::DeferredType);
-	if (PyModule_AddObject(module, "Deferred", (PyObject *)&MGA::DeferredType) < 0)
-		return MOD_ERROR;
-	
-	if (PyType_Ready(&MGA::JSONEncoderType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::JSONEncoderType);
-	if (PyModule_AddObject(module, "JSONEncoder", (PyObject *)&MGA::JSONEncoderType) < 0)
-		return MOD_ERROR;
-	
-	if (PyType_Ready(&MGA::JSONDecoderType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::JSONDecoderType);
-	if (PyModule_AddObject(module, "JSONDecoder", (PyObject *)&MGA::JSONDecoderType) < 0)
-		return MOD_ERROR;
-	
-	if (PyType_Ready(&MGA::NamedSemaphoreType) < 0)
-		return MOD_ERROR;
-	Py_INCREF(&MGA::NamedSemaphoreType);
-	if (PyModule_AddObject(module, "NamedSemaphore", (PyObject *)&MGA::NamedSemaphoreType) < 0)
-		return MOD_ERROR;
+
+	state->fDecimalType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Decimal_spec, NULL);
+	if (!state->fDecimalType)
+		return -1;
+	if (PyModule_AddType(module, state->fDecimalType) < 0)
+		return -1;
+
+	state->fClientType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Client_spec, NULL);
+	if (!state->fClientType)
+		return -1;
+	if (PyModule_AddType(module, state->fClientType) < 0)
+		return -1;
+
+	state->fDeferredType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Deferred_spec, NULL);
+	if (!state->fDeferredType)
+		return -1;
+	if (PyModule_AddType(module, state->fDeferredType) < 0)
+		return -1;
+
+	state->fJSONEncoderType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &JSONEncoder_spec, NULL);
+	if (!state->fJSONEncoderType)
+		return -1;
+	if (PyModule_AddType(module, state->fJSONEncoderType) < 0)
+		return -1;
+
+	state->fJSONDecoderType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &JSONDecoder_spec, NULL);
+	if (!state->fJSONDecoderType)
+		return -1;
+	if (PyModule_AddType(module, state->fJSONDecoderType) < 0)
+		return -1;
+
+	state->fNamedSemaphoreType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &NamedSemaphore_spec, NULL);
+	if (!state->fNamedSemaphoreType)
+		return -1;
+	if (PyModule_AddType(module, state->fNamedSemaphoreType) < 0)
+		return -1;
 
 	MGA::InitJSON();
 	MGA::InitUtilities();
-	
-	if ((signed)sMainThreadID == -1)
-		sMainThreadID = PyThreadState_Get()->thread_id;
+
+	state->fMainThreadID = PyThread_get_thread_ident();
 	state->fInitialized = true;
 	state->fIdleCB = NULL;
 	state->fSuspendCB = NULL;
@@ -1282,13 +1299,51 @@ MOD_INIT(_kongalib)
 	state->fMethodEndArray = PyUnicode_FromString("end_array");
 	state->fMethodWrite = PyUnicode_FromString("write");
 
-	Py_INCREF(state->fJSONException);	
+	Py_INCREF(state->fJSONException);
 
 	state->fTimerList = PyList_New(0);
-	
-	CL_AddPowerCallback(_power_callback);
 
-	return MOD_SUCCESS(module);
+	CL_AddPowerCallback(_power_callback, module);
+
+	return 0;
+}
+
+
+static PyModuleDef_Slot module_slots[] = {
+	{ Py_mod_exec, (void *)module_exec },
+#if PY_VERSION_HEX >= 0x030C0000
+	{ Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED },
+#endif
+	{ 0, NULL }
+};
+
+
+static struct PyModuleDef sModuleDef = {
+	PyModuleDef_HEAD_INIT,
+	"_kongalib",
+	"kongalib support module",
+	sizeof(MGA::MODULE_STATE),
+	sMGA_Methods,
+	module_slots,
+	module_traverse,
+	module_clear,
+	(freefunc)module_free,
+};
+
+
+#ifdef __CL_UNIX__
+#define MOD_INIT(name)	extern "C" EXPORT PyObject *PyInit_##name(void)
+#else
+#define MOD_INIT(name)	PyMODINIT_FUNC EXPORT PyInit_##name(void)
+#endif
+
+
+/**
+ *	Main module initialization function. Automatically called by Python on module import.
+ */
+MOD_INIT(_kongalib)
+{
+	return PyModuleDef_Init(&sModuleDef);
 }
 
 

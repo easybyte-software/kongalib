@@ -92,7 +92,7 @@ private:
 static PyObject *
 setException(const string& msg)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	PyObject *args = Py_BuildValue("s", (const char *)msg.c_str());
 	if (state)
 		PyErr_SetObject(state->fJSONException, args);
@@ -135,7 +135,7 @@ checkGen(yajl_gen_status status)
 static bool
 encode_object(MGA::JSONEncoderObject *self, PyObject *object)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return false;
@@ -158,7 +158,7 @@ encode_object(MGA::JSONEncoderObject *self, PyObject *object)
 		if (!checkGen(yajl_gen_double(self->fHandle, PyFloat_AS_DOUBLE(object))))
 			return false;
 	}
-	else if (PyObject_TypeCheck(object, &MGA::DecimalType)) {
+	else if (PyObject_TypeCheck(object, state->fDecimalType)) {
 		string number = ((MGA::DecimalObject *)object)->fValue.ToString();
 		if (!checkGen(yajl_gen_number(self->fHandle, number.c_str(), number.size())))
 			return false;
@@ -337,9 +337,11 @@ static void
 enc_dealloc(MGA::JSONEncoderObject *self)
 {
 	yajl_gen_free(self->fHandle);
-	
+
+	PyTypeObject *type = Py_TYPE(self);
 	self->~JSONEncoderObject();
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
 
@@ -373,14 +375,14 @@ parse_null(void *ctx)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodRead, Py_None, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -394,14 +396,14 @@ parse_boolean(void *ctx, int boolean)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodRead, boolean ? Py_True : Py_False, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -415,14 +417,14 @@ parse_number(void *ctx, const char *number, size_t size)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result, *object;
 	CL_Decimal decimal(string(number, size));
 	
@@ -430,7 +432,7 @@ parse_number(void *ctx, const char *number, size_t size)
 		object = PyLong_FromLong((long)decimal);
 	}
 	else {
-		object = (PyObject *)MGA::DecimalObject::Allocate();
+		object = (PyObject *)MGA::DecimalObject::Allocate(state);
 		((MGA::DecimalObject *)object)->fValue = decimal;
 	}
 	result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodRead, object, NULL);
@@ -448,14 +450,14 @@ parse_string(void *ctx, const unsigned char *text, size_t size)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	CL_TimeStamp datetime;
 	CL_Date date;
 	CL_Time time;
@@ -495,14 +497,14 @@ parse_map_key(void *ctx, const unsigned char *key, size_t size)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = NULL;
 	PyObject *object = PyUnicode_DecodeUTF8((const char *)key, (Py_ssize_t)size, NULL);
 	if (object) {
@@ -521,14 +523,14 @@ parse_start_map(void *ctx)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodStartMap, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -542,14 +544,14 @@ parse_end_map(void *ctx)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodEndMap, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -563,14 +565,14 @@ parse_start_array(void *ctx)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodStartArray, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -584,14 +586,14 @@ parse_end_array(void *ctx)
 {
 	PyGILState_STATE gstate;
 	gstate = PyGILState_Ensure();
-	MGA::MODULE_STATE *state = GET_STATE();
-	
+	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
+	MGA::MODULE_STATE *state = MGA::getModuleState();
+
 	if (!state) {
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		PyGILState_Release(gstate);
 		return 0;
 	}
-	MGA::JSONDecoderObject *self = (MGA::JSONDecoderObject *)ctx;
 	PyObject *result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodEndArray, NULL);
 	Py_XDECREF(result);
 	PyGILState_Release(gstate);
@@ -653,9 +655,11 @@ static void
 dec_dealloc(MGA::JSONDecoderObject *self)
 {
 	yajl_free(self->fHandle);
-	
+
+	PyTypeObject *type = Py_TYPE(self);
 	self->~JSONDecoderObject();
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
 
@@ -789,88 +793,44 @@ static PyMethodDef dec_methods[] = {
 };
 
 
-PyTypeObject MGA::JSONEncoderType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.JSONEncoder",				/* tp_name */
-    sizeof(MGA::JSONEncoderObject),			/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)enc_dealloc,				/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	0,										/* tp_repr */
-	0,										/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	0,										/* tp_hash */
-	0,										/* tp_call */
-	0,										/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	"JSONEncoder objects",					/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	0,										/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	enc_methods,							/* tp_methods */
-	0,										/* tp_members */
-	0,										/* tp_getset */
-	0,										/* tp_base */
-	0,										/* tp_dict */
-	0,										/* tp_descr_get */
-	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
-	(initproc)enc_init,						/* tp_init */
-	0,										/* tp_alloc */
-	(newfunc)enc_new,						/* tp_new */
+static PyType_Slot JSONEncoder_slots[] = {
+	{ Py_tp_dealloc, (void *)enc_dealloc },
+	{ Py_tp_doc, (void *)"JSONEncoder objects" },
+	{ Py_tp_methods, (void *)enc_methods },
+	{ Py_tp_init, (void *)enc_init },
+	{ Py_tp_new, (void *)enc_new },
+	{ 0, NULL }
 };
 
-
-PyTypeObject MGA::JSONDecoderType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.JSONDecoder",				/* tp_name */
-    sizeof(MGA::JSONDecoderType),			/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)dec_dealloc,				/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	0,										/* tp_repr */
-	0,										/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	0,										/* tp_hash */
-	0,										/* tp_call */
-	0,										/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,	/* tp_flags */
-	"JSONDecoder objects",					/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	0,										/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	dec_methods,							/* tp_methods */
-	0,										/* tp_members */
-	0,										/* tp_getset */
-	0,										/* tp_base */
-	0,										/* tp_dict */
-	0,										/* tp_descr_get */
-	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
-	(initproc)dec_init,						/* tp_init */
-	0,										/* tp_alloc */
-	(newfunc)dec_new,						/* tp_new */
+PyType_Spec JSONEncoder_spec = {
+	"_kongalib.JSONEncoder",
+	sizeof(MGA::JSONEncoderObject),
+	0,
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	JSONEncoder_slots,
 };
+
+/* JSONEncoderType is now stored in MODULE_STATE */
+
+
+static PyType_Slot JSONDecoder_slots[] = {
+	{ Py_tp_dealloc, (void *)dec_dealloc },
+	{ Py_tp_doc, (void *)"JSONDecoder objects" },
+	{ Py_tp_methods, (void *)dec_methods },
+	{ Py_tp_init, (void *)dec_init },
+	{ Py_tp_new, (void *)dec_new },
+	{ 0, NULL }
+};
+
+PyType_Spec JSONDecoder_spec = {
+	"_kongalib.JSONDecoder",
+	sizeof(MGA::JSONDecoderObject),
+	0,
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	JSONDecoder_slots,
+};
+
+/* JSONDecoderType is now stored in MODULE_STATE */
 
 
 namespace MGA {

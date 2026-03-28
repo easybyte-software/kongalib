@@ -18,6 +18,8 @@
 #include "module.h"
 #include <wchar.h>
 
+#define DECIMAL_STATE()		((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))
+
 
 /**
  *	Addition operator for the MGA.Decimal type.
@@ -40,7 +42,7 @@ MGA_Decimal_add(PyObject *_self, PyObject *_other)
 		return NULL;
 	}
 
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue + other->fValue;
 
 	Py_DECREF(self);
@@ -71,7 +73,7 @@ MGA_Decimal_sub(PyObject *_self, PyObject *_other)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue - other->fValue;
 
 	Py_DECREF(self);
@@ -102,7 +104,7 @@ MGA_Decimal_mul(PyObject *_self, PyObject *_other)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue * other->fValue;
 
 	Py_DECREF(self);
@@ -139,7 +141,7 @@ MGA_Decimal_rem(PyObject *_self, PyObject *_other)
 		PyErr_SetString(PyExc_ZeroDivisionError, "decimal division");
 		return NULL;
 	}
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue % other->fValue;
 
 	Py_DECREF(self);
@@ -175,10 +177,10 @@ MGA_Decimal_divmod(PyObject *_self, PyObject *_other)
 		PyErr_SetString(PyExc_ZeroDivisionError, "decimal division");
 		return NULL;
 	}
-	quotient = MGA::DecimalObject::Allocate();
+	quotient = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	quotient->fValue = (self->fValue / other->fValue).Floor();
 	
-	remainder = MGA::DecimalObject::Allocate();
+	remainder = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	remainder->fValue = self->fValue % other->fValue;
 
 	Py_DECREF(self);
@@ -215,7 +217,7 @@ MGA_Decimal_pow(PyObject *_self, PyObject *_other, PyObject *unused)
 		return NULL;
 	}
 	if (other->fValue == 0) {
-		result = MGA::DecimalObject::Allocate();
+		result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		result->fValue = 1;
 
 		Py_DECREF(self);
@@ -233,7 +235,7 @@ MGA_Decimal_pow(PyObject *_self, PyObject *_other, PyObject *unused)
 		Py_DECREF(self);
 		Py_DECREF(other);
 		
-		result = MGA::DecimalObject::Allocate();
+		result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		result->fValue = 0;
 		
 		return result;
@@ -245,7 +247,7 @@ MGA_Decimal_pow(PyObject *_self, PyObject *_other, PyObject *unused)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Pow(other->fValue);
 
 	Py_DECREF(self);
@@ -265,7 +267,7 @@ MGA_Decimal_neg(MGA::DecimalObject *self)
 {
 	MGA::DecimalObject *result;
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = -self->fValue;
 	
 	return result;
@@ -295,7 +297,7 @@ MGA_Decimal_abs(MGA::DecimalObject *self)
 {
 	MGA::DecimalObject *result;
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Abs();
 	
 	return result;
@@ -410,7 +412,7 @@ MGA_Decimal_div(PyObject *_self, PyObject *_other)
 		PyErr_SetString(PyExc_ZeroDivisionError, "decimal division");
 		return NULL;
 	}
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue / other->fValue;
 
 	Py_DECREF(self);
@@ -459,7 +461,7 @@ MGA_Decimal_richcompare(MGA::DecimalObject *self, PyObject *other, int op)
 {
 	int result = 0;
 	
-	if (PyObject_TypeCheck(other, &MGA::DecimalType)) {
+	if (PyObject_TypeCheck(other, ((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))->fDecimalType)) {
 		MGA::DecimalObject *value = (MGA::DecimalObject *)other;
 		switch (op) {
 		case Py_EQ: result = self->fValue == value->fValue; break;
@@ -550,7 +552,7 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return -1;
 	
 	if (value) {
-		if (PyObject_TypeCheck(value, &MGA::DecimalType)) {
+		if (PyObject_TypeCheck(value, ((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))->fDecimalType)) {
 			self->fValue = ((MGA::DecimalObject *)value)->fValue;
 		}
 		else if (PyLong_Check(value)) {
@@ -611,7 +613,7 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = DECIMAL_STATE();
 	static char *kwlist[] = { "precision", "width", "sep", "padzero", "monetary", NULL };
 	int precision = -1, width = 0, padzero = 0, sep = 0, monetary=0;
 	CL_LocaleInfo info;
@@ -649,7 +651,7 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (!value) {
-		value = MGA::DecimalObject::Allocate();
+		value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		value->fValue = 1;
 		dealloc = true;
 	}
@@ -660,7 +662,7 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Ceil(value->fValue);
 	
 	if (dealloc)
@@ -682,7 +684,7 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (!value) {
-		value = MGA::DecimalObject::Allocate();
+		value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		value->fValue = 1;
 		dealloc = true;
 	}
@@ -693,7 +695,7 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Floor(value->fValue);
 	
 	if (dealloc)
@@ -715,7 +717,7 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (!value) {
-		value = MGA::DecimalObject::Allocate();
+		value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		value->fValue = 1;
 		dealloc = true;
 	}
@@ -726,7 +728,7 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Round(value->fValue);
 	
 	if (dealloc)
@@ -746,7 +748,7 @@ MGA_Decimal___round__(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|i", kwlist, &digits))
 		return NULL;
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Round(digits);
 	
 	return result;
@@ -766,12 +768,12 @@ MGA_Decimal_multiply(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (!value) {
-		value = MGA::DecimalObject::Allocate();
+		value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		value->fValue = 1;
 		dealloc = true;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Multiply(other->fValue, value->fValue, (CL_Decimal::RoundType)mode);
 	
 	if (dealloc)
@@ -795,7 +797,7 @@ MGA_Decimal_divide(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	
 	if (!value) {
-		value = MGA::DecimalObject::Allocate();
+		value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 		value->fValue = 1;
 		dealloc = true;
 	}
@@ -806,7 +808,7 @@ MGA_Decimal_divide(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 	
-	result = MGA::DecimalObject::Allocate();
+	result = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	result->fValue = self->fValue.Divide(other->fValue, value->fValue, (CL_Decimal::RoundType)mode);
 	
 	if (dealloc)
@@ -822,7 +824,7 @@ MGA_Decimal_copy(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA::DecimalObject *value;
 	
-	value = MGA::DecimalObject::Allocate();
+	value = MGA::DecimalObject::Allocate(DECIMAL_STATE());
 	value->fValue = self->fValue;
 	
 	return value;
@@ -835,8 +837,8 @@ MGA_Decimal_reduce(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	PyObject *tuple = PyTuple_New(2);
 	PyObject *arguments = PyTuple_New(1);
 	PyTuple_SET_ITEM(arguments, 0, MGA_Decimal_str(self));
-	Py_INCREF(&MGA::DecimalType);
-	PyTuple_SET_ITEM(tuple, 0, (PyObject *)&MGA::DecimalType);
+	Py_INCREF(((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))->fDecimalType);
+	PyTuple_SET_ITEM(tuple, 0, (PyObject *)((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))->fDecimalType);
 	PyTuple_SET_ITEM(tuple, 1, arguments);
 	return tuple;
 }
@@ -845,7 +847,7 @@ MGA_Decimal_reduce(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 MGA_Decimal_set_locale(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	MGA::MODULE_STATE *state = GET_STATE();
+	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState((PyTypeObject *)self);
 	static char *kwlist[] = { "lang", NULL };
 	const char *lang;
 	
@@ -862,55 +864,20 @@ MGA_Decimal_set_locale(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	return MGA::DecimalObject::Allocate();
+	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState(type);
+	return MGA::DecimalObject::Allocate(state);
 }
 
 
 static void
 MGA_Decimal_dealloc(MGA::DecimalObject *self)
 {
+	PyTypeObject *type = Py_TYPE(self);
 	self->~DecimalObject();
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	type->tp_free((PyObject*)self);
+	Py_DECREF(type);
 }
 
-
-/** Vtable for MGA.Decimal numeric operations. */
-static PyNumberMethods MGA_Decimal_as_number = {
-	(binaryfunc)MGA_Decimal_add,			/* nb_add */
-	(binaryfunc)MGA_Decimal_sub,			/* nb_subtract */
-	(binaryfunc)MGA_Decimal_mul,			/* nb_multiply */
-	(binaryfunc)MGA_Decimal_rem,			/* nb_remainder */
-	(binaryfunc)MGA_Decimal_divmod,			/* nb_divmod */
-	(ternaryfunc)MGA_Decimal_pow,			/* nb_power */
-	(unaryfunc)MGA_Decimal_neg,				/* nb_negative */
-	(unaryfunc)MGA_Decimal_pos,				/* nb_positive */
-	(unaryfunc)MGA_Decimal_abs,				/* nb_absolute */
-	(inquiry)MGA_Decimal_nonzero,			/* nb_nonzero */
-	0,										/* nb_invert */
-	0,										/* nb_lshift */
-	0,										/* nb_rshift */
-	0,										/* nb_and */
-	0,										/* nb_xor */
-	0,										/* nb_or */
-	(unaryfunc)MGA_Decimal_int,				/* nb_int */
-	0,										/* nb_reserved */
-	(unaryfunc)MGA_Decimal_float,			/* nb_float */
-	0,										/* nb_inplace_add */
-	0,										/* nb_inplace_subtract */
-	0,										/* nb_inplace_multiply */
-	0,										/* nb_inplace_remainder */
-	0,										/* nb_inplace_power */
-	0,										/* nb_inplace_lshift */
-	0,										/* nb_inplace_rshift */
-	0,										/* nb_inplace_and */
-	0,										/* nb_inplace_xor */
-	0,										/* nb_inplace_or */
-	(binaryfunc)MGA_Decimal_floor_div,		/* nb_floor_divide */
-	(binaryfunc)MGA_Decimal_div,			/* nb_true_divide */
-	0,										/* nb_inplace_floor_divide */
-	0,										/* nb_inplace_true_divide */
-	(unaryfunc)MGA_Decimal_index,			/* nb_index */
-};
 
 
 static PyMethodDef MGA_Decimal_methods[] = {
@@ -929,61 +896,59 @@ static PyMethodDef MGA_Decimal_methods[] = {
 };
 
 
-/** Vtable describing the MGA.Decimal type. */
-PyTypeObject MGA::DecimalType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-    "_kongalib.Decimal",						/* tp_name */
-    sizeof(MGA::DecimalObject),				/* tp_basicsize */
-	0,										/* tp_itemsize */
-	(destructor)MGA_Decimal_dealloc,		/* tp_dealloc */
-	0,										/* tp_print */
-	0,										/* tp_getattr */
-	0,										/* tp_setattr */
-	0,										/* tp_compare */
-	(reprfunc)MGA_Decimal_str,				/* tp_repr */
-	&MGA_Decimal_as_number,					/* tp_as_number */
-	0,										/* tp_as_sequence */
-	0,										/* tp_as_mapping */
-	(hashfunc)MGA_Decimal_hash,				/* tp_hash */
-	0,										/* tp_call */
-	(reprfunc)MGA_Decimal_str,				/* tp_str */
-	0,										/* tp_getattro */
-	0,										/* tp_setattro */
-	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,						/* tp_flags */
-	"Decimal objects",						/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
-	(richcmpfunc)MGA_Decimal_richcompare,	/* tp_richcompare */
-	0,										/* tp_weaklistoffset */
-	0,										/* tp_iter */
-	0,										/* tp_iternext */
-	MGA_Decimal_methods,					/* tp_methods */
-	0,										/* tp_members */
-	0,										/* tp_getset */
-	0,										/* tp_base */
-	0,										/* tp_dict */
-	0,										/* tp_descr_get */
-	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
-	(initproc)MGA_Decimal_init,				/* tp_init */
-	0,										/* tp_alloc */
-	(newfunc)MGA_Decimal_new,				/* tp_new */
+/** Slot definitions for the MGA.Decimal type. */
+static PyType_Slot Decimal_slots[] = {
+	{ Py_tp_dealloc, (void *)MGA_Decimal_dealloc },
+	{ Py_tp_repr, (void *)MGA_Decimal_str },
+	{ Py_nb_add, (void *)MGA_Decimal_add },
+	{ Py_nb_subtract, (void *)MGA_Decimal_sub },
+	{ Py_nb_multiply, (void *)MGA_Decimal_mul },
+	{ Py_nb_remainder, (void *)MGA_Decimal_rem },
+	{ Py_nb_divmod, (void *)MGA_Decimal_divmod },
+	{ Py_nb_power, (void *)MGA_Decimal_pow },
+	{ Py_nb_negative, (void *)MGA_Decimal_neg },
+	{ Py_nb_positive, (void *)MGA_Decimal_pos },
+	{ Py_nb_absolute, (void *)MGA_Decimal_abs },
+	{ Py_nb_bool, (void *)MGA_Decimal_nonzero },
+	{ Py_nb_int, (void *)MGA_Decimal_int },
+	{ Py_nb_float, (void *)MGA_Decimal_float },
+	{ Py_nb_floor_divide, (void *)MGA_Decimal_floor_div },
+	{ Py_nb_true_divide, (void *)MGA_Decimal_div },
+	{ Py_nb_index, (void *)MGA_Decimal_index },
+	{ Py_tp_hash, (void *)MGA_Decimal_hash },
+	{ Py_tp_str, (void *)MGA_Decimal_str },
+	{ Py_tp_doc, (void *)"Decimal objects" },
+	{ Py_tp_richcompare, (void *)MGA_Decimal_richcompare },
+	{ Py_tp_methods, (void *)MGA_Decimal_methods },
+	{ Py_tp_init, (void *)MGA_Decimal_init },
+	{ Py_tp_new, (void *)MGA_Decimal_new },
+	{ 0, NULL }
 };
+
+PyType_Spec Decimal_spec = {
+	"_kongalib.Decimal",
+	sizeof(MGA::DecimalObject),
+	0,
+	Py_TPFLAGS_DEFAULT,
+	Decimal_slots,
+};
+
+/* DecimalType is now stored in MODULE_STATE */
 
 
 MGA::DecimalObject *
-MGA::DecimalObject::Allocate()
+MGA::DecimalObject::Allocate(MGA::MODULE_STATE *state)
 {
-	return new (DecimalType.tp_alloc(&DecimalType, 0)) MGA::DecimalObject();
+	return new (state->fDecimalType->tp_alloc(state->fDecimalType, 0)) MGA::DecimalObject();
 }
 
 
 int
 MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 {
+	MGA::MODULE_STATE *state = MGA::getModuleState();
 	CL_Decimal value;
-	if (PyObject_TypeCheck(object, &MGA::DecimalType)) {
+	if (state && PyObject_TypeCheck(object, state->fDecimalType)) {
 		*decimal = (MGA::DecimalObject *)object;
 		Py_INCREF(object);
 		return 1;
@@ -1021,7 +986,7 @@ MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 		PyErr_SetString(PyExc_ValueError, "Expected Decimal object");
 		return 0;
 	}
-	*decimal = MGA::DecimalObject::Allocate();
+	*decimal = MGA::DecimalObject::Allocate(state);
 	(*decimal)->fValue = value;
 	return 1;
 }

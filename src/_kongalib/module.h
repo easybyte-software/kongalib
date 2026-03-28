@@ -65,9 +65,9 @@ struct MODULE_STATE;
 typedef struct ClientObject
 {
 	PyObject_HEAD
-	
+
 	ClientObject();
-	
+
 	MGA_Client		*fClient;				/**< The #MGA_Client object doing the real work behind the scene. */
 } ClientObject;
 
@@ -78,12 +78,13 @@ typedef struct ClientObject
 typedef struct DeferredObject
 {
 	PyObject_HEAD
-	
-	DeferredObject(ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle);
+
+	DeferredObject(PyObject *module, ClientObject *client, PyObject *userData, PyObject *success, PyObject *error, PyObject *progress, PyObject *idle);
 	~DeferredObject();
-	
-	static DeferredObject *Allocate(ClientObject *client, PyObject *userData, PyObject *success = nullptr, PyObject *error = nullptr, PyObject *progress = nullptr, PyObject *idle = nullptr);
-	
+
+	static DeferredObject *Allocate(PyObject *module, ClientObject *client, PyObject *userData, PyObject *success = nullptr, PyObject *error = nullptr, PyObject *progress = nullptr, PyObject *idle = nullptr);
+
+	PyObject		*fModule;
 	ClientObject	*fClient;
 	PyObject		*fSuccess;
 	PyObject		*fError;
@@ -108,8 +109,8 @@ typedef struct DecimalObject
 
 	DecimalObject() {}
 
-	static DecimalObject *Allocate();
-	
+	static DecimalObject *Allocate(MODULE_STATE *state);
+
 	CL_Decimal		fValue;					/**< The #CL_Decimal object associated to this Python MGA.Decimal object. */
 } DecimalObject;
 
@@ -120,9 +121,9 @@ typedef struct DecimalObject
 typedef struct JSONEncoderObject
 {
 	PyObject_HEAD
-	
+
 	JSONEncoderObject();
-	
+
 	yajl_gen		fHandle;
 	string			fEncoding;
 	bool			fPretty;
@@ -135,9 +136,9 @@ typedef struct JSONEncoderObject
 typedef struct JSONDecoderObject
 {
 	PyObject_HEAD
-	
+
 	JSONDecoderObject();
-	
+
 	yajl_handle		fHandle;
 	string			fEncoding;
 	string			fFileName;
@@ -182,17 +183,14 @@ typedef struct MODULE_STATE
 	PyObject						*fMethodStartArray;
 	PyObject						*fMethodEndArray;
 	PyObject						*fMethodWrite;
+	PyTypeObject					*fClientType;
+	PyTypeObject					*fDeferredType;
+	PyTypeObject					*fDecimalType;
+	PyTypeObject					*fJSONEncoderType;
+	PyTypeObject					*fJSONDecoderType;
+	PyTypeObject					*fNamedSemaphoreType;
+	unsigned long					fMainThreadID;
 } MODULE_STATE;
-
-
-extern PyModuleDef					*gModuleDefPtr;
-
-extern PyTypeObject ClientType;
-extern PyTypeObject DeferredType;
-extern PyTypeObject DecimalType;
-extern PyTypeObject JSONEncoderType;
-extern PyTypeObject JSONDecoderType;
-extern PyTypeObject NamedSemaphoreType;
 
 
 extern string translate(MGA_Status error);
@@ -206,19 +204,17 @@ extern void untrackClient(MGA::ClientObject *client);
 
 extern int ConvertString(PyObject *object, string *string);
 extern int ConvertDecimal(PyObject *object, DecimalObject **decimal);
-extern PyObject *List_FromCLU(CLU_List *list);
-extern void List_FromPy(PyObject *object, CLU_List *list);
-extern PyObject *Table_FromCLU(CLU_Table *table);
-extern void Table_FromPy(PyObject *object, CLU_Table *table);
+extern PyObject *List_FromCLU(MODULE_STATE *state, CLU_List *list);
+extern void List_FromPy(MODULE_STATE *state, PyObject *object, CLU_List *list);
+extern PyObject *Table_FromCLU(MODULE_STATE *state, CLU_Table *table);
+extern void Table_FromPy(MODULE_STATE *state, PyObject *object, CLU_Table *table);
+
+extern MODULE_STATE *getModuleState();
 
 extern void InitUtilities();
 extern void InitJSON();
 
 };
-
-
-#define GET_STATE_EX(m)				((MGA::MODULE_STATE *)PyModule_GetState(m))
-#define GET_STATE()					(PyState_FindModule(MGA::gModuleDefPtr) ? GET_STATE_EX(PyState_FindModule(MGA::gModuleDefPtr)) : NULL)
 
 
 #endif
