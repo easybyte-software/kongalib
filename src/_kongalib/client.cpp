@@ -101,10 +101,10 @@ _DiscoverCB(MGA_ServerSpec *spec, uint32 numServers, MGA::DeferredObject *reques
 		for (uint32 i = 0; i < numServers; i++) {
 			PyObject *server = PyDict_New();
 			const char *uuid = spec[i].fUUID;
-			PyDict_SetItemString(server, "host", PyUnicode_FromStringAndSize(spec[i].fHost.c_str(), spec[i].fHost.size()));
+			PyDict_SetItemString(server, "host", PyUnicode_FromStringAndSize(spec[i].fHost.data(), spec[i].fHost.size()));
 			PyDict_SetItemString(server, "port", PyLong_FromLong((long)spec[i].fPort));
-			PyDict_SetItemString(server, "name", PyUnicode_FromStringAndSize(spec[i].fName.c_str(), spec[i].fName.size()));
-			PyDict_SetItemString(server, "description", PyUnicode_FromStringAndSize(spec[i].fDescription.c_str(), spec[i].fDescription.size()));
+			PyDict_SetItemString(server, "name", PyUnicode_FromStringAndSize(spec[i].fName.data(), spec[i].fName.size()));
+			PyDict_SetItemString(server, "description", PyUnicode_FromStringAndSize(spec[i].fDescription.data(), spec[i].fDescription.size()));
 			PyDict_SetItemString(server, "data_version", PyLong_FromLong((long)spec[i].fDataVersion));
 			PyDict_SetItemString(server, "uuid", PyUnicode_FromStringAndSize(uuid, strlen(uuid)));
 			PyDict_SetItemString(server, "multitenant_enabled", spec[i].fMultiTenant ? Py_True : Py_False);
@@ -342,7 +342,7 @@ _ErrorCB(MGA_Status error_no, const string& error, MGA::DeferredObject *request)
 		string error_str = error;
 		if (error_str.empty())
 			error_str = MGA::translate(error_no);
-		PyObject *error_obj = PyUnicode_FromStringAndSize(error_str.c_str(), error_str.size());
+		PyObject *error_obj = PyUnicode_FromStringAndSize(error_str.data(), error_str.size());
 		if (!error_obj) {
 			PyErr_Clear();
 			error_str = CL_StringFormat("<Error %d>", error_no);
@@ -383,7 +383,7 @@ _ProgressCB(MGA_ProgressType type, double completeness, const string& message, M
 	
 // 	printf("_ProgressCB: %d (%g) - %d %d %d\n", type, completeness, (!request->fAborted) ? 1 : 0, (!request->fExecuted) ? 1 : 0, (request->fProgress) ? 1 : 0);
 	if ((!request->fAborted) && (!request->fExecuted) && (request->fProgress) && (request->fProgress != Py_None)) {
-		PyObject *state = PyUnicode_FromStringAndSize(message.c_str(), message.size());
+		PyObject *state = PyUnicode_FromStringAndSize(message.data(), message.size());
 		if (!state) {
 			PyErr_Clear();
 			state = PyUnicode_FromString("");
@@ -466,10 +466,10 @@ MGA_Client_list_servers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 		for (uint32 i = 0; i < numServers; i++) {
 			PyObject *server = PyDict_New();
 			const char *uuid = spec[i].fUUID;
-			PyDict_SetItemString(server, "host", PyUnicode_FromStringAndSize(spec[i].fHost.c_str(), spec[i].fHost.size()));
+			PyDict_SetItemString(server, "host", PyUnicode_FromStringAndSize(spec[i].fHost.data(), spec[i].fHost.size()));
 			PyDict_SetItemString(server, "port", PyLong_FromLong((long)spec[i].fPort));
-			PyDict_SetItemString(server, "name", PyUnicode_FromStringAndSize(spec[i].fName.c_str(), spec[i].fName.size()));
-			PyDict_SetItemString(server, "description", PyUnicode_FromStringAndSize(spec[i].fDescription.c_str(), spec[i].fDescription.size()));
+			PyDict_SetItemString(server, "name", PyUnicode_FromStringAndSize(spec[i].fName.data(), spec[i].fName.size()));
+			PyDict_SetItemString(server, "description", PyUnicode_FromStringAndSize(spec[i].fDescription.data(), spec[i].fDescription.size()));
 			PyDict_SetItemString(server, "data_version", PyLong_FromLong((long)spec[i].fDataVersion));
 			PyDict_SetItemString(server, "uuid", PyUnicode_FromStringAndSize(uuid, strlen(uuid)));
 			PyDict_SetItemString(server, "multitenant_enabled", spec[i].fMultiTenant ? Py_True : Py_False);

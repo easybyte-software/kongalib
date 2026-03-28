@@ -357,7 +357,7 @@ host_lookup(PyObject *self, PyObject *args, PyObject *kwds)
 	address = CL_NetAddress::Lookup(address);
 	Py_END_ALLOW_THREADS
 
-	return PyUnicode_FromStringAndSize(address.c_str(), address.size());
+	return PyUnicode_FromStringAndSize(address.data(), address.size());
 }
 
 
@@ -390,17 +390,17 @@ get_network_interfaces(PyObject *self, PyObject *args, PyObject *kwds)
 		Py_DECREF(temp);
 
 		address = IF->GetAddress();
-		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
+		temp = PyUnicode_FromStringAndSize(address.GetIP().data(), address.GetIP().size());
 		PyDict_SetItemString(entry, "address", temp);
 		Py_DECREF(temp);
 
 		address = IF->GetNetmask();
-		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
+		temp = PyUnicode_FromStringAndSize(address.GetIP().data(), address.GetIP().size());
 		PyDict_SetItemString(entry, "netmask", temp);
 		Py_DECREF(temp);
 
 		address = IF->GetBroadcast();
-		temp = PyUnicode_FromStringAndSize(address.GetIP().c_str(), address.GetIP().size());
+		temp = PyUnicode_FromStringAndSize(address.GetIP().data(), address.GetIP().size());
 		PyDict_SetItemString(entry, "broadcast", temp);
 		Py_DECREF(temp);
 
@@ -418,7 +418,7 @@ static PyObject *
 get_machine_uuid(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	string uuid = (const char *)MGA::GetComputerUUID();
-	return PyUnicode_FromStringAndSize(uuid.c_str(), uuid.size());
+	return PyUnicode_FromStringAndSize(uuid.data(), uuid.size());
 }
 
 
@@ -427,7 +427,7 @@ get_system_info(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	CL_ComputerInfo info;
 	CL_GetComputerInfo(&info);
-	return PyUnicode_FromStringAndSize(info.fOSSpec.c_str(), info.fOSSpec.size());
+	return PyUnicode_FromStringAndSize(info.fOSSpec.data(), info.fOSSpec.size());
 }
 
 
@@ -449,7 +449,7 @@ hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 
 	password = MGA::GetPassword(password);
-	return PyUnicode_FromStringAndSize(password.c_str(), password.size());
+	return PyUnicode_FromStringAndSize(password.data(), password.size());
 }
 
 
@@ -619,7 +619,7 @@ get_application_log_path(PyObject *self, PyObject *args, PyObject *kwds)
 #endif
 	path += name;
 
-	return PyUnicode_FromStringAndSize(path.c_str(), path.size());
+	return PyUnicode_FromStringAndSize(path.data(), path.size());
 }
 
 
