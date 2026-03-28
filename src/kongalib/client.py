@@ -22,7 +22,7 @@ from .expression import *
 from .data_dictionary import *
 
 from _kongalib import Client as ClientImpl
-from _kongalib import start_timer
+import threading
 
 
 DEFAULT_DISCOVER_TIMEOUT		= 5000
@@ -223,9 +223,7 @@ class Client:
 					return cache(DataDictionary(self._impl.get_data_dictionary(success, error, progress, userdata, timeout)))
 			else:
 				if success is not None:
-					def callback(dummy):
-						success(data)
-					start_timer(0, callback)
+					threading.Thread(target=success, args=(data,), daemon=True).start()
 				else:
 					return data
 	

@@ -264,18 +264,7 @@ Deferred_dealloc(MGA::DeferredObject *self)
 static PyObject *
 Deferred_cancel(MGA::DeferredObject *self, PyObject *args)
 {
-	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self->fModule));
-	if (!self->fAborted) {
-		Py_BEGIN_ALLOW_THREADS
-		if (state)
-			state->fTimerLock.Lock();
-		self->fAborted = true;
-		self->fCondition.Signal();
-		if (state)
-			state->fTimerLock.Unlock();
-		Py_END_ALLOW_THREADS
-	}
-
+	self->fAborted = true;
 	Py_RETURN_NONE;
 }
 
@@ -342,184 +331,6 @@ static PyType_Spec Deferred_spec = {
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
 	Deferred_slots,
 };
-
-
-class TimerJob : public CL_Job
-{
-public:
-	TimerJob(uint32 timeout, MGA::DeferredObject *deferred)
-		: CL_Job(), fTimeOut(timeout), fDeferred(deferred)
-	{
-		MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(deferred->fModule));
-		if (state) {
-			PyList_Append(state->fTimerList, (PyObject *)fDeferred);
-		}
-	}
-
-	~TimerJob() = default;
-
-	CL_Status Run() override {
-		if (Py_IsInitialized()) {
-			PyGILState_STATE gstate;
-			gstate = PyGILState_Ensure();
-			MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(fDeferred->fModule));
-			CL_Status status;
-
-			if (!state) {
-				PyGILState_Release(gstate);
-				return CL_OK;
-			}
-
-			Py_INCREF(fDeferred);
-
-			Py_BEGIN_ALLOW_THREADS
-
-			state->fTimerLock.Lock();
-			if (fDeferred->fAborted) {
-				status = CL_ERROR;
-			}
-			else {
-				status = fDeferred->fCondition.Wait(&state->fTimerLock, fTimeOut);
-			}
-			state->fTimerLock.Unlock();
-
-			Py_END_ALLOW_THREADS
-
-			for (int i = 0; i < PyList_GET_SIZE(state->fTimerList); i++) {
-				MGA::DeferredObject *deferred = (MGA::DeferredObject *)PyList_GET_ITEM(state->fTimerList, i);
-				if (deferred == fDeferred) {
-					PyList_SetSlice(state->fTimerList, i, i + 1, NULL);
-					break;
-				}
-			}
-
-			if (status == CL_TIMED_OUT) {
-				if ((!fDeferred->fAborted) && (fDeferred->fSuccess)) {
-					PyObject *result = PyObject_CallFunctionObjArgs(fDeferred->fSuccess, fDeferred->fUserData, NULL);
-					Py_XDECREF(result);
-					if (PyErr_Occurred()) {
-						PyErr_Print();
-						PyErr_Clear();
-					}
-					fDeferred->fExecuted = true;
-				}
-			}
-			Py_DECREF(fDeferred);
-
-			PyGILState_Release(gstate);
-		}
-		else {
-			fDeferred->fPending = false;
-			fDeferred->fAborted = true;
-		}
-
-		return CL_OK;
-	}
-
-private:
-	uint32					fTimeOut;
-	MGA::DeferredObject		*fDeferred;
-};
-
-
-static PyObject *
-start_timer(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
-	char *kwlist[] = { "milliseconds", "callback", "userdata", NULL };
-	int32 ms;
-	PyObject *callback, *userdata = Py_None;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iO|O", kwlist, &ms, &callback, &userdata))
-		return NULL;
-
-	MGA::DeferredObject *deferred = MGA::DeferredObject::Allocate(self, NULL, userdata, callback, NULL, NULL);
-	if (state && state->fInitialized)
-		state->fDispatcher->AddJob(CL_New(TimerJob(CL_MAX(0, ms), deferred)), true);
-	return (PyObject *)deferred;
-}
-
-
-/**
- *	Converts a dict object to an XML document and saves it inside an unicode string. The XML format is the same
- *	as the one returned via CLU_Table::SaveXML().
- *	\param	self				Unused.
- *	\param	args				Arguments tuple.
- *	\param	kwds				Supported argument keywords. Accepted keywords are:
- *								- \e dict: the Python dict object to be converted to XML.
- *	\return						An unicode string holding the XML document derived from \e dict.
- */
-static PyObject *
-save_xml(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	char *kwlist[] = { "dict", NULL };
-	CLU_Table table;
-	PyObject *dict, *result;
-	CL_XML_Document doc;
-	CL_Blob stream;
-	string xml;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist, &PyDict_Type, &dict))
-		return NULL;
-
-	MGA::Table_FromPy(((MGA::MODULE_STATE *)PyModule_GetState(self)), dict, &table);
-	if (PyErr_Occurred())
-		return NULL;
-
-	Py_BEGIN_ALLOW_THREADS
-	doc.SetRoot(table.SaveXML(&doc));
-	doc.Save(stream);
-	stream.Rewind();
-	xml << stream;
-	Py_END_ALLOW_THREADS
-	result = PyUnicode_DecodeUTF8(xml.c_str(), xml.size(), NULL);
-
-	return result;
-}
-
-
-/**
- *	Loads the contents of an XML document held in a string into a Python dict object. The XML format understood
- *	must be in the same form as accepted by CLU_Table::LoadXML(). If an error occurs while loading the XML data,
- *	a ValueError exception is raised.
- *	\param	self				Unused.
- *	\param	args				Arguments tuple.
- *	\param	kwds				Supported argument keywords. Accepted keywords are:
- *								- \e xml: an unicode string holding the XML document representing the dict.
- *	\return						A dict object representing the data held in the XML document in \e xml.
- */
-static PyObject *
-load_xml(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	char *kwlist[] = { "xml", NULL };
-	CLU_Table table;
-	string xml;
-	CL_XML_Document doc;
-	CL_XML_Node root;
-	bool load;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &xml))
-		return NULL;
-
-	Py_BEGIN_ALLOW_THREADS
-	CL_Blob stream;
-	stream << xml;
-	stream.Rewind();
-	load = doc.Load(stream);
-	Py_END_ALLOW_THREADS
-	if (!load) {
-		PyErr_SetString(PyExc_ValueError, doc.GetError().c_str());
-		return NULL;
-	}
-
-	root = doc.GetRoot();
-	if ((!root) || (!table.LoadXML(&doc, root))) {
-		PyErr_SetString(PyExc_ValueError, "malformed XML dictionary definition");
-		return NULL;
-	}
-
-	return MGA::Table_FromCLU(((MGA::MODULE_STATE *)PyModule_GetState(self)), &table);
-}
 
 
 /**
@@ -643,36 +454,6 @@ hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 
 
 static PyObject *
-lock(PyObject *self, PyObject *args)
-{
-	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
-
-	if (state) {
-		Py_BEGIN_ALLOW_THREADS
-		state->fThreadsLock.Lock();
-		Py_END_ALLOW_THREADS
-	}
-
-	Py_RETURN_NONE;
-}
-
-
-static PyObject *
-unlock(PyObject *self, PyObject *args)
-{
-	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
-
-	if (state) {
-		Py_BEGIN_ALLOW_THREADS
-		state->fThreadsLock.Unlock();
-		Py_END_ALLOW_THREADS
-	}
-
-	Py_RETURN_NONE;
-}
-
-
-static PyObject *
 _cleanup(PyObject *self, PyObject *args)
 {
 	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
@@ -683,12 +464,6 @@ _cleanup(PyObject *self, PyObject *args)
 			{
 				CL_AutoLocker locker(&state->fThreadsLock);
 				state->fInitialized = false;
-			}
-
-			for (int i = 0; i < PyList_GET_SIZE(state->fTimerList); i++) {
-				MGA::DeferredObject *deferred = (MGA::DeferredObject *)PyList_GET_ITEM(state->fTimerList, i);
-				deferred->fAborted = true;
-				deferred->fCondition.Signal();
 			}
 
 			Py_BEGIN_ALLOW_THREADS
@@ -1111,12 +886,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"get_network_interfaces",		(PyCFunction)get_network_interfaces,		METH_VARARGS | METH_KEYWORDS,	"get_network_interfaces() -> tuple\n\nReturns a list of dicts holding informations on all the available network interfaces." },
 	{	"get_machine_uuid",				(PyCFunction)get_machine_uuid,				METH_NOARGS,					"get_machine_uuid() -> str\n\nGets machine unique UUID." },
 	{	"get_system_info",				(PyCFunction)get_system_info,				METH_NOARGS,					"get_system_info() -> str\n\nGets informations on the operating system." },
-	{	"save_xml",						(PyCFunction)save_xml,						METH_VARARGS | METH_KEYWORDS,	"save_xml(dict) -> str\n\nConverts given dictionary object in XML form and returns it as an (unicode) string." },
-	{	"load_xml",						(PyCFunction)load_xml,						METH_VARARGS | METH_KEYWORDS,	"load_xml(str) -> dict\n\nLoads XML from given (unicode) string and returns a corresponding dictionary object." },
-	{	"start_timer",					(PyCFunction)start_timer,					METH_VARARGS | METH_KEYWORDS,	"start_timer(seconds, callback, userdata) -> Deferred\n\nStarts a timer, so that callback gets called after specified amount of seconds. Returns a cancellable Deferred object." },
 	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
-	{	"lock",							(PyCFunction)lock,							METH_NOARGS,					"lock()\n\nAcquires the global MGA threads lock." },
-	{	"unlock",						(PyCFunction)unlock,						METH_NOARGS,					"unlock()\n\nReleases the global MGA threads lock." },
 	{	"_cleanup",						(PyCFunction)_cleanup,						METH_NOARGS,					"_cleanup()\n\nCleanup resources." },
 	{	"set_default_idle_callback",	(PyCFunction)set_default_idle_callback,		METH_VARARGS | METH_KEYWORDS,	"set_default_idle_callback(callback)\n\nSets the default callback to be issued during client sync operations." },
 	{	"set_power_callbacks",			(PyCFunction)set_power_callbacks,			METH_VARARGS | METH_KEYWORDS,	"set_power_callbacks(suspend, resume)\n\nSets callbacks for suspend/resume system events." },
@@ -1145,7 +915,6 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fSuspendCB);
 	Py_CLEAR(s->fResumeCB);
 	Py_CLEAR(s->fException);
-	Py_CLEAR(s->fTimerList);
 	Py_CLEAR(s->fJSONException);
 	Py_CLEAR(s->fMethodRead);
 	Py_CLEAR(s->fMethodReadKey);
@@ -1205,7 +974,6 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fSuspendCB);
 	Py_VISIT(s->fResumeCB);
 	Py_VISIT(s->fException);
-	Py_VISIT(s->fTimerList);
 	Py_VISIT(s->fJSONException);
 	Py_VISIT(s->fMethodRead);
 	Py_VISIT(s->fMethodReadKey);
@@ -1300,8 +1068,6 @@ module_exec(PyObject *module)
 	state->fMethodWrite = PyUnicode_FromString("write");
 
 	Py_INCREF(state->fJSONException);
-
-	state->fTimerList = PyList_New(0);
 
 	CL_AddPowerCallback(_power_callback, module);
 

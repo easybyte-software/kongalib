@@ -94,7 +94,6 @@ typedef struct DeferredObject
 	volatile bool	fAborted;
 	volatile bool	fExecuted;
 	volatile bool	fPending;
-	CL_Condition	fCondition;
 } DeferredObject;
 
 
@@ -168,8 +167,6 @@ typedef struct MODULE_STATE
 	PyObject						*fResumeCB;
 	volatile bool					fInitialized;
 	PyObject						*fException;
-	CL_Mutex						fTimerLock;
-	PyObject						*fTimerList;
 	std::list<MGA_Client *>			fClientList;
 	std::list<MGA_Client *>			fFreeClientsList;
 	string							fLanguage;
