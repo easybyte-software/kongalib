@@ -42,16 +42,16 @@ Se si desidera è possibile compilare i sorgenti. I prerequisiti per compilare
 Sono supportate le versioni di Windows dalla 10 in su. Come prerequisiti è
 necessario installare:
 
-	- Microsoft Visual Studio 2017 o successiva
+	- Microsoft Visual Studio 2019 o successiva
 	- `SDK di Konga`_
 
 
-**MacOS X**
+**macOS**
 
-Sono supportate le versioni di macOS dalla 10.9 in su. Come prerequisiti è
+Sono supportate le versioni di macOS dalla 10.13 in su. Come prerequisiti è
 necessario installare:
 
-	- XCode (assicurarsi di aver installato anche i tool da linea di comando)
+	- Xcode (assicurarsi di aver installato anche i tool da linea di comando)
 	- `SDK di Konga`_
 
 
@@ -65,7 +65,7 @@ seguenti pacchetti *deb*:
 
 	- build-essential
 	- g++
-	- python-dev
+	- python3-dev
 	- `easybyte-konga-dev`_
 
 La compilazione come da standard Python è possibile sempre tramite *pip*, eseguendo
