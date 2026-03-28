@@ -40,6 +40,8 @@
 #include <ebpr/errors.h>
 #include <konga_client/errors.h>
 
+#include <atomic>
+
 
 #if (defined(__GNUC__) || defined(__clang__))
 	#define EXPORT		__attribute__((__visibility__("default")))
@@ -91,9 +93,9 @@ typedef struct DeferredObject
 	PyObject		*fProgress;
 	PyObject		*fIdle;
 	PyObject		*fUserData;
-	volatile bool	fAborted;
-	volatile bool	fExecuted;
-	volatile bool	fPending;
+	std::atomic<bool>	fAborted;
+	std::atomic<bool>	fExecuted;
+	std::atomic<bool>	fPending;
 } DeferredObject;
 
 
@@ -165,7 +167,7 @@ typedef struct MODULE_STATE
 	PyObject						*fIdleCB;
 	PyObject						*fSuspendCB;
 	PyObject						*fResumeCB;
-	volatile bool					fInitialized;
+	std::atomic<bool>				fInitialized;
 	PyObject						*fException;
 	std::list<MGA_Client *>			fClientList;
 	std::list<MGA_Client *>			fFreeClientsList;

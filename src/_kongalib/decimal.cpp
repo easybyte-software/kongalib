@@ -542,7 +542,7 @@ MGA_Decimal_from_string(CL_Decimal& result, PyObject *string, bool *overflow)
 static int
 MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "value", NULL };
+	static const char *kwlist[] = { "value", NULL };
 	PyObject *value = NULL, *number;
 	bool overflow = false, bad = false;
 	
@@ -614,7 +614,7 @@ static PyObject *
 MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA::MODULE_STATE *state = DECIMAL_STATE();
-	static char *kwlist[] = { "precision", "width", "sep", "padzero", "monetary", NULL };
+	static const char *kwlist[] = { "precision", "width", "sep", "padzero", "monetary", NULL };
 	int precision = -1, width = 0, padzero = 0, sep = 0, monetary=0;
 	CL_LocaleInfo info;
 
@@ -642,7 +642,7 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "value", NULL };
+	static const char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
 	bool dealloc = false;
@@ -675,7 +675,7 @@ MGA_Decimal_ceil(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "value", NULL };
+	static const char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
 	bool dealloc = false;
@@ -708,7 +708,7 @@ MGA_Decimal_floor(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "value", NULL };
+	static const char *kwlist[] = { "value", NULL };
 	MGA::DecimalObject *value = NULL;
 	MGA::DecimalObject *result = NULL;
 	bool dealloc = false;
@@ -741,7 +741,7 @@ MGA_Decimal_round(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal___round__(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "digits", NULL };
+	static const char *kwlist[] = { "digits", NULL };
 	int digits = 0;
 	MGA::DecimalObject *result = NULL;
 	
@@ -758,7 +758,7 @@ MGA_Decimal___round__(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_multiply(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "other", "value", "mode", NULL };
+	static const char *kwlist[] = { "other", "value", "mode", NULL };
 	MGA::DecimalObject *other, *result;
 	MGA::DecimalObject *value = NULL;
 	int mode = CL_Decimal::ROUND;
@@ -787,7 +787,7 @@ MGA_Decimal_multiply(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 static MGA::DecimalObject *
 MGA_Decimal_divide(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = { "other", "value", "mode", NULL };
+	static const char *kwlist[] = { "other", "value", "mode", NULL };
 	MGA::DecimalObject *other, *result;
 	MGA::DecimalObject *value = NULL;
 	int mode = CL_Decimal::ROUND;
@@ -848,7 +848,7 @@ static PyObject *
 MGA_Decimal_set_locale(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState((PyTypeObject *)self);
-	static char *kwlist[] = { "lang", NULL };
+	static const char *kwlist[] = { "lang", NULL };
 	const char *lang;
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &lang))

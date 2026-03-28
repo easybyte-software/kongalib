@@ -506,7 +506,7 @@ parse_map_key(void *ctx, const unsigned char *key, size_t size)
 		return 0;
 	}
 	PyObject *result = NULL;
-	PyObject *object = PyUnicode_DecodeUTF8((const char *)key, (Py_ssize_t)size, NULL);
+	PyObject *object = PyUnicode_FromStringAndSize((const char *)key, (Py_ssize_t)size);
 	if (object) {
 		result = PyObject_CallMethodObjArgs((PyObject *)self, state->fMethodReadKey, object, NULL);
 		Py_DECREF(object);
