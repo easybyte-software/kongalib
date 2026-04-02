@@ -618,8 +618,15 @@ MGA_Decimal_format(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	int precision = -1, width = 0, padzero = 0, sep = 0, monetary=0;
 	CL_LocaleInfo info;
 
-	CL_GetLocaleInfo(&info, state ? state->fLanguage : "");
-	
+	{
+		string lang;
+		if (state) {
+			CL_AutoLocker locker(&state->fThreadsLock);
+			lang = state->fLanguage;
+		}
+		CL_GetLocaleInfo(&info, lang);
+	}
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiii", kwlist, &precision, &width, &sep, &padzero, &monetary))
 		return NULL;
 	
@@ -854,8 +861,10 @@ MGA_Decimal_set_locale(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &lang))
 		return NULL;
 	
-	if (state)
+	if (state) {
+		CL_AutoLocker locker(&state->fThreadsLock);
 		state->fLanguage = lang;
+	}
 
 	Py_RETURN_NONE;
 }

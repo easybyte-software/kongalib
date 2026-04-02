@@ -74,10 +74,7 @@ public:
 
 	static locale_t c_locale()
 	{
-		static locale_t locale = NULL;
-		if (!locale) {
-			locale = newlocale(LC_ALL_MASK, "C", NULL);
-		}
+		static locale_t locale = newlocale(LC_ALL_MASK, "C", NULL);
 		return locale;
 	}
 

@@ -204,13 +204,6 @@ MGA::DeferredObject::DeferredObject(PyObject *module, ClientObject *client, PyOb
 
 MGA::DeferredObject::~DeferredObject()
 {
-	Py_DECREF(fModule);
-	Py_XDECREF(fClient);
-	Py_XDECREF(fSuccess);
-	Py_XDECREF(fError);
-	Py_XDECREF(fProgress);
-	Py_XDECREF(fIdle);
-	Py_DECREF(fUserData);
 }
 
 
@@ -255,6 +248,7 @@ Deferred_dealloc(MGA::DeferredObject *self)
 {
 	PyTypeObject *type = Py_TYPE(self);
 	PyObject_GC_UnTrack(self);
+	Deferred_clear(self);
 	self->~DeferredObject();
 	type->tp_free((PyObject*)self);
 	Py_DECREF(type);
@@ -715,7 +709,7 @@ get_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	if (state->fTimeOut) {
-		return PyLong_FromLong((long)state->fTimeOut);
+		return PyLong_FromLong((long)state->fTimeOut.load());
 	}
 	else
 		Py_RETURN_NONE;
@@ -733,7 +727,9 @@ get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
 
 	if (state->fTimeOut) {
 		uint32 now = CL_GetTime();
-		return PyLong_FromLong(state->fTimeOut - CL_MIN(state->fTimeOut, (now - state->fStartTime)));
+		uint32 timeout = state->fTimeOut.load();
+		uint32 elapsed = now - state->fStartTime.load();
+		return PyLong_FromLong(timeout - CL_MIN(timeout, elapsed));
 	}
 	else
 		Py_RETURN_NONE;

@@ -172,8 +172,8 @@ typedef struct MODULE_STATE
 	std::list<MGA_Client *>			fClientList;
 	std::list<MGA_Client *>			fFreeClientsList;
 	string							fLanguage;
-	uint32							fTimeOut;
-	uint32							fStartTime;
+	std::atomic<uint32>				fTimeOut;
+	std::atomic<uint32>				fStartTime;
 	PyObject						*fJSONException;
 	PyObject						*fMethodRead;
 	PyObject						*fMethodReadKey;
