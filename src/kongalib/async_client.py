@@ -16,6 +16,7 @@
 import asyncio
 import nest_asyncio
 import inspect
+import warnings
 
 from kongalib import *
 
@@ -538,19 +539,19 @@ class AsyncClient(Client):
 			IN_ROW_ID: row_id
 		}, OUT_ANSWER)
 	
-	def select_data(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, exist=None, progress=None):
+	def select_data(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, limit=None, *, get_total=False, exist=None, progress=None, count=None):
 		"""Genera ed esegue una SELECT sul server per ottenere una lista di risultati, a partire dalla tabella *tablename*.
 		*fieldnamelist* è una lista di nomi dei campi da ottenere; se un campo fk_X di *tablename* è una foreign key, si può accedere ai
 		campi della tabella collegata Y specificando "fk_X.Campo_di_Y"; la JOIN corrispondente verrà generata e gestita automaticamente dal
 		server. Analogamente, si possono creare catene di JOIN implicite facendo riferimenti multipli di campi foreign key, per esempio
 		"fk_X.fk_Y.fk_Z.Campo_di_Z".
-		
+
 		Se *where_expr* non è ``None``, può essere il corpo di una espressione WHERE SQL, e può contenere riferimenti nella stessa forma di
 		*fieldnamelist*, per esempio "(Campo_di_X = 1) AND (fk_X.Campo_di_Y > 5)".
-		
+
 		*order_by* può essere un nome di campo per cui ordinare i risultati, dove *order_desc* specifica se ordinare in modo ascendente o discendente.
-		*offset* e *count* permettono di restituire risultati solo a partire dal numero *offset*, e limitandosi a *count* risultati.
-		
+		*offset* e *limit* permettono di restituire risultati solo a partire dal numero *offset*, e limitandosi a *limit* risultati.
+
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato dipende dal valore del parametro *get_total*.
 		Se *get_total* è ``True``, il risultato sarà una tupla nella forma ``(result_set, total_rows, exist_results)``; *total_rows* sarà il numero
 		totale di righe come se *offset* e *limit* non fossero stati specificati, mentre *exist_results* sarà un ``dict`` le cui chiavi saranno gli
@@ -558,7 +559,14 @@ class AsyncClient(Client):
 		per la tabella *tablename* oppure no.
 		Se *get_total* è ``False``, il risultato sarà il solo *result_set*, ossia una lista di righe risultato della query, dove ogni riga è una
 		lista di valori.
+
+		.. deprecated::
+			Il parametro *count* è deprecato; usare *limit* al suo posto.
 		"""
+		if count is not None:
+			warnings.warn("'count' parameter is deprecated, use 'limit' instead", DeprecationWarning, stacklevel=2)
+			if limit is None:
+				limit = count
 		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
@@ -570,14 +578,22 @@ class AsyncClient(Client):
 			IN_ORDER_BY: order_by,
 			IN_ORDER_DESC: order_desc,
 			IN_OFFSET: offset,
-			IN_ROW_COUNT: count,
+			IN_ROW_COUNT: limit,
 			IN_GET_TOTAL_ROWS: get_total,
 			IN_GET_ROWS_EXIST: exist,
 		}, ( OUT_RESULT_SET, OUT_TOTAL_ROWS, OUT_EXIST ) if get_total else OUT_RESULT_SET, progress=progress)
-	
-	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, progress=None):
+
+	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, limit=None, *, get_total=False, progress=None, count=None):
 		"""Esattamente come :meth:`.select_data`, ma l'oggetto ``asyncio.Future`` restituito una volta completato ritornerà un *result_set* sotto
-		forma di lista di ``dict``, anzichè una lista di liste."""
+		forma di lista di ``dict``, anzichè una lista di liste.
+
+		.. deprecated::
+			Il parametro *count* è deprecato; usare *limit* al suo posto.
+		"""
+		if count is not None:
+			warnings.warn("'count' parameter is deprecated, use 'limit' instead", DeprecationWarning, stacklevel=2)
+			if limit is None:
+				limit = count
 		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
@@ -596,7 +612,7 @@ class AsyncClient(Client):
 			IN_ORDER_BY: order_by,
 			IN_ORDER_DESC: order_desc,
 			IN_OFFSET: offset,
-			IN_ROW_COUNT: count,
+			IN_ROW_COUNT: limit,
 			IN_GET_TOTAL_ROWS: get_total,
 		}, get_result, progress=progress)
 

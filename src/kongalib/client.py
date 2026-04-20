@@ -15,6 +15,7 @@
 
 import sys
 import threading
+import warnings
 
 from kongalib import Error, ErrorList
 from .constants import *
@@ -506,30 +507,37 @@ class Client:
 		})
 		return output['ANSWER']
 	
-	def select_data(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, exist=None, success=None, error=None, progress=None):
+	def select_data(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, limit=None, *, get_total=False, exist=None, success=None, error=None, progress=None, count=None):
 		"""Genera ed esegue una SELECT sul server per ottenere una lista di risultati, a partire dalla tabella *tablename*.
 		*fieldnamelist* è una lista di nomi dei campi da ottenere; se un campo fk_X di *tablename* è una foreign key, si può accedere ai
 		campi della tabella collegata Y specificando "fk_X.Campo_di_Y"; la JOIN corrispondente verrà generata e gestita automaticamente dal
 		server. Analogamente, si possono creare catene di JOIN implicite facendo riferimenti multipli di campi foreign key, per esempio
 		"fk_X.fk_Y.fk_Z.Campo_di_Z".
-		
+
 		Se *where_expr* non è ``None``, può essere il corpo di una espressione WHERE SQL, e può contenere riferimenti nella stessa forma di
 		*fieldnamelist*, per esempio "(Campo_di_X = 1) AND (fk_X.Campo_di_Y > 5)".
-		
+
 		*order_by* può essere un nome di campo per cui ordinare i risultati, dove *order_desc* specifica se ordinare in modo ascendente o discendente.
-		*offset* e *count* permettono di restituire risultati solo a partire dal numero *offset*, e limitandosi a *count* risultati.
-		
+		*offset* e *limit* permettono di restituire risultati solo a partire dal numero *offset*, e limitandosi a *limit* risultati.
+
 		Se *get_total* è ``True``, il valore di ritorno (o gli argomenti della callback *success*) sarà una tupla nella forma ``(result_set, total_rows, exist_results)``;
 		*total_rows* sarà il numero totale di righe come se *offset* e *limit* non fossero stati specificati, mentre *exist_results* sarà un
 		``dict`` le cui chiavi saranno gli ID specificati nel parametro *exist*, e i valori saranno ``True`` o ``False`` a seconda che il
 		corrispettivo ID sia presente nel database per la tabella *tablename* oppure no.
-		
+
 		Se *success* è ``None`` la chiamata è bloccante e verrà restituito un risultato come descritto sopra, altrimenti verrà lanciata un'eccezione
 		:class:`~kongalib.Error` in caso di errore.
 		Se *success* è una funzione nella forma ``success(result_set)`` oppure ``success(result_set, total_rows, exist_results)`` (a seconda del
 		parametro *get_total* come descritto sopra), la chiamata restituisce immediatamente un oggetto :class:`~kongalib.Deferred` e l'operazione
 		viene eseguita in modo asincrono; la callback *success* verrà invocata a tempo debito.
+
+		.. deprecated::
+			Il parametro *count* è deprecato; usare *limit* al suo posto.
 		"""
+		if count is not None:
+			warnings.warn("'count' parameter is deprecated, use 'limit' instead", DeprecationWarning, stacklevel=2)
+			if limit is None:
+				limit = count
 		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
@@ -553,7 +561,7 @@ class Client:
 				IN_ORDER_BY: order_by,
 				IN_ORDER_DESC: order_desc,
 				IN_OFFSET: offset,
-				IN_ROW_COUNT: count,
+				IN_ROW_COUNT: limit,
 				IN_GET_TOTAL_ROWS: get_total,
 				IN_GET_ROWS_EXIST: exist,
 			}, success=callback, error=errback, progress=progress)
@@ -565,7 +573,7 @@ class Client:
 				IN_ORDER_BY: order_by,
 				IN_ORDER_DESC: order_desc,
 				IN_OFFSET: offset,
-				IN_ROW_COUNT: count,
+				IN_ROW_COUNT: limit,
 				IN_GET_TOTAL_ROWS: get_total,
 				IN_GET_ROWS_EXIST: exist,
 			})
@@ -575,9 +583,17 @@ class Client:
 				else:
 					return output[OUT_RESULT_SET]
 			raise Error(output[OUT_ERRNO], output[OUT_ERROR])
-	
-	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, count=None, get_total=False, success=None, error=None, progress=None):
-		"""Esattamente come :meth:`.select_data`, ma restituisce il *result_set* come una lista di ``dict``, anzichè una lista di liste."""
+
+	def select_data_as_dict(self, tablename, fieldnamelist=None, where_expr=None, order_by=None, order_desc=False, offset=0, limit=None, *, get_total=False, success=None, error=None, progress=None, count=None):
+		"""Esattamente come :meth:`.select_data`, ma restituisce il *result_set* come una lista di ``dict``, anzichè una lista di liste.
+
+		.. deprecated::
+			Il parametro *count* è deprecato; usare *limit* al suo posto.
+		"""
+		if count is not None:
+			warnings.warn("'count' parameter is deprecated, use 'limit' instead", DeprecationWarning, stacklevel=2)
+			if limit is None:
+				limit = count
 		if isinstance(fieldnamelist, str):
 			fieldnamelist = [ fieldnamelist ]
 		elif fieldnamelist:
@@ -604,7 +620,7 @@ class Client:
 				IN_ORDER_BY: order_by,
 				IN_ORDER_DESC: order_desc,
 				IN_OFFSET: offset,
-				IN_ROW_COUNT: count,
+				IN_ROW_COUNT: limit,
 				IN_GET_TOTAL_ROWS: get_total,
 			}, success=callback, error=errback, progress=progress)
 		else:
@@ -615,7 +631,7 @@ class Client:
 				IN_ORDER_BY: order_by,
 				IN_ORDER_DESC: order_desc,
 				IN_OFFSET: offset,
-				IN_ROW_COUNT: count,
+				IN_ROW_COUNT: limit,
 				IN_GET_TOTAL_ROWS: get_total,
 			})
 			if output[OUT_ERRNO] == OK:
@@ -1037,5 +1053,3 @@ class Client:
 			})
 			if output[OUT_ERRNO] != OK:
 				raise Error(output[OUT_ERRNO], output[OUT_ERROR])
-
-
