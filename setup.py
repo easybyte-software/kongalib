@@ -80,7 +80,7 @@ def get_ext_args():
 		libraries = [
 			'ebpr_s', 'konga_client_s',
 			'shell32', 'user32', 'netapi32', 'iphlpapi', 'shlwapi',
-			'advapi32', 'secur32', 'ws2_32', 'psapi', 'bcrypt',
+			'advapi32', 'secur32', 'ws2_32', 'psapi', 'dbghelp', 'bcrypt',
 		]
 		if konga_sdk is not None:
 			cflags.append('/I%s\\Include' % konga_sdk)
