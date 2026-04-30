@@ -439,7 +439,7 @@ _ProgressCB(MGA_ProgressType type, double completeness, const string& message, M
 static PyObject *
 MGA_Client_list_servers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "timeout", "port", "success", "error", "progress", "userdata", NULL };
+	char *kwlist[] = { "timeout", "port", "success", "error", "progress", "userdata", NULL };
 	uint32 timeout = MGA_DEFAULT_DISCOVER_TIMEOUT, port = 0;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	
@@ -504,7 +504,7 @@ MGA_Client_list_servers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "server", "host", "port", "options", "timeout", "success", "error", "progress", "userdata", NULL };
+	char *kwlist[] = { "server", "host", "port", "options", "timeout", "success", "error", "progress", "userdata", NULL };
 	PyObject *server = Py_None, *object, *optionsObj = NULL;
 	MGA_ServerSpec spec;
 	CLU_Table options;
@@ -675,7 +675,7 @@ MGA_Client_get_connection_info(MGA::ClientObject *self, PyObject *args)
 static PyObject *
 MGA_Client_execute(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "command", "data", "timeout", "success", "error", "progress", "idle", "userdata", NULL };
+	char *kwlist[] = { "command", "data", "timeout", "success", "error", "progress", "idle", "userdata", NULL };
 	PyObject *py_input = NULL;
 	CLU_Table input, output;
 	MGA_Command command;
@@ -733,7 +733,7 @@ MGA_Client_interrupt(MGA::ClientObject *self, PyObject *args)
 static PyObject *
 MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
@@ -770,7 +770,7 @@ MGA_Client_get_data_dictionary(MGA::ClientObject *self, PyObject *args, PyObject
 static PyObject *
 MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "configured", "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "configured", "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *configured = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
@@ -809,7 +809,7 @@ MGA_Client_list_drivers(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 MGA_Client_list_databases(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "driver", "quick", "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "driver", "quick", "success", "error", "progress", "userdata", "timeout", NULL };
 	string driver;
 	PyObject *driverObj = NULL, *quickObj = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -853,7 +853,7 @@ static PyObject *
 MGA_Client_create_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "desc", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "desc", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name, desc;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -890,7 +890,7 @@ static PyObject *
 MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
 	string driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *output;
 	CLU_Table info;
@@ -926,7 +926,7 @@ MGA_Client_open_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds
 static PyObject *
 MGA_Client_close_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "backup", "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "backup", "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *backup = Py_False, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	bool is_backup;
@@ -963,7 +963,7 @@ static PyObject *
 MGA_Client_upgrade_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1005,7 +1005,7 @@ static PyObject *
 MGA_Client_delete_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "delete_cloud_data", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "delete_cloud_data", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name;
 	PyObject *deleteCloudData = Py_None, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1044,7 +1044,7 @@ static PyObject *
 MGA_Client_query_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "query", "native", "full_column_names", "collapse_blobs", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "query", "native", "full_column_names", "collapse_blobs", "success", "error", "progress", "userdata", "timeout", NULL };
 	string query;
 	PyObject *_native = Py_False, *_full_column_names = Py_False, *_collapse_blobs = Py_False;
 	bool native, full_column_names, collapse_blobs;
@@ -1098,7 +1098,7 @@ static PyObject *
 MGA_Client_backup_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "backupName", "driver", "name", "auto", "overwrite", "position", "storeindex", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "backupName", "driver", "name", "auto", "overwrite", "position", "storeindex", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, backupName, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *automatic = Py_True, *overWrite = Py_False, *storeIndex = Py_False;
 	uint32 position = 0, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1137,7 +1137,7 @@ static PyObject *
 MGA_Client_restore_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "backupName", "driver", "name", "changeUUID", "overWrite", "position", "restoreindex", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "backupName", "driver", "name", "changeUUID", "overWrite", "position", "restoreindex", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, backupName, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 changeUUID = 1, overWrite = 0, position=0, restoreIndex=1, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1170,7 +1170,7 @@ MGA_Client_restore_database(MGA::ClientObject *self, PyObject *args, PyObject *k
 static PyObject *
 MGA_Client_list_backups(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "position", "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "position", "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 position=0, timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
 	MGA_Status result;
@@ -1208,7 +1208,7 @@ static PyObject *
 MGA_Client_delete_backup(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "backupName", "position", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "backupName", "position", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, backupName;
 	CLU_List backupNames;
 	PyObject *object, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
@@ -1265,7 +1265,7 @@ static PyObject *
 MGA_Client_optimize_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1299,7 +1299,7 @@ static PyObject *
 MGA_Client_repair_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "output", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "output", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name, output;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1333,7 +1333,7 @@ static PyObject *
 MGA_Client_index_database(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "password", "driver", "name", "reset", "run", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "password", "driver", "name", "reset", "run", "success", "error", "progress", "userdata", "timeout", NULL };
 	string password, driver, name;
 	PyObject *reset = Py_False, *run = Py_True, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1370,7 +1370,7 @@ MGA_Client_index_database(MGA::ClientObject *self, PyObject *args, PyObject *kwd
 static PyObject *
 MGA_Client_list_clients(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "full", "any", "success", "error", "progress", "userdata", "timeout", NULL };
+	char *kwlist[] = { "full", "any", "success", "error", "progress", "userdata", "timeout", NULL };
 	PyObject *fullObj = Py_False, *anyObj = Py_False, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
 	bool full, any;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1412,7 +1412,7 @@ static PyObject *
 MGA_Client_get_client_info(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "id", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "id", "success", "error", "progress", "userdata", "timeout", NULL };
 	uint32 clientId = 0;
 	string sid;
 	PyObject *client, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
@@ -1465,7 +1465,7 @@ static PyObject *
 MGA_Client_kill_client(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "id", "password", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "id", "password", "success", "error", "progress", "userdata", "timeout", NULL };
 	uint32 clientId = 0;
 	string sid, password;
 	PyObject *client, *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;
@@ -1513,7 +1513,7 @@ static PyObject *
 MGA_Client_authenticate(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "username", "password", "success", "error", "progress", "userdata", "timeout", "new_password", NULL };
+	static char *kwlist[] = { "username", "password", "success", "error", "progress", "userdata", "timeout", "new_password", NULL };
 	string userName, password, newPassword;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None, *newPasswordObj = NULL;
 	uint32 timeout = MGA_DEFAULT_EXECUTE_TIMEOUT;
@@ -1562,7 +1562,7 @@ static PyObject *
 MGA_Client_full_text_search(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 {
 	MGA_Status result;
-	static const char *kwlist[] = { "text", "limit", "success", "error", "progress", "userdata", "timeout", NULL };
+	static char *kwlist[] = { "text", "limit", "success", "error", "progress", "userdata", "timeout", NULL };
 	string text;
 	uint32 limit = 0;
 	PyObject *success = NULL, *error = NULL, *progress = NULL, *userdata = Py_None;

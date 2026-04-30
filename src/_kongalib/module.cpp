@@ -341,7 +341,7 @@ static PyType_Spec Deferred_spec = {
 static PyObject *
 host_lookup(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "address", NULL };
+	char *kwlist[] = { "address", NULL };
 	string address;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &address))
@@ -436,7 +436,7 @@ get_system_info(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 hash_password(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "password", NULL };
+	char *kwlist[] = { "password", NULL };
 	string password;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kwlist, MGA::ConvertString, &password))
@@ -539,7 +539,7 @@ set_default_idle_callback(PyObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
 	}
-	const char *kwlist[] = { "callback", NULL };
+	char *kwlist[] = { "callback", NULL };
 	PyObject *object;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &object))
 		return NULL;
@@ -560,7 +560,7 @@ set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_RuntimeError, "no module state!");
 		return NULL;
 	}
-	const char *kwlist[] = { "suspend", "resume", NULL };
+	char *kwlist[] = { "suspend", "resume", NULL };
 	PyObject *suspend, *resume;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &suspend, &resume))
 		return NULL;
@@ -580,7 +580,7 @@ set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 checksum(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "callback", NULL };
+	char *kwlist[] = { "callback", NULL };
 	PyObject *object;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &object))
 		return NULL;
@@ -662,7 +662,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 static PyObject *
 set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "timeout", NULL };
+	char *kwlist[] = { "timeout", NULL };
 	PyObject *object = NULL;
 	uint32 timeout, oldTimeout;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &object))
@@ -739,7 +739,7 @@ get_interpreter_time_left(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 _set_process_foreground(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "foreground", NULL };
+	char *kwlist[] = { "foreground", NULL };
 	PyObject *foreground;
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &foreground))
 		return NULL;
@@ -752,7 +752,7 @@ _set_process_foreground(PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 _apply_stylesheet(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	const char *kwlist[] = { "xml", "xslt", NULL };
+	char *kwlist[] = { "xml", "xslt", NULL };
 	string xml, xslt, error;
 	CL_Blob xmlBlob, xsltBlob, output;
 

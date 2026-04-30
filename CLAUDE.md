@@ -97,5 +97,5 @@ GitHub Actions workflow `build_wheels.yml` is manually dispatched. It builds whe
 - The codebase uses tabs for indentation in most files.
 - Python 3.10+ is required (pyproject.toml `requires-python`).
 - `constants.py` and `constants.json` are auto-generated — do not edit manually.
-- C extension uses `const char *kwlist[]` for `PyArg_ParseTupleAndKeywords`.
+- C extension uses `char *kwlist[]` for `PyArg_ParseTupleAndKeywords` (Python ≤ 3.12 requires non-const `char **`; 3.13 widened it to `const char * const *` but accepts the old form).
 - Thread-shared bools use `std::atomic<bool>`, not `volatile`.
