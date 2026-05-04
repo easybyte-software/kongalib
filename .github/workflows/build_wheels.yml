@@ -3,13 +3,8 @@ name: Build wheels
 on:
   workflow_dispatch:
     inputs:
-      publish:
-        description: 'Publish wheels by uploading to PyPI'
-        type: boolean
-        default: false
-        required: false
       sdk_version:
-        description: 'Version of the Konga SDK to be used'
+        description: 'Version of the Konga SDK to be used (e.g. nightly, stable/2.1.0, stable/2.1.0-beta, archive/2.1.0)'
         default: 'nightly'
         required: true
       platform:
@@ -22,114 +17,125 @@ on:
         - all
         required: true
         default: 'all'
-      path:
-        description: 'Path override'
-        type: string
-        default: ''
-        required: false
-  
-  workflow_call:
-    inputs:
-      publish:
-        type: boolean
-        default: false
-        required: false
-      sdk_version:
-        type: string
-        default: 'nightly'
-        required: false
-      platform:
-        type: string
-        required: true
-      path:
-        type: string
-        default: ''
-        required: false
-    secrets:
-      kss_private_key:
-        required: true
-
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 
 jobs:
+  context:
+    name: Resolve build context
+    runs-on: ubuntu-latest
+    outputs:
+      sdk_version:  ${{ steps.derive.outputs.sdk_version }}
+      publish_pypi: ${{ steps.derive.outputs.publish_pypi }}
+      publish_kss:  ${{ steps.derive.outputs.publish_kss }}
+      kss_public:   ${{ steps.derive.outputs.kss_public }}
+      platform:     ${{ steps.derive.outputs.platform }}
+    steps:
+      - id: derive
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_SDK_VERSION: ${{ inputs.sdk_version }}
+          INPUT_PLATFORM: ${{ inputs.platform }}
+        run: |
+          if [[ "${EVENT_NAME}" == "push" ]]; then
+            # Tag push: build against archive/<tag>, publish to PyPI, skip KSS.
+            echo "sdk_version=archive/${REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "publish_pypi=true"              >> "$GITHUB_OUTPUT"
+            echo "publish_kss=false"              >> "$GITHUB_OUTPUT"
+            echo "kss_public=false"               >> "$GITHUB_OUTPUT"
+            echo "platform=all"                   >> "$GITHUB_OUTPUT"
+          else
+            # workflow_dispatch: upload to KSS, never to PyPI.
+            # --public flag is set iff sdk_version targets the archive channel.
+            sdk="${INPUT_SDK_VERSION:-nightly}"
+            echo "sdk_version=${sdk}"                       >> "$GITHUB_OUTPUT"
+            echo "publish_pypi=false"                       >> "$GITHUB_OUTPUT"
+            echo "publish_kss=true"                         >> "$GITHUB_OUTPUT"
+            if [[ "${sdk}" == archive/* ]]; then
+              echo "kss_public=true"                        >> "$GITHUB_OUTPUT"
+            else
+              echo "kss_public=false"                       >> "$GITHUB_OUTPUT"
+            fi
+            echo "platform=${INPUT_PLATFORM:-all}"          >> "$GITHUB_OUTPUT"
+          fi
+
   build_sdist:
     name: Build SDist
+    needs: [context]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.ref }}
-      
-      - name: Setup submodule
-        run: git submodule update --init .
-        working-directory: ${{ inputs.path }}
-        if: (inputs.path != '')
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Build SDist
         run: pipx run build --sdist
-        working-directory: ${{ inputs.path || '.' }}
-    
+
       - name: Setup Python
-        if: (inputs.path != '')
+        if: needs.context.outputs.publish_kss == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Upload to KSS
-        if: (inputs.path != '')
+        if: needs.context.outputs.publish_kss == 'true'
         run: |
           pip install rsa requests
-          python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ${{ inputs.path || '.' }}/dist/*.tar.gz --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py dist/*.tar.gz --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: source-dist
-          path: ${{ inputs.path || '.' }}/dist/*.tar.gz
-      
+          path: dist/*.tar.gz
+
   build_wheels:
     name: Build on ${{ matrix.os }}
+    needs: [context]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v6
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         with:
           ref: ${{ github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup (Linux)
-        if: (runner.os == 'Linux') && (inputs.platform == 'all' || (inputs.platform == runner.os))
+        if: (runner.os == 'Linux') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         uses: docker/setup-qemu-action@v4
         with:
           platforms: all
-  
+
       - name: Setup (Windows)
-        if: (runner.os == 'Windows') && (inputs.platform == 'all' || (inputs.platform == runner.os))
+        if: (runner.os == 'Windows') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         run: |
-          Invoke-WebRequest https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=win -OutFile ${{ runner.temp }}\KongaSDK.exe
+          Invoke-WebRequest https://public.easybyte.it/downloads/${{ needs.context.outputs.sdk_version }}/sdk?spec=win -OutFile ${{ runner.temp }}\KongaSDK.exe
           Start-Process ${{ runner.temp }}\KongaSDK.exe -ArgumentList "/install /quiet" -Wait
         shell: pwsh
-  
+
       - name: Setup (macOS)
-        if: (runner.os == 'macOS') && (inputs.platform == 'all' || (inputs.platform == runner.os))
+        if: (runner.os == 'macOS') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         run: |
-          curl https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
+          curl https://public.easybyte.it/downloads/${{ needs.context.outputs.sdk_version }}/sdk?spec=mac -o KongaSDK.dmg
           7z e -aoa KongaSDK.dmg && sudo installer -pkg *.pkg -target /
         shell: bash
 
-      - name: Setup submodule
-        run: git submodule update --init .
-        working-directory: ${{ inputs.path }}
-        if: (inputs.path != '')
-
       - name: Build wheels
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         uses: pypa/cibuildwheel@v3.4.1
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-          CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre2-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ inputs.sdk_version }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
+          CIBW_BEFORE_ALL_LINUX: 'yum install -y wget tar zlib-devel pcre2-devel dbus-devel dbus-libs && rm -fr /usr/local/konga_sdk && mkdir -p /usr/local/konga_sdk && cd /usr/local/konga_sdk && wget https://public.easybyte.it/downloads/${{ needs.context.outputs.sdk_version }}/sdk?spec=linux,tar.gz,`uname -m` -O konga_sdk.tar.gz && tar -zxvf konga_sdk.tar.gz'
           CIBW_BUILD: '*-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
           CIBW_SKIP: 'cp38-* cp39-*'
           CIBW_ARCHS_MACOS: 'universal2'
@@ -137,50 +143,49 @@ jobs:
           CIBW_BUILD_VERBOSITY: '2'
           CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
-          CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ inputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
-        with:
-          package-dir: ${{ inputs.path || '.' }}
+          CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ needs.context.outputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
 
       - name: Setup Python
-        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Upload to KSS
-        if: (inputs.path != '') && (inputs.platform == 'all' || (inputs.platform == matrix.os))
+        if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         run: |
           pip install rsa requests
-          python3 ${{ inputs.path }}/.github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ inputs.sdk_version }}" ${{ inputs.publish && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
 
       - uses: actions/upload-artifact@v7
-        if: inputs.platform == 'all' || (inputs.platform == runner.os)
+        if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         with:
           name: binary-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
-  upload_all:
-    name: Upload wheels
-    needs: [build_wheels, build_sdist]
+  upload_pypi:
+    name: Upload to PyPI
+    needs: [context, build_wheels, build_sdist]
+    if: needs.context.outputs.publish_pypi == 'true'
     environment:
       name: pypi
       url: https://pypi.org/p/kongalib
     permissions:
       id-token: write
     runs-on: ubuntu-latest
-    if: inputs.publish
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/download-artifact@v8
-        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
-          name: binary-${{ matrix.os }}
+          pattern: 'binary-*'
           path: dist
-    
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: source-dist
+          path: dist
+
       - name: Publish packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: inputs.platform == 'all' || (inputs.platform == matrix.os)
         with:
           skip-existing: true

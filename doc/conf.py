@@ -50,8 +50,11 @@ copyright = u'%d, Converge SpA - EasyByte Software' % datetime.date.today().year
 #
 
 # The short X.Y version.
-with open(os.path.join('..', 'setup.py'), 'rb') as file:
-	version = re.search(r"version = '([^']*)'", file.read()).group(1)
+try:
+	from importlib.metadata import version as _get_version
+	version = _get_version('kongalib')
+except Exception:
+	version = '0.0.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 

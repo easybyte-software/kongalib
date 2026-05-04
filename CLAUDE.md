@@ -85,11 +85,16 @@ When modifying the C extension:
 
 ## Versioning
 
-Version is in `_version.py` (`_VERSION`). The `KONGALIB_BUILD` env var appends a build suffix. The build backend is a custom wrapper over setuptools (`_version:build_meta`).
+Version is derived from git tags via `setuptools-scm` (configured in `pyproject.toml`). A tag like `2.1.0` produces version `2.1.0`; commits past that tag produce a PEP 440 dev version like `2.1.1.dev3+g<sha>`. To override the derivation (e.g. when building from the parent konga monorepo and the wheel needs a specific version like `2.1.0.post1+konga`), set `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB` to a PEP 440 string before invoking the build — this bypasses git inspection entirely. If neither tags nor the env var are available, `[tool.setuptools_scm].fallback_version` (`0.0.0+unknown`) is used.
 
 ## CI
 
-GitHub Actions workflow `build_wheels.yml` is manually dispatched. It builds wheels for Windows, macOS (universal2), and Linux (x86_64, aarch64 via manylinux_2_28) using cibuildwheel, and optionally publishes to PyPI.
+GitHub Actions workflow `build_wheels.yml` builds wheels for Windows, macOS (universal2), and Linux (x86_64, aarch64 via manylinux_2_28) using cibuildwheel. Two triggers:
+
+- `workflow_dispatch` (manual or invoked by konga CI): builds against the SDK at `inputs.sdk_version` (e.g. `nightly`, `stable/X.Y.Z`, `stable/X.Y.Z-beta`, `archive/X.Y.Z`), uploads wheels to KSS at the same path. The `--public` flag is passed to KSS only when `sdk_version` starts with `archive/`. Dispatch runs **never** publish to PyPI.
+- `push` of a tag matching `[0-9]+.[0-9]+.[0-9]+`: builds against `archive/<tag>` and publishes to PyPI. Tag-push runs do **not** upload to KSS (the archive-channel KSS upload is expected to have happened earlier via konga CI's dispatch).
+
+A small `context` job at the top of the workflow resolves `sdk_version`, `publish_pypi`, `publish_kss`, `kss_public`, and `platform` once; downstream jobs read `needs.context.outputs.*`.
 
 ## Code Conventions
 

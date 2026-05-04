@@ -2,9 +2,8 @@
 #
 #	require setuptools >= 78.0.0 once Python 3.8 support is dropped; this enables us to use non-deprecated license (see below)
 #
-requires = [ "setuptools >= 61.0.0" ]
-build-backend = "_version:build_meta"
-backend-path = [ '.' ]
+requires = [ "setuptools >= 61.0.0", "setuptools-scm >= 8" ]
+build-backend = "setuptools.build_meta"
 
 
 [project]
@@ -65,5 +64,12 @@ py-modules = [ "kongautil", "kongaui" ]
 zip-safe = true
 
 
-[tool.setuptools.dynamic]
-version = { attr = "_version.__version__" }
+#
+#	Version is derived from git tags (e.g. tag "2.1.0" -> version "2.1.0").
+#	Between tags, setuptools-scm produces a PEP 440 dev version like
+#	"2.1.1.dev3+g<sha>". To override (e.g. when building from the parent
+#	konga monorepo), set SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB to a
+#	PEP 440 string before invoking the build.
+#
+[tool.setuptools_scm]
+fallback_version = "0.0.0+unknown"
