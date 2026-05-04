@@ -17,6 +17,10 @@ on:
         - all
         required: true
         default: 'all'
+      checkout_ref:
+        description: 'Git ref (branch, tag, or SHA) to check out and build. Defaults to the workflow dispatch ref.'
+        required: false
+        default: ''
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -70,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.checkout_ref || github.ref }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -105,7 +109,7 @@ jobs:
       - uses: actions/checkout@v6
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.checkout_ref || github.ref }}
           fetch-depth: 0
           fetch-tags: true
 
