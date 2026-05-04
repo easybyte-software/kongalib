@@ -63,9 +63,12 @@ zip-safe = true
 #
 #	Version is derived from git tags (e.g. tag "2.1.0" -> version "2.1.0").
 #	Between tags, setuptools-scm produces a PEP 440 dev version like
-#	"2.1.1.dev3+g<sha>". To override (e.g. when building from the parent
-#	konga monorepo), set SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB to a
-#	PEP 440 string before invoking the build.
+#	"2.1.1.dev3" (the default "+g<sha>" local segment is suppressed via
+#	local_scheme so wheels remain PyPI-acceptable). To override (e.g.
+#	when building from the parent konga monorepo), set
+#	SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB to a PEP 440 string
+#	before invoking the build.
 #
 [tool.setuptools_scm]
 fallback_version = "0.0.0+unknown"
+local_scheme = "no-local-version"

@@ -85,7 +85,7 @@ When modifying the C extension:
 
 ## Versioning
 
-Version is derived from git tags via `setuptools-scm` (configured in `pyproject.toml`). A tag like `2.1.0` produces version `2.1.0`; commits past that tag produce a PEP 440 dev version like `2.1.1.dev3+g<sha>`. To override the derivation (e.g. when building from the parent konga monorepo and the wheel needs a specific version like `2.1.0.post1+konga`), set `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB` to a PEP 440 string before invoking the build — this bypasses git inspection entirely. If neither tags nor the env var are available, `[tool.setuptools_scm].fallback_version` (`0.0.0+unknown`) is used.
+Version is derived from git tags via `setuptools-scm` (configured in `pyproject.toml`). A tag like `2.1.0` produces version `2.1.0`; commits past that tag produce a PEP 440 dev version like `2.1.1.dev3` (the default `+g<sha>` local segment is suppressed via `local_scheme = "no-local-version"` so dev wheels remain PyPI-acceptable). To override the derivation (e.g. when building from the parent konga monorepo and the wheel needs a specific version like `2.1.0.post1+konga`), set `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_KONGALIB` to a PEP 440 string before invoking the build — this bypasses git inspection entirely. If neither tags nor the env var are available, `[tool.setuptools_scm].fallback_version` (`0.0.0+unknown`) is used.
 
 ## CI
 
