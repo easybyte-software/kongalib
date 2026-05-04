@@ -91,7 +91,7 @@ jobs:
         if: needs.context.outputs.publish_kss == 'true'
         run: |
           pip install rsa requests
-          python3 .github/scripts/publish_to_kss.py dist/*.tar.gz --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py dist/*.tar.gz --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -159,7 +159,7 @@ jobs:
         if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         run: |
           pip install rsa requests
-          python3 .github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.kss_private_key }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
 
       - uses: actions/upload-artifact@v7
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
