@@ -486,7 +486,8 @@ class _ProxyStdOut(io.StringIO):
 
 class _ProxyStdErr(io.StringIO):
 	def write(self, text):
-		sys.__stderr__.write(str(text))
+		if sys.__stderr__ is not None:
+			sys.__stderr__.write(str(text))
 		try:
 			proxy.builtin.write_stderr(str(text))
 		except:
@@ -758,6 +759,3 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			finally:
 				p.stop()
 		break
-
-
-
