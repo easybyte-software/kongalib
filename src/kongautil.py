@@ -36,6 +36,7 @@ _last_client = None
 _konga_exe = None
 _konga_args = None
 _konga_reuse_client = False
+_konga_timeout = 180
 _konga_proc = None
 
 
@@ -152,6 +153,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 		global _konga_exe
 		global _konga_args
 		global _konga_reuse_client
+		global _konga_timeout
 		client = kongalib.Client()
 		if host is None:
 			import argparse
@@ -174,6 +176,7 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 				'konga_exe':	'',
 				'konga_args':	'',
 				'reuse_client':	'',
+				'timeout':		'',
 			})
 			config.add_section('kongautil.connect')
 			config.add_section('kongautil.print_layout')
@@ -190,6 +193,8 @@ def connect(host=None, port=None, driver=None, database=None, username=None, pas
 			_konga_exe = config.get('kongautil.print_layout', 'konga_exe') or None
 			_konga_args = config.get('kongautil.print_layout', 'konga_args') or None
 			_konga_reuse_client = config.get('kongautil.print_layout', 'reuse_client') or False
+			try:	_konga_timeout = int(config.get('kongautil.print_layout', 'timeout'))
+			except:	pass
 
 			class ArgumentParser(argparse.ArgumentParser):
 				def _print_message(self, message, file=None):
@@ -275,7 +280,7 @@ def _terminate_script_proc():
 
 
 def _run_script(script, log, client):
-	import tempfile, subprocess, string, random, atexit
+	import tempfile, subprocess, string, random, atexit, threading
 	client_exe = _konga_exe
 	if client_exe is None:
 		if sys.platform == 'win32':
@@ -331,28 +336,45 @@ def _run_script(script, log, client):
 			lines += [ '.echo %s' % marker, '' ]
 			_konga_proc.stdin.write('\n'.join(lines))
 			_konga_proc.stdin.flush()
-			while True:
-				line = _konga_proc.stdout.readline()
-				if not line:
-					break
-				line = line[:-1]
-				if line == marker:
-					break
-				log.info(line)
+			timed_out = [ False ]
+			def _on_timeout():
+				timed_out[0] = True
+				try:
+					_konga_proc.kill()
+				except:
+					pass
+			timer = threading.Timer(_konga_timeout, _on_timeout)
+			timer.start()
+			try:
+				while True:
+					line = _konga_proc.stdout.readline()
+					if not line:
+						break
+					line = line[:-1]
+					if line == marker:
+						break
+					log.info(line)
+			finally:
+				timer.cancel()
+			if timed_out[0]:
+				_konga_proc = None
+				raise subprocess.TimeoutExpired(client_exe, _konga_timeout)
 		else:
 			temp = tempfile.NamedTemporaryFile(mode='w', delete=False)
 			try:
 				with temp:
 					temp.write('\n'.join(lines))
-				output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True).splitlines()
+				output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True, timeout=_konga_timeout).splitlines()
 				for line in output:
 					log.info(line)
 			finally:
 				os.unlink(temp.name)
-	except subprocess.CalledProcessError as e:
-		log.warning("Errors running script:")
-		output = kongalib.ensure_text(e.output).splitlines()
-		for line in output:
+	except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+		if isinstance(e, subprocess.TimeoutExpired):
+			log.warning("Timeout (%d seconds) running script:" % _konga_timeout)
+		else:
+			log.warning("Errors running script:")
+		for line in kongalib.ensure_text(e.output).splitlines() if e.output else []:
 			log.error(line)
 		log.info("Original script was:")
 		for line in script:
