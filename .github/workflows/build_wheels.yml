@@ -135,7 +135,7 @@ jobs:
 
       - name: Build wheels
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
-        uses: pypa/cibuildwheel@v3.4.1
+        uses: pypa/cibuildwheel@v4.1.0
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
