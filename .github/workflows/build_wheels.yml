@@ -146,9 +146,15 @@ jobs:
           CIBW_ARCHS_MACOS: 'universal2'
           CIBW_ARCHS_LINUX: ${{ matrix.archs }}
           CIBW_BUILD_VERBOSITY: '2'
-          CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
+          CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk" KONGALIB_STRIP=1'
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
-          CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ needs.context.outputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}"'
+          CIBW_ENVIRONMENT_MACOS: 'KONGALIB_STRIP=1'
+          CIBW_ENVIRONMENT_WINDOWS: 'KONGASDK="${{ needs.context.outputs.sdk_version == ''nightly'' && ''C:\\Program Files\\EasyByte\\Konga SDK Nightly'' || ''C:\\Program Files\\EasyByte\\Konga SDK'' }}" KONGALIB_STRIP=1'
+          # Release wheels (PyPI/KSS) ship without debug info; kit-built dev wheels keep it.
+          # KONGALIB_STRIP makes setup.py drop -g/-ggdb (macOS), -g (Linux) and /Zi+/DEBUG
+          # (Windows, so no .pdb is generated or packaged). On Linux, auditwheel --strip also
+          # strips symbols pulled in from the statically-linked SDK libs and the vendored libs.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'auditwheel repair --strip -w {dest_dir} {wheel}'
 
       - name: Setup Python
         if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))

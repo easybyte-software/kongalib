@@ -40,13 +40,15 @@ def get_ext_args():
 	cflags = []
 	ldflags = []
 	libraries = []
+	# CI release builds set KONGALIB_STRIP=1 to omit debug info so the wheels shipped to
+	# PyPI/KSS stay slim; kit/dev builds leave it unset and keep full debug info.
+	strip = bool(os.environ.get('KONGALIB_STRIP'))
 
 	if sys.platform == 'darwin':
 		sdk = _find_macos_sdk()
 		sdk_root = konga_sdk or '/usr/local'
 		macosx_version_min = os.environ.get('MACOSX_DEPLOYMENT_TARGET', '10.13')
 		cflags = [
-			'-g', '-ggdb',
 			'-Wno-deprecated-register', '-Wno-sometimes-uninitialized', '-Wno-write-strings',
 			'-fvisibility=hidden',
 			'-mmacosx-version-min=%s' % macosx_version_min,
@@ -70,10 +72,9 @@ def get_ext_args():
 		cflags = [
 			'/std:c++17', '/EHsc',
 			'/D_CRT_SECURE_NO_WARNINGS', '/DPSAPI_VERSION=1', '/DPY_SSIZE_T_CLEAN',
-			'/Zi', '/wd4244', '/wd4005', '/wd4267', '/d2FH4-',
+			'/wd4244', '/wd4005', '/wd4267', '/d2FH4-',
 		]
 		ldflags = [
-			'/DEBUG',
 			'/NODEFAULTLIB:LIBCMT', '/NODEFAULTLIB:LIBCMTD',
 			'/ignore:4197', '/ignore:4099',
 		]
@@ -89,7 +90,6 @@ def get_ext_args():
 	else:
 		sdk_root = konga_sdk or '/usr/local'
 		cflags = [
-			'-g',
 			'-Wno-maybe-uninitialized', '-Wno-write-strings', '-Wno-multichar',
 			'-fvisibility=hidden',
 			'-I%s/include' % sdk_root,
@@ -100,6 +100,21 @@ def get_ext_args():
 			'-L%s/lib' % sdk_root,
 			'-lkonga_client_s', '-lebpr_s', '-lz', '-lpcre2-8', '-ldbus-1',
 		]
+
+	if not strip:
+		# Dev/kit builds keep full debug info.
+		if sys.platform == 'darwin':
+			cflags += ['-g', '-ggdb']
+		elif sys.platform == 'win32':
+			cflags += ['/Zi']
+			ldflags += ['/DEBUG']
+		else:
+			cflags += ['-g']
+	elif sys.platform == 'darwin':
+		# macOS wheels have no post-build strip step (delocate lacks --strip), so strip
+		# debug (-S) and local (-x) symbols at link time. DWARF never lands in the linked
+		# .so on macOS, so this only sheds the symbol tables dragged in from the static libs.
+		ldflags += ['-Wl,-S', '-Wl,-x']
 
 	# Allow env var overrides (used by CMake build)
 	if os.environ.get('CFLAGS'):
