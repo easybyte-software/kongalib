@@ -99,12 +99,19 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: Build on ${{ matrix.os }}
+    name: Build on ${{ matrix.runner }}
     needs: [context]
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - runner: ubuntu-latest      # Linux x86_64
+            archs: x86_64
+          - runner: ubuntu-24.04-arm   # Linux aarch64 — native ARM runner, no QEMU
+            archs: aarch64
+          - runner: windows-latest
+          - runner: macos-latest
     steps:
       - uses: actions/checkout@v6
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
@@ -112,12 +119,6 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.ref }}
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Setup (Linux)
-        if: (runner.os == 'Linux') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: all
 
       - name: Setup (Windows)
         if: (runner.os == 'Windows') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
@@ -143,7 +144,7 @@ jobs:
           CIBW_BUILD: '*-macosx_universal2 *-win_amd64 *-manylinux_x86_64 *-manylinux_aarch64'
           CIBW_SKIP: 'cp38-* cp39-*'
           CIBW_ARCHS_MACOS: 'universal2'
-          CIBW_ARCHS_LINUX: 'x86_64 aarch64'
+          CIBW_ARCHS_LINUX: ${{ matrix.archs }}
           CIBW_BUILD_VERBOSITY: '2'
           CIBW_ENVIRONMENT_LINUX: 'KONGASDK="/usr/local/konga_sdk"'
           CIBW_ENVIRONMENT_PASS_LINUX: 'KONGASDK'
@@ -164,7 +165,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         with:
-          name: binary-${{ matrix.os }}
+          name: binary-${{ matrix.runner }}
           path: ./wheelhouse/*.whl
 
   upload_pypi:
