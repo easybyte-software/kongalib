@@ -72,7 +72,7 @@ jobs:
     needs: [context]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.checkout_ref || github.ref }}
           fetch-depth: 0
@@ -113,7 +113,7 @@ jobs:
           - runner: windows-latest
           - runner: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
         with:
           ref: ${{ inputs.checkout_ref || github.ref }}
