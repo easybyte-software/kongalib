@@ -83,7 +83,7 @@ jobs:
 
       - name: Setup Python
         if: needs.context.outputs.publish_kss == 'true'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
@@ -158,7 +158,7 @@ jobs:
 
       - name: Setup Python
         if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
