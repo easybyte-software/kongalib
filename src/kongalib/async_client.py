@@ -14,14 +14,10 @@
 
 
 import asyncio
-import nest_asyncio
 import inspect
 import warnings
 
 from kongalib import *
-
-
-nest_asyncio.apply()
 
 
 class AsyncClient(Client):

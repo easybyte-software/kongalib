@@ -38,7 +38,6 @@ classifiers = [
 ]
 dependencies = [
 	"colorama",
-	"nest_asyncio"
 ]
 dynamic = [ "version" ]
 

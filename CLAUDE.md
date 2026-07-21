@@ -36,7 +36,7 @@ src/
   kongalib/           Python package (installed as "kongalib")
     __init__.py       Public API: Decimal, Client, Error, ErrorList, Log, constants
     client.py         Synchronous Client class (wraps _kongalib.Client C++ impl)
-    async_client.py   AsyncClient (asyncio wrapper over Client, uses nest_asyncio)
+    async_client.py   AsyncClient (asyncio wrapper over Client)
     db.py             PEP 249 DB-API 2.0 interface (Connection, Cursor)
     constants.py      Auto-generated from constants.json (table/field constants)
     expression.py     SQL expression builder
