@@ -101,4 +101,5 @@ Costanti
 
 
 .. automodule:: kongalib
+	:no-index:
 	:members: BACKUP_ON_COMPUTER, BACKUP_ON_CLOUD
