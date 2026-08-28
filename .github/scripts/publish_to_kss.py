@@ -20,6 +20,7 @@ def main():
 	parser.add_argument('--private-key', type=str, required=True, help='Private key for signing uploads.')
 	parser.add_argument('--sdk-version', type=str, required=True, help='Version tag for the upload.')
 	parser.add_argument('--public', action='store_true', help='Make the upload public.')
+	parser.add_argument('--dist', action='store_true', help='Distributed release: make the version visible to clients and automatic updates.')
 	parser.add_argument('path', nargs='+', help='Paths to installer files to upload.')
 	options = parser.parse_args()
 
@@ -67,7 +68,10 @@ def main():
 			response = requests.post(SUPPORT_SERVER_PUBLISH_UPLOAD, data={
 				'signature': binascii.hexlify(signature),
 				'public': 'true' if (channel == 'archive') else 'false',
-				'dist': 'true' if (channel == 'archive') and options.public else 'false',
+				# Not inferred from the channel: release candidates also live in
+				# archive/, and flagging them as distributed flips t_Versions.public
+				# on the support server, exposing them to every client's autoupdater.
+				'dist': 'true' if (channel == 'archive') and options.dist else 'false',
 				'tag': tag,
 				'version': version,
 				'activation_version': 0,

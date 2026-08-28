@@ -21,6 +21,10 @@ on:
         description: 'Git ref (branch, tag, or SHA) to check out and build. Defaults to the workflow dispatch ref.'
         required: false
         default: ''
+      dist:
+        description: 'Distributed release: publish as visible to clients and automatic updates'
+        required: false
+        default: 'false'
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -35,6 +39,7 @@ jobs:
       publish_pypi: ${{ steps.derive.outputs.publish_pypi }}
       publish_kss:  ${{ steps.derive.outputs.publish_kss }}
       kss_public:   ${{ steps.derive.outputs.kss_public }}
+      kss_dist:     ${{ steps.derive.outputs.kss_dist }}
       platform:     ${{ steps.derive.outputs.platform }}
     steps:
       - id: derive
@@ -44,6 +49,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           INPUT_SDK_VERSION: ${{ inputs.sdk_version }}
           INPUT_PLATFORM: ${{ inputs.platform }}
+          INPUT_DIST: ${{ inputs.dist }}
         run: |
           if [[ "${EVENT_NAME}" == "push" ]]; then
             # Tag push: build against archive/<tag>, publish to PyPI, skip KSS.
@@ -51,18 +57,28 @@ jobs:
             echo "publish_pypi=true"              >> "$GITHUB_OUTPUT"
             echo "publish_kss=false"              >> "$GITHUB_OUTPUT"
             echo "kss_public=false"               >> "$GITHUB_OUTPUT"
+            echo "kss_dist=false"                 >> "$GITHUB_OUTPUT"
             echo "platform=all"                   >> "$GITHUB_OUTPUT"
           else
             # workflow_dispatch: upload to KSS, never to PyPI.
             # --public flag is set iff sdk_version targets the archive channel.
+            # --dist comes from the caller and must NOT be inferred from the channel:
+            # release candidates build against archive/ too, and inferring it there
+            # would publish them to clients as if they were distributed releases.
             sdk="${INPUT_SDK_VERSION:-nightly}"
             echo "sdk_version=${sdk}"                       >> "$GITHUB_OUTPUT"
             echo "publish_pypi=false"                       >> "$GITHUB_OUTPUT"
             echo "publish_kss=true"                         >> "$GITHUB_OUTPUT"
             if [[ "${sdk}" == archive/* ]]; then
               echo "kss_public=true"                        >> "$GITHUB_OUTPUT"
+              if [[ "${INPUT_DIST:-false}" == "true" ]]; then
+                echo "kss_dist=true"                        >> "$GITHUB_OUTPUT"
+              else
+                echo "kss_dist=false"                       >> "$GITHUB_OUTPUT"
+              fi
             else
               echo "kss_public=false"                       >> "$GITHUB_OUTPUT"
+              echo "kss_dist=false"                         >> "$GITHUB_OUTPUT"
             fi
             echo "platform=${INPUT_PLATFORM:-all}"          >> "$GITHUB_OUTPUT"
           fi
@@ -91,7 +107,7 @@ jobs:
         if: needs.context.outputs.publish_kss == 'true'
         run: |
           pip install rsa requests
-          python3 .github/scripts/publish_to_kss.py dist/*.tar.gz --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py dist/*.tar.gz --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }} ${{ needs.context.outputs.kss_dist == 'true' && '--dist' || '' }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -166,7 +182,7 @@ jobs:
         if: (needs.context.outputs.publish_kss == 'true') && (needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os))
         run: |
           pip install rsa requests
-          python3 .github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }}
+          python3 .github/scripts/publish_to_kss.py ./wheelhouse/*.whl --private-key "${{ secrets.PUBLISH_PRIVATE_KEY }}" --sdk-version "${{ needs.context.outputs.sdk_version }}" ${{ needs.context.outputs.kss_public == 'true' && '--public' || '' }} ${{ needs.context.outputs.kss_dist == 'true' && '--dist' || '' }}
 
       - uses: actions/upload-artifact@v7
         if: needs.context.outputs.platform == 'all' || (needs.context.outputs.platform == runner.os)
