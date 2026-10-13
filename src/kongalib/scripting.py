@@ -542,8 +542,9 @@ class _Method:
 
 
 class _ServerProxy(threading.Thread):
-	def __init__(self, handlers=None):
+	def __init__(self, handlers=None, loop=None):
 		self.handlers = handlers or {}
+		self.loop = loop
 		self.listener = None
 		self.conn = None
 		super(_ServerProxy, self).__init__()
@@ -589,9 +590,8 @@ class _ServerProxy(threading.Thread):
 							raise RuntimeError('Method "%s" unavailable in this context' % name)
 						result = func(*args, **kwargs)
 						if asyncio.iscoroutine(result):
-							try:
-								loop = asyncio.get_running_loop()
-							except:
+							loop = self.loop
+							if loop is None:
 								loop = asyncio.get_event_loop_policy().get_event_loop()
 							result = asyncio.run_coroutine_threadsafe(result, loop).result()
 						result = (None, result)
@@ -693,10 +693,15 @@ def add_dll_directory(path):
 		_DLL_PATHS.append(path)
 
 
-def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None):
+def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None, loop=None):
 	import traceback
 	if (script is None) and (filename is None):
 		raise ValueError('Either script or filename must be specified')
+	if loop is None:
+		try:
+			loop = asyncio.get_running_loop()
+		except RuntimeError:
+			pass
 	debug_log("[ServerProxy] launching...")
 	if filename is None:
 		filename = '<script>'
@@ -709,7 +714,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	_handlers.update(handlers or {})
 	_handlers['builtin']._set_interpreter(interpreter)
 	while True:
-		p = _ServerProxy(_handlers)
+		p = _ServerProxy(_handlers, loop)
 		try:
 			p.start()
 			debug_log("[ServerProxy] listener address is: %s" % repr(p.listener.address))
