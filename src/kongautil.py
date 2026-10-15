@@ -266,6 +266,32 @@ def get_window_vars():
 
 
 
+def _popen_group_kwargs():
+	import subprocess
+	if sys.platform == 'win32':
+		return { 'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP }
+	else:
+		return { 'start_new_session': True }
+
+
+
+def _kill_proc_tree(proc):
+	import subprocess
+	try:
+		if sys.platform == 'win32':
+			subprocess.call('taskkill /F /T /PID %d' % proc.pid, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		else:
+			import signal
+			os.killpg(proc.pid, signal.SIGKILL)
+	except:
+		pass
+	try:
+		proc.kill()
+	except:
+		pass
+
+
+
 def _terminate_script_proc():
 	try:
 		_konga_proc.stdin.write('.quit\n')
@@ -273,7 +299,7 @@ def _terminate_script_proc():
 		try:
 			_konga_proc.wait(5)
 		except:
-			_konga_proc.terminate()
+			_kill_proc_tree(_konga_proc)
 	except:
 		pass
 
@@ -325,7 +351,7 @@ def _run_script(script, log, client):
 			global _konga_proc
 			if (_konga_proc is None) or (_konga_proc.poll() is not None):
 				try:
-					_konga_proc = subprocess.Popen('%s %s --script -' % (client_exe, _konga_args or ''), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True)
+					_konga_proc = subprocess.Popen('%s %s --script -' % (client_exe, _konga_args or ''), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True, **_popen_group_kwargs())
 				except Exception as e:
 					raise subprocess.CalledProcessError(-1, '', e)
 				atexit.unregister(_terminate_script_proc)
@@ -339,10 +365,7 @@ def _run_script(script, log, client):
 			timed_out = [ False ]
 			def _on_timeout():
 				timed_out[0] = True
-				try:
-					_konga_proc.kill()
-				except:
-					pass
+				_kill_proc_tree(_konga_proc)
 			timer = threading.Timer(_konga_timeout, _on_timeout)
 			timer.start()
 			try:
@@ -364,8 +387,21 @@ def _run_script(script, log, client):
 			try:
 				with temp:
 					temp.write('\n'.join(lines))
-				output = subprocess.check_output('%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name)), stderr=subprocess.STDOUT, shell=True, universal_newlines=True, timeout=_konga_timeout).splitlines()
-				for line in output:
+				cmd = '%s %s --script %s' % (client_exe, _konga_args or '', quote(temp.name))
+				proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, universal_newlines=True, **_popen_group_kwargs())
+				try:
+					output, _ = proc.communicate(timeout=_konga_timeout)
+				except subprocess.TimeoutExpired:
+					_kill_proc_tree(proc)
+					output, _ = proc.communicate()
+					raise subprocess.TimeoutExpired(cmd, _konga_timeout, output=output)
+				except:
+					_kill_proc_tree(proc)
+					proc.wait()
+					raise
+				if proc.returncode:
+					raise subprocess.CalledProcessError(proc.returncode, cmd, output)
+				for line in output.splitlines():
 					log.info(line)
 			finally:
 				os.unlink(temp.name)
@@ -431,7 +467,7 @@ def print_layout(command_or_layout, builtins=None, code_azienda=None, code_eserc
 			_run_script(script, log, client)
 		finally:
 			if temp is not None:
-				os.unlink(temp)
+				os.unlink(temp.name)
 	if log.has_errors():
 		raise PrintError(log)
 	return log
@@ -598,4 +634,3 @@ def get_context():
 def is_batch():
 	"""Restituisce ``True`` se lo script è eseguito con Python da linea di comando, ``False`` se è eseguito dall'interno di Konga."""
 	return not _proxy.is_valid()
-
