@@ -627,6 +627,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 
 	if (state->fTimeOut > 0) {
 		if ((CL_GetTime() - state->fStartTime) > state->fTimeOut) {
+			bool called = false;
 			result = -1;
 			PyEval_SetTrace(NULL, NULL);
 			PyObject *module = PyImport_ImportModule("kongalib.scripting");
@@ -641,6 +642,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 					Py_INCREF(func);
 					res = PyObject_CallFunctionObjArgs(func, NULL);
 					Py_DECREF(func);
+					called = true;
 
 					if (res) {
 						Py_DECREF(res);
@@ -649,7 +651,9 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 				}
 				Py_DECREF(module);
 			}
-			if (result < 0)
+			// timeout_handler() decide da sé se e come riarmare il timeout, anche quando
+			// solleva un'eccezione per interrompere lo script
+			if ((result < 0) && (!called))
 				state->fTimeOut = 0;
 			state->fStartTime = CL_GetTime();
 			PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);

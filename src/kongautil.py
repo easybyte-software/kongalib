@@ -21,6 +21,7 @@ try:
 except:
 	from pipes import quote
 
+from kongalib import scripting as _scripting
 from kongalib.scripting import proxy as _proxy
 
 
@@ -558,23 +559,24 @@ def show_log(log, title, size=None, iconsize=32):
 
 
 def suspend_timeout():
-	"""Sospende il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
+	"""Sospende il timeout di esecuzione dello script e restituisce i millisecondi che mancavano alla sua scadenza (o None se non era attivo),
+	da passare a :func:`resume_timeout`. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		return _proxy.builtin.set_timeout(restore=False)
+		return _scripting.suspend_script_timeout()
 
 
 
 def resume_timeout(timeout):
 	"""Ripristina il timeout di esecuzione dello script. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		_proxy.builtin.set_timeout(timeout, restore=False)
+		_scripting.resume_script_timeout(timeout)
 
 
 
 def set_timeout(timeout):
 	"""Imposta il timeout di esecuzione dello script in secondi, passati i quali verrà mostrata una finestra di avviso. La funzione non comporta eccezioni ma non ha alcun effetto se eseguita al di fuori di Konga."""
 	if _proxy.is_valid():
-		_proxy.builtin.set_timeout(timeout * 1000, restore=False)
+		_scripting.set_script_timeout(int(timeout * 1000))
 
 
 
