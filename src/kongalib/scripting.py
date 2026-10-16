@@ -86,6 +86,8 @@ class InterpreterTimeout(BaseException):
 
 
 class InterpreterError(Exception):
+	"""Non più sollevata: l'esito di un'esecuzione è in :class:`ExecutionResult`. Resta per
+	compatibilità con il codice che la intercetta."""
 	def __init__(self, exc_info):
 		self._exc_info = exc_info
 	def get_exc_info(self):
@@ -233,7 +235,6 @@ class Proxy:
 
 
 class _State:
-	handler = None
 	io = []
 	atexit_registered = False
 	# Il timeout è controllato dalla trace C, che è installata per thread: solo il thread
@@ -465,7 +466,6 @@ def init_interpreter(channel):
 
 def exit_interpreter():
 	sys.stdout, sys.stderr, sys.stdin = _State.io.pop()
-	# proxy.close()
 
 
 def _current_exc_info():
@@ -595,7 +595,7 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		logger.debug('terminated by the host')
 	except KeyboardInterrupt:
 		logger.debug('user issued a keyboard interrupt')
-	except Exception as e:
+	except Exception:
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
 	finally:
