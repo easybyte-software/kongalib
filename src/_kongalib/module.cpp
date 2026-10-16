@@ -1012,11 +1012,6 @@ module_exec(PyObject *module)
 	state->fDispatcher = CL_New(CL_Dispatcher(8, 128, &onCreateWorker, &onDestroyWorker));
 	Py_END_ALLOW_THREADS
 
-	state->fParentModule = PyImport_AddModule("kongalib");
-	Py_INCREF(state->fParentModule);
-	state->fException = PyDict_GetItemString(PyModule_GetDict(state->fParentModule), "Error");
-	Py_INCREF(state->fException);
-
 	state->fDecimalType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Decimal_spec, NULL);
 	if (!state->fDecimalType)
 		return -1;
@@ -1063,7 +1058,6 @@ module_exec(PyObject *module)
 	state->fResumeCB = NULL;
 	state->fTimeOut = 0;
 	state->fStartTime = 0;
-	state->fJSONException = PyDict_GetItemString(PyModule_GetDict(state->fParentModule), "JSONError");
 	state->fMethodRead = PyUnicode_FromString("read");
 	state->fMethodReadKey = PyUnicode_FromString("read_key");
 	state->fMethodStartMap = PyUnicode_FromString("start_map");
@@ -1072,7 +1066,20 @@ module_exec(PyObject *module)
 	state->fMethodEndArray = PyUnicode_FromString("end_array");
 	state->fMethodWrite = PyUnicode_FromString("write");
 
-	Py_INCREF(state->fJSONException);
+	// Le classi d'errore sono definite da kongalib, che importa questo modulo dopo averle
+	// definite: qui si ottiene il modulo kongalib in corso di importazione. Se invece si
+	// importa _kongalib per primo, così si importa kongalib, che trova questo modulo già
+	// completo dei suoi tipi; prima un kongalib vuoto prendeva il posto di quello vero
+	state->fParentModule = PyImport_ImportModule("kongalib");
+	if (!state->fParentModule)
+		return -1;
+	state->fException = PyObject_GetAttrString(state->fParentModule, "Error");
+	state->fJSONException = PyObject_GetAttrString(state->fParentModule, "JSONError");
+	if ((!state->fException) || (!state->fJSONException)) {
+		PyErr_Clear();
+		PyErr_SetString(PyExc_ImportError, "kongalib does not define Error and JSONError");
+		return -1;
+	}
 
 	CL_AddPowerCallback(_power_callback, module);
 
