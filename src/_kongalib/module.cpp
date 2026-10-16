@@ -37,6 +37,7 @@
 extern PyType_Spec Decimal_spec;
 extern PyType_Spec JSONEncoder_spec;
 extern PyType_Spec JSONDecoder_spec;
+extern PyType_Spec Cipher_spec;
 #ifndef KONGALIB_CORE_ONLY
 extern PyType_Spec Client_spec;
 extern PyType_Spec NamedSemaphore_spec;
@@ -941,6 +942,8 @@ static PyMethodDef sMGA_Methods[] = {
 #ifndef KONGALIB_CORE_ONLY
 	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
 #endif
+	{	"_clu_encode",					(PyCFunction)MGA::CLU_Encode,				METH_VARARGS,					"_clu_encode(dict) -> bytes\n\nEncodes a dict as a CLU table, as sent to the server." },
+	{	"_clu_decode",					(PyCFunction)MGA::CLU_Decode,				METH_VARARGS,					"_clu_decode(bytes) -> dict\n\nDecodes a CLU table as received from the server." },
 	{	NULL,							NULL,										0,								NULL }
 };
 
@@ -971,6 +974,7 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fJSONEncoderType);
 	Py_CLEAR(s->fJSONDecoderType);
 	Py_CLEAR(s->fNamedSemaphoreType);
+	Py_CLEAR(s->fCipherType);
 
 	return 0;
 }
@@ -1035,6 +1039,7 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fJSONEncoderType);
 	Py_VISIT(s->fJSONDecoderType);
 	Py_VISIT(s->fNamedSemaphoreType);
+	Py_VISIT(s->fCipherType);
 
 	return 0;
 }
@@ -1102,6 +1107,12 @@ module_exec(PyObject *module)
 	if (PyModule_AddType(module, state->fNamedSemaphoreType) < 0)
 		return -1;
 #endif
+
+	state->fCipherType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Cipher_spec, NULL);
+	if (!state->fCipherType)
+		return -1;
+	if (PyModule_AddType(module, state->fCipherType) < 0)
+		return -1;
 
 	// True nel modulo ridotto al nucleo di ebpr (es. nel browser): mancano Client, Deferred,
 	// NamedSemaphore e le funzioni di rete e di sistema

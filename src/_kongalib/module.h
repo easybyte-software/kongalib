@@ -159,6 +159,20 @@ typedef struct NamedSemaphoreObject
 } NamedSemaphoreObject;
 
 
+/**
+ *	Cipher of an IPC connection, as used by CL_TCPClient (see wire.cpp).
+ */
+typedef struct CipherObject
+{
+	PyObject_HEAD
+
+	CipherObject() : fCipher(NULL) {}
+	~CipherObject() { delete fCipher; }
+
+	CL_Cipher		*fCipher;
+} CipherObject;
+
+
 typedef struct MODULE_STATE
 {
 	PyObject						*fParentModule;
@@ -188,6 +202,7 @@ typedef struct MODULE_STATE
 	PyTypeObject					*fJSONEncoderType;
 	PyTypeObject					*fJSONDecoderType;
 	PyTypeObject					*fNamedSemaphoreType;
+	PyTypeObject					*fCipherType;
 	unsigned long					fMainThreadID;
 } MODULE_STATE;
 
@@ -211,6 +226,9 @@ extern PyObject *Table_FromCLU(MODULE_STATE *state, CLU_Table *table);
 extern void Table_FromPy(MODULE_STATE *state, PyObject *object, CLU_Table *table);
 
 extern MODULE_STATE *getModuleState();
+
+extern PyObject *CLU_Encode(PyObject *self, PyObject *args);
+extern PyObject *CLU_Decode(PyObject *self, PyObject *args);
 
 extern void InitUtilities();
 extern void InitJSON();
