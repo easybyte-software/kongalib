@@ -14,7 +14,6 @@
 
 import sys
 import os, os.path
-import atexit
 import threading
 import time
 import textwrap
@@ -51,13 +50,6 @@ ICON_WARNING						= 26			#: Icona di avviso
 ICON_INFORMATION					= 27			#: Icona informativa
 
 
-
-def _shutdown():
-	try:
-		_proxy.ui.shutdown()
-	except:
-		pass
-atexit.register(_shutdown)
 
 if not _proxy.is_valid():
 	colorama.init()
