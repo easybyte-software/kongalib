@@ -622,8 +622,10 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 {
 	int result = 0;
 	MGA::MODULE_STATE *state = MGA::getModuleState();
+	// senza lo stato del modulo (es. mentre l'interprete si chiude) non c'è timeout da
+	// controllare; restituire -1 senza un'eccezione impostata sarebbe un SystemError
 	if (!state)
-		return -1;
+		return 0;
 
 	if (state->fTimeOut > 0) {
 		if ((CL_GetTime() - state->fStartTime) > state->fTimeOut) {
@@ -652,9 +654,13 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 				Py_DECREF(module);
 			}
 			// timeout_handler() decide da sé se e come riarmare il timeout, anche quando
-			// solleva un'eccezione per interrompere lo script
-			if ((result < 0) && (!called))
+			// solleva un'eccezione per interrompere lo script; se non è stato possibile
+			// chiamarlo il timeout si disattiva, senza interrompere lo script
+			if (!called) {
+				PyErr_Clear();
 				state->fTimeOut = 0;
+				result = 0;
+			}
 			state->fStartTime = CL_GetTime();
 			PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
 		}

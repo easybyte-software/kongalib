@@ -132,6 +132,22 @@ def _loads(data):
 
 
 
+def _run_coroutine(coro, loop):
+	# Esegue *coro* da codice sincrono: sul loop *loop* attendendone la fine, se gira in un
+	# altro thread; se gira in questo thread non si può attendere e viene solo avviata.
+	# Senza loop la esegue in un loop temporaneo.
+	if loop is None:
+		return asyncio.run(coro)
+	try:
+		running = asyncio.get_running_loop()
+	except RuntimeError:
+		running = None
+	if running is loop:
+		return loop.create_task(coro)
+	return asyncio.run_coroutine_threadsafe(coro, loop).result()
+
+
+
 def debug_log(text):
 	try:
 		_logger.debug(text)
@@ -583,6 +599,11 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
 	finally:
+		# la trace del timeout non deve restare attiva mentre l'interprete si chiude
+		try:
+			set_interpreter_timeout(0)
+		except:
+			pass
 		if conn is not None:
 			try:
 				conn.close()
@@ -995,10 +1016,7 @@ class _CallDispatcher:
 				raise RuntimeError('Method "%s" unavailable in this context' % name)
 			result = func(*args, **kwargs)
 			if asyncio.iscoroutine(result):
-				if self.loop is None:
-					result = asyncio.run(result)
-				else:
-					result = asyncio.run_coroutine_threadsafe(result, self.loop).result()
+				result = _run_coroutine(result, self.loop)
 			if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
 				self.watchdog.start()
 		except (Exception, InterpreterTimeout) as e:
@@ -1055,11 +1073,15 @@ class _CallDispatcher:
 class _ServerProxy(threading.Thread):
 	"""Trasporto delle chiamate dello script per il backend a processi: un listener a cui
 	l'interprete si collega per un'esecuzione, servito da questo thread."""
+	# Quanto attendere il thread alla fine dell'esecuzione: può essere fermo su un handler
+	# dell'host che non ritorna (es. una finestra lasciata aperta)
+	STOP_TIMEOUT = 5
+
 	def __init__(self, dispatcher):
 		self.dispatcher = dispatcher
 		self.listener = None
 		self.conn = None
-		super().__init__()
+		super().__init__(daemon=True)
 
 	def start(self):
 		if gConnFamilyOverride:
@@ -1072,14 +1094,26 @@ class _ServerProxy(threading.Thread):
 			raise BadConnection()
 		super().start()
 
-	def stop(self):
+	def close(self):
+		"""Chiude il listener e la connessione; il thread esce appena possibile."""
 		if self.listener is not None:
 			self.listener.close()
 			self.listener = None
 		if self.conn is not None:
 			self.conn.close()
+
+	def stop(self):
+		self.close()
 		if self.is_alive():
-			self.join()
+			self.join(self.STOP_TIMEOUT)
+
+	async def stop_async(self):
+		# il thread potrebbe attendere una coroutine di un handler, che gira sul loop: non
+		# va atteso bloccando il loop
+		self.close()
+		deadline = time.monotonic() + self.STOP_TIMEOUT
+		while self.is_alive() and (time.monotonic() < deadline):
+			await asyncio.sleep(0.01)
 
 	def run(self):
 		debug_log("[ServerProxy] run")
@@ -1151,6 +1185,7 @@ class BuiltinHandler:
 		return ''.join(text)
 	
 	def print_exception(self, type, value, tb):
+		"""Riporta un'eccezione dello script; nelle sottoclassi può essere una coroutine."""
 		print(self.format_exception(type, value, tb))
 	
 	def handle_timeout(self):
@@ -1207,8 +1242,11 @@ class _Execution:
 		self.builtin = self.handlers['builtin']
 		self.builtin._set_interpreter(interpreter)
 		self.run = run
+		self.loop = loop
 		self.watchdog = _StopWatchdog(interpreter)
 		self.dispatcher = _CallDispatcher(self.handlers, loop, self.watchdog, run)
+		# print_exception() dell'handler builtin può essere una coroutine
+		self.pending = []
 
 	def start_server(self):
 		"""Avvia il listener a cui l'interprete si collegherà per questa esecuzione;
@@ -1257,9 +1295,30 @@ class _Execution:
 			return True
 		tb = list(filter(do_filter, tb))
 		try:
-			self.builtin.print_exception(type, value, tb)
+			result = self.builtin.print_exception(type, value, tb)
+			if inspect.isawaitable(result):
+				self.pending.append(result)
 		except:
 			debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
+
+	def complete(self):
+		# porta a termine le segnalazioni restituite come coroutine
+		import traceback
+		pending, self.pending = self.pending, []
+		for coro in pending:
+			try:
+				_run_coroutine(coro, self.loop)
+			except:
+				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
+
+	async def complete_async(self):
+		import traceback
+		pending, self.pending = self.pending, []
+		for coro in pending:
+			try:
+				await coro
+			except:
+				debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
 
 	def close(self):
 		self.watchdog.cancel()
@@ -1296,6 +1355,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 					server.stop()
 			break
 	finally:
+		ex.complete()
 		ex.close()
 		ex.builtin._atexit()
 		debug_log("[ServerProxy] done")
@@ -1323,9 +1383,10 @@ async def execute_async(script=None, filename=None, argv=None, path=None, timeou
 					continue
 			finally:
 				if server is not None:
-					server.stop()
+					await server.stop_async()
 			break
 	finally:
+		await ex.complete_async()
 		ex.close()
 		await ex.builtin._atexit_async()
 		debug_log("[ServerProxy] done")
