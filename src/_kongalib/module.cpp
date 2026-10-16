@@ -640,10 +640,50 @@ get_application_log_path(PyObject *self, PyObject *args, PyObject *kwds)
 #endif	/* KONGALIB_CORE_ONLY */
 
 
+/*
+ *	La trace controlla l'orologio solo ogni sTraceInterval eventi: leggere lo stato del modulo e
+ *	l'orologio a ogni evento rallentava uno script di 5-6 volte, e di 16 in Pyodide, dove
+ *	l'orologio è una chiamata a JS. L'intervallo raddoppia (fino a TRACE_MAX_INTERVAL) finché
+ *	tra due controlli passa meno di un millisecondo, e torna a 1 appena ne passano più di
+ *	TRACE_SLOW_CHECK: uno script fatto di eventi lenti (una sleep() per riga) controlla a ogni
+ *	evento, e il ritardo massimo della scadenza resta di TRACE_MAX_INTERVAL eventi, una volta
+ *	sola, quando gli eventi diventano lenti dopo una fase veloce. Le chiamate all'host, gli
+ *	eventi lenti più comuni, riarmano il timeout e quindi riportano l'intervallo a 1.
+ *	Variabili del processo e non dello stato del modulo, per non cercare il modulo a ogni
+ *	evento; c'è un solo interprete per processo (o per worker).
+ */
+#define TRACE_MAX_INTERVAL		64
+#define TRACE_SLOW_CHECK		10
+
+static uint32 sTraceCountdown = 1;
+static uint32 sTraceInterval = 1;
+static uint32 sTraceLastCheck = 0;
+
+
+static void
+interpreter_timeout_reset()
+{
+	sTraceCountdown = sTraceInterval = 1;
+	sTraceLastCheck = CL_GetTime();
+}
+
+
 static int
 interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *arg)
 {
+	if (--sTraceCountdown > 0)
+		return 0;
+
 	int result = 0;
+	uint32 now = CL_GetTime();
+	uint32 elapsed = now - sTraceLastCheck;
+	sTraceLastCheck = now;
+	if (elapsed > TRACE_SLOW_CHECK)
+		sTraceInterval = 1;
+	else if ((elapsed == 0) && (sTraceInterval < TRACE_MAX_INTERVAL))
+		sTraceInterval *= 2;
+	sTraceCountdown = sTraceInterval;
+
 	MGA::MODULE_STATE *state = MGA::getModuleState();
 	// senza lo stato del modulo (es. mentre l'interprete si chiude) non c'è timeout da
 	// controllare; restituire -1 senza un'eccezione impostata sarebbe un SystemError
@@ -651,7 +691,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 		return 0;
 
 	if (state->fTimeOut > 0) {
-		if ((CL_GetTime() - state->fStartTime) > state->fTimeOut) {
+		if ((now - state->fStartTime) > state->fTimeOut) {
 			bool called = false;
 			result = -1;
 			PyEval_SetTrace(NULL, NULL);
@@ -685,6 +725,7 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 				result = 0;
 			}
 			state->fStartTime = CL_GetTime();
+			interpreter_timeout_reset();
 			PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
 		}
 	}
@@ -719,6 +760,7 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	state->fTimeOut = timeout;
 	if (timeout) {
 		state->fStartTime = CL_GetTime();
+		interpreter_timeout_reset();
 		PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
 	}
 	else {
