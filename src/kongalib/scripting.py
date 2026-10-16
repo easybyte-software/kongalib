@@ -51,6 +51,10 @@ STOP_GRACE = 5
 _STOP_HANDLED = '_timeout_stop_handled'
 # Chiamata con cui l'interprete comunica all'host la fine di un'esecuzione e il suo esito
 _SCRIPT_DONE = '_script_done'
+# Tipo di un messaggio dello script verso l'host, in testa alla chiamata serializzata: una
+# chiamata attende la risposta, una notifica no
+_CALL = b'C'
+_NOTIFY = b'N'
 # Rinvio (ms) di un controllo del timeout scaduto dentro questo stesso modulo
 _DEFER_INTERVAL = 50
 _THIS_FILE = __file__
@@ -118,6 +122,15 @@ class _ScriptException(Exception):
 
 
 
+def _dumps(obj):
+	return bytes(multiprocessing.reduction.ForkingPickler.dumps(obj))
+
+
+def _loads(data):
+	return multiprocessing.reduction.ForkingPickler.loads(data)
+
+
+
 def debug_log(text):
 	try:
 		_logger.debug(text)
@@ -144,35 +157,62 @@ class _TimeoutBlocker:
 			self.lock.release()
 
 
-class Proxy:
-	def __init__(self):
-		self._conn = None
-		self._lock = _TimeoutBlocker()
+class _ConnectionChannel:
+	"""Canale delle chiamate dello script verso l'host per il backend a processi, su una
+	connessione multiprocessing. Trasporta messaggi già codificati."""
+	def __init__(self, conn):
+		self.conn = conn
 
-	def _initialize(self, conn_type, address):
-		self.close()
+	@classmethod
+	def connect(cls, conn_type, address):
 		debug_log("[Proxy] init: %s" % repr(address))
 		try:
-			self._conn = multiprocessing.connection.Client(address, conn_type)
-		except:
+			conn = multiprocessing.connection.Client(address, conn_type)
+		except Exception as e:
 			import traceback
 			_logger.error("[Proxy] init error: %s" % traceback.format_exc())
-			raise
+			raise BadConnection('Unable to connect the interpreter to the host: %s' % e)
 		debug_log("[Proxy] connection established")
+		return cls(conn)
+
+	def call(self, data):
+		"""Invia la chiamata codificata *data* e restituisce la risposta codificata."""
+		self.conn.send_bytes(_CALL + data)
+		return self.conn.recv_bytes()
+
+	def notify(self, data):
+		"""Invia la chiamata codificata *data* senza attendere risposta."""
+		self.conn.send_bytes(_NOTIFY + data)
+
+	def close(self):
+		self.conn.close()
+
+
+class Proxy:
+	"""Gli handler dell'host visti dallo script: ``proxy.<handler>.<metodo>(...)`` chiama il
+	metodo sull'host e ne attende il risultato, ``proxy.<handler>.<metodo>.notify(...)`` lo
+	chiama senza attendere."""
+	def __init__(self):
+		self._channel = None
+		self._lock = _TimeoutBlocker()
+
+	def _attach(self, channel):
+		self.close()
+		self._channel = channel
 
 	def is_valid(self):
-		return self._conn is not None
-	
+		return self._channel is not None
+
 	def close(self):
-		if self._conn is not None:
+		if self._channel is not None:
 			sys.stdout.flush()
 			sys.stderr.flush()
-			self._conn.close()
-			self._conn = None
+			self._channel.close()
+			self._channel = None
 		debug_log("[Proxy] connection closed")
-	
+
 	def __getattr__(self, name):
-		return _MethodHandler(self._conn, self._lock, name)
+		return _MethodHandler(self, name)
 
 
 class _State:
@@ -357,10 +397,10 @@ def timeout_handler():
 
 
 
-def init_interpreter(conn_type, address):
+def init_interpreter(channel):
 	saved_io = (sys.stdout, sys.stderr, sys.stdin)
 	try:
-		proxy._initialize(conn_type, address)
+		proxy._attach(channel)
 		sys.stdout = _ProxyStdOut()
 		sys.stderr = _ProxyStdErr()
 	#   sys.stdout = io.TextIOWrapper(_ProxyStdOut(), 'utf-8', line_buffering=True)
@@ -449,7 +489,48 @@ def _send_done(exc_info):
 
 
 
+def _run_job(job, channel):
+	"""Esegue lo script descritto da *job* con *channel* per le chiamate all'host, e ne
+	notifica la fine; non dipende dal backend. Solleva :class:`BadConnection` se l'host non
+	risponde all'avvio, e restituisce False se non è più raggiungibile alla fine."""
+	args, path, timeout, script, cwd = job
+	sys.argv = args
+	sys.path = path
+	filename = args[0]
+	if cwd:
+		os.chdir(cwd)
+	init_interpreter(channel)
+	with _State.timeout_lock:
+		_State.script_thread = threading.get_ident()
+		_State.pause_depth = 0
+		_State.paused_left = None
+		_State.handling_timeout = False
+		_State.stopping = False
+		_State.running = True
+	exc_info = None
+	try:
+		script = compile(script, filename, 'exec', dont_inherit=1)
+		set_script_timeout(timeout)
+		exec(script, { '__file__': filename, '__name__': '__main__' })
+	except SystemExit as e:
+		# sys.exit() termina lo script, non l'interprete
+		if e.code not in (None, 0):
+			exc_info = _current_exc_info()
+	except (Exception, InterpreterTimeout):
+		exc_info = _current_exc_info()
+	with _State.timeout_lock:
+		_State.stopping = False
+		_State.running = False
+	set_script_timeout(0)
+	exit_interpreter()
+	sent = _send_done(exc_info)
+	proxy.close()
+	return sent
+
+
+
 def _trampoline(conn, foreground, env, dll_paths, queue, level):
+	# Punto d'ingresso del processo dell'interprete (backend a processi)
 	logging.getLogger().setLevel(level)
 	logger = logging.getLogger('script._trampoline')
 	handler = logging.handlers.QueueHandler(queue)
@@ -483,44 +564,14 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 			request = requests.get()
 			if request[0] == 'quit':
 				break
-			_, args, path, timeout, script, cwd, conn_type, address = request
-			sys.argv = args
-			sys.path = path
-			filename = args[0]
-			if cwd:
-				os.chdir(cwd)
+			_, job, (conn_type, address) = request
 			try:
-				init_interpreter(conn_type, address)
+				sent = _run_job(job, _ConnectionChannel.connect(conn_type, address))
 			except BadConnection as e:
 				# l'host riproverà, se può, con un'altra famiglia di connessione
 				logger.error(str(e))
 				conn.send(('bad_connection', str(e)))
 				continue
-			with _State.timeout_lock:
-				_State.script_thread = threading.get_ident()
-				_State.pause_depth = 0
-				_State.paused_left = None
-				_State.handling_timeout = False
-				_State.stopping = False
-				_State.running = True
-			exc_info = None
-			try:
-				script = compile(script, filename, 'exec', dont_inherit=1)
-				set_script_timeout(timeout)
-				exec(script, { '__file__': filename, '__name__': '__main__' })
-			except SystemExit as e:
-				# sys.exit() termina lo script, non l'interprete
-				if e.code not in (None, 0):
-					exc_info = _current_exc_info()
-			except (Exception, InterpreterTimeout):
-				exc_info = _current_exc_info()
-			with _State.timeout_lock:
-				_State.stopping = False
-				_State.running = False
-			set_script_timeout(0)
-			exit_interpreter()
-			sent = _send_done(exc_info)
-			proxy.close()
 			if not sent:
 				break
 	except _Terminate:
@@ -539,43 +590,102 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		logger.debug('exiting interpreter process')
 	
 
-class Interpreter:
-	def __init__(self, foreground=True, env=None):
-		self.proc = None
-		self.exc_info = None
-		self.conn = None
-		self.lock = threading.RLock()
-		self.queue = multiprocessing.Queue()
+class _ProcessBackend:
+	"""Backend dell'interprete per CPython: un processo multiprocessing, con una pipe per i
+	messaggi di controllo e una coda per i log; le chiamate dello script arrivano all'host
+	tramite :class:`_ServerProxy`."""
+	def __init__(self, foreground, env):
 		self.foreground = foreground
 		self.env = env
+		self.process = None
+		self.conn = None
+		self.queue = multiprocessing.Queue()
 		self.logger_listener = logging.handlers.QueueListener(self.queue, *logging.getLogger().handlers, respect_handler_level=True)
 
+	def start(self):
+		self.conn, child_conn = multiprocessing.Pipe()
+		self.logger_listener.start()
+		self.process = multiprocessing.Process(target=_trampoline, args=(child_conn, self.foreground, self.env, _DLL_PATHS, self.queue, logging.getLogger().level), daemon=True)
+		self.process.start()
+		# l'estremità del figlio resta solo al figlio: se muore, la pipe si chiude
+		child_conn.close()
+		exitcode = self.process.exitcode
+		if exitcode is not None:
+			raise RuntimeError('Unable to start interpreter process: exit code %d' % exitcode)
+
+	def send(self, message):
+		"""Invia un messaggio di controllo all'interprete."""
+		self.conn.send(message)
+
+	def receive(self):
+		"""Restituisce il prossimo messaggio di controllo dell'interprete, se ce n'è uno."""
+		try:
+			return self.conn.recv() if self.conn.poll() else None
+		except (EOFError, OSError):
+			return None
+
+	def is_alive(self):
+		return self.process.is_alive()
+
+	@property
+	def exitcode(self):
+		return self.process.exitcode
+
+	def kill(self):
+		"""Termina il processo: prima con una richiesta (SIGTERM), poi d'autorità."""
+		try:
+			self.process.terminate()
+		except:
+			pass
+		self.process.join(3)
+		if self.process.is_alive():
+			try:
+				self.process.kill()
+			except Exception as e:
+				debug_log('Interpreter.stop() failed with error: %s' % str(e))
+
+	def close(self):
+		try:
+			self.logger_listener.stop()
+		except:
+			pass
+
+
+
+class Interpreter:
+	"""Interprete separato in cui eseguire gli script con :func:`execute`; può essere riusato
+	per più esecuzioni."""
+	def __init__(self, foreground=True, env=None):
+		self.backend = None
+		self.started = False
+		self.exc_info = None
+		self.lock = threading.RLock()
+		self.foreground = foreground
+		self.env = env
+
+	@property
+	def proc(self):
+		"""Il processo dell'interprete, o None se non è avviato."""
+		backend = self.backend
+		return backend.process if backend is not None else None
+
 	def __del__(self):
-		with self.lock:
-			if self.proc is not None:
-				if self.proc.is_alive():
-					try:
-						self.conn.send(('quit',))
-					except:
-						pass
+		backend = self.backend
+		if backend is not None:
+			if backend.is_alive():
 				try:
-					self.logger_listener.stop()
+					backend.send(('quit',))
 				except:
 					pass
+			backend.close()
 
 	def ensure_proc(self):
 		with self.lock:
-			if self.proc is None:
-				self.conn, self.client_conn = multiprocessing.Pipe()
-				self.logger_listener.start()
-				self.proc = multiprocessing.Process(target=_trampoline, args=(self.client_conn, self.foreground, self.env, _DLL_PATHS, self.queue, logging.getLogger().level), daemon=True)
-				self.proc.start()
-				# l'estremità del figlio resta solo al figlio: se muore, la pipe si chiude
-				self.client_conn.close()
-				self.client_conn = None
-				exitcode = self.proc.exitcode
-				if exitcode is not None:
-					raise RuntimeError('Unable to start interpreter process: exit code %d' % exitcode)
+			if self.backend is None:
+				backend = _ProcessBackend(self.foreground, self.env)
+				backend.start()
+				self.backend = backend
+				self.started = True
 
 	def execute(self, script=None, filename=None, argv=None, path=None, timeout=None, run=None, connection=None):
 		"""Esegue lo script e ne attende la fine; restituisce un :class:`ExecutionResult`.
@@ -584,10 +694,9 @@ class Interpreter:
 		l'interprete non riesce a collegarsi."""
 		if run is None:
 			run = _Run()
-		conn_type, address = connection or (None, None)
 		with self.lock:
 			self.ensure_proc()
-			proc = self.proc
+			backend = self.backend
 			self.exc_info = None
 			args = argv
 			if not args:
@@ -599,32 +708,30 @@ class Interpreter:
 				cwd = os.path.dirname(os.path.abspath(filename))
 			except:
 				cwd = None
-			self.conn.send(('run', args, path, timeout, script or '', cwd, conn_type, address))
+			job = (args, path, timeout, script or '', cwd)
+			backend.send(('run', job, connection or (None, None)))
 			self.lock.release()
 			try:
-				result = self._wait(proc, run)
+				result = self._wait(backend, run)
 			finally:
 				self.lock.acquire()
 			self.exc_info = result.exc_info
 			return result
 
-	def _wait(self, proc, run):
+	def _wait(self, backend, run):
 		while not run.finished.wait(0.05):
-			try:
-				message = self.conn.recv() if self.conn.poll() else None
-			except (EOFError, OSError):
-				message = None
+			message = backend.receive()
 			if (message is not None) and (message[0] == 'bad_connection'):
 				raise BadConnection(message[1])
 			with self.lock:
-				stopped = self.proc is not proc
+				stopped = self.backend is not backend
 			if stopped:
 				return ExecutionResult(ExecutionResult.TERMINATED)
-			if not proc.is_alive():
+			if not backend.is_alive():
 				# la notifica della fine dell'esecuzione potrebbe essere ancora in viaggio
 				if run.finished.wait(0.5):
 					break
-				return ExecutionResult(ExecutionResult.CRASHED, exitcode=proc.exitcode)
+				return ExecutionResult(ExecutionResult.CRASHED, exitcode=backend.exitcode)
 		exc_info = run.exc_info
 		if exc_info is None:
 			return ExecutionResult(ExecutionResult.COMPLETED)
@@ -634,23 +741,10 @@ class Interpreter:
 
 	def stop(self):
 		with self.lock:
-			proc = self.proc
-			if proc is not None:
-				self.proc = None
-				self.lock.release()
-				try:
-					try:
-						proc.terminate()
-					except:
-						pass
-					proc.join(3)
-					if proc.is_alive():
-						try:
-							proc.kill()
-						except Exception as e:
-							debug_log('Interpreter.stop() failed with error: %s' % str(e))
-				finally:
-					self.lock.acquire()
+			backend, self.backend = self.backend, None
+		if backend is not None:
+			backend.kill()
+			backend.close()
 
 	def interrupt(self):
 		"""Chiede all'interprete di interrompere al più presto lo script in esecuzione, come
@@ -658,17 +752,17 @@ class Interpreter:
 		lo script viene fermato se questo restituisce True. Senza effetto se nessuno script
 		è in esecuzione."""
 		with self.lock:
-			if (self.proc is None) or (not self.proc.is_alive()):
+			backend = self.backend
+			if (backend is None) or (not backend.is_alive()):
 				return
 			try:
-				self.conn.send(('interrupt',))
+				backend.send(('interrupt',))
 			except (OSError, EOFError):
 				pass
 
 	def is_running(self):
-		conn = self.conn
-		proc = self.proc
-		return (conn is None) or ((proc is not None) and proc.is_alive())
+		backend = self.backend
+		return (not self.started) or ((backend is not None) and backend.is_alive())
 
 	def get_exc_info(self):
 		with self.lock:
@@ -682,12 +776,12 @@ class _ProxyStdIn(io.StringIO):
 
 class _ProxyStdOut(io.StringIO):
 	def write(self, text):
-		proxy.builtin.write_stdout(str(text))
+		proxy.builtin.write_stdout.notify(str(text))
 		return len(text)
 
 	def flush(self):
 		try:
-			proxy.builtin.flush_stdout()
+			proxy.builtin.flush_stdout.notify()
 		except:
 			pass
 
@@ -697,25 +791,24 @@ class _ProxyStdErr(io.StringIO):
 		if sys.__stderr__ is not None:
 			sys.__stderr__.write(str(text))
 		try:
-			proxy.builtin.write_stderr(str(text))
+			proxy.builtin.write_stderr.notify(str(text))
 		except:
 			pass
 		return len(text)
 
 	def flush(self):
 		try:
-			proxy.builtin.flush_stderr()
+			proxy.builtin.flush_stderr.notify()
 		except:
 			pass
 
 
 
 class _MethodHandler:
-	def __init__(self, conn, lock, name):
-		self._conn = conn
-		self._lock = lock
+	def __init__(self, proxy, name):
+		self._proxy = proxy
 		self._name = name
-	
+
 	def __getattr__(self, name):
 		return _Method(self, name)
 
@@ -725,28 +818,38 @@ class _Method:
 	def __init__(self, handler, name):
 		self.handler = handler
 		self.name = name
-	
+
+	def _encode(self, args, kwargs):
+		return _dumps((self.handler._name, self.name, args, kwargs))
+
 	def __call__(self, *args, **kwargs):
-		with self.handler._lock:
+		data = self._encode(args, kwargs)
+		proxy = self.handler._proxy
+		with proxy._lock:
 			if DEBUG:
 				s = time.time()
 				debug_log('[Proxy] call: %s' % str((self.handler._name, self.name, args, kwargs)))
-			self.handler._conn.send((self.handler._name, self.name, args, kwargs))
+			reply = proxy._channel.call(data)
 			if DEBUG:
-				debug_log('[Proxy] call sent in %f secs. Waiting reply: %s' % (time.time() - s, str((self.handler._name, self.name))))
-			
-			multiprocessing.connection.wait([ self.handler._conn ])
-			e, result = self.handler._conn.recv()
-			if DEBUG:
-				s = time.time()
-				debug_log('[Proxy] got reply in %f secs: %s' % (time.time() - s, str((self.handler._name, self.name, result))))
-			if e is None:
-				return result
-			errmsg, errno = e
-			if errno is None:
-				raise RuntimeError(errmsg)
-			else:
-				raise Error(errno, errmsg)
+				debug_log('[Proxy] got reply in %f secs: %s' % (time.time() - s, str((self.handler._name, self.name))))
+		e, result = _loads(reply)
+		if e is None:
+			return result
+		errmsg, errno = e
+		if errno is None:
+			raise RuntimeError(errmsg)
+		else:
+			raise Error(errno, errmsg)
+
+	def notify(self, *args, **kwargs):
+		"""Chiama il metodo sull'host senza attenderne la fine: eventuali errori vengono solo
+		registrati dall'host. Chiamate e notifiche arrivano all'host nell'ordine in cui sono
+		fatte."""
+		data = self._encode(args, kwargs)
+		proxy = self.handler._proxy
+		with proxy._lock.lock:
+			proxy._channel.notify(data)
+
 
 
 class _StopWatchdog:
@@ -794,38 +897,99 @@ class _Run:
 
 
 
-class _ServerProxy(threading.Thread):
-	def __init__(self, handlers=None, loop=None, watchdog=None, run=None):
-		self.handlers = handlers or {}
+class _CallDispatcher:
+	"""Esegue sugli handler dell'host le chiamate dello script durante un'esecuzione; non
+	dipende dal trasporto, che gli passa i messaggi ricevuti e invia le risposte."""
+	def __init__(self, handlers, loop=None, watchdog=None, run=None):
+		self.handlers = handlers
 		self.loop = loop
 		self.watchdog = watchdog
-		self.run_state = run
+		self.run = run
 		self.done = False
 		self.done_exc_info = None
-		self.listener = None
-		self.conn = None
-		super().__init__()
+
+	def dispatch(self, data):
+		"""Esegue la chiamata nel messaggio *data*; restituisce la risposta da inviare
+		all'interprete, o None se il messaggio è una notifica."""
+		kind, payload = data[:1], data[1:]
+		try:
+			handler, name, args, kwargs = _loads(payload)
+		except Exception as e:
+			# es. un argomento di una classe che solo lo script può importare
+			_logger.error("[ServerProxy] unable to decode the call from the script: %s" % e)
+			return self._reply(kind, (('Unable to decode the call from the script: %s' % e, None), None))
+		func = self._lookup(handler, name)
+		try:
+			if func is None:
+				raise RuntimeError('Method "%s" unavailable in this context' % name)
+			result = func(*args, **kwargs)
+			if asyncio.iscoroutine(result):
+				if self.loop is None:
+					result = asyncio.run(result)
+				else:
+					result = asyncio.run_coroutine_threadsafe(result, self.loop).result()
+			if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
+				self.watchdog.start()
+		except (Exception, InterpreterTimeout) as e:
+			import traceback
+			_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
+			if isinstance(e, Error):
+				errno = e.errno
+			else:
+				errno = None
+			return self._reply(kind, ((str(e), errno), None))
+		return self._reply(kind, (None, result))
+
+	def replied(self):
+		"""Da chiamare dopo aver inviato all'interprete la risposta dell'ultima chiamata."""
+		# la fine dell'esecuzione si notifica solo dopo aver risposto all'interprete:
+		# chiudendo prima la connessione, lui la crederebbe persa
+		if self.done and (self.run is not None):
+			self.done = False
+			self.run.set_done(self.done_exc_info)
+
+	def close(self):
+		self.handlers = {}
+
+	def _lookup(self, handler, name):
+		if handler == 'builtin':
+			if name == _STOP_HANDLED:
+				return self._stop_handled
+			if name == _SCRIPT_DONE:
+				return self._script_done
+		if handler in self.handlers:
+			return getattr(self.handlers[handler], name, None)
+		return None
+
+	def _reply(self, kind, reply):
+		if kind == _NOTIFY:
+			return None
+		try:
+			return _dumps(reply)
+		except Exception as e:
+			# il risultato non è serializzabile: lo script riceve un errore al suo posto
+			_logger.error("[ServerProxy] unable to send the result to the script: %s" % e)
+			return _dumps((('Unable to send the result to the script: %s' % e, None), None))
 
 	def _stop_handled(self):
 		if self.watchdog is not None:
 			self.watchdog.cancel()
 
 	def _script_done(self, exc_info):
-		# la fine dell'esecuzione si notifica solo dopo aver risposto all'interprete:
-		# chiudendo prima la connessione, lui la crederebbe persa
 		self.done_exc_info = exc_info
 		self.done = True
 
-	def _reply(self, result):
-		try:
-			self.conn.send(result)
-		except (IOError, EOFError):
-			raise
-		except Exception as e:
-			# il risultato non è serializzabile: lo script riceve un errore al suo posto
-			_logger.error("[ServerProxy] unable to send the result to the script: %s" % e)
-			self.conn.send((('Unable to send the result to the script: %s' % e, None), None))
-	
+
+
+class _ServerProxy(threading.Thread):
+	"""Trasporto delle chiamate dello script per il backend a processi: un listener a cui
+	l'interprete si collega per un'esecuzione, servito da questo thread."""
+	def __init__(self, dispatcher):
+		self.dispatcher = dispatcher
+		self.listener = None
+		self.conn = None
+		super().__init__()
+
 	def start(self):
 		if gConnFamilyOverride:
 			family = None
@@ -843,7 +1007,6 @@ class _ServerProxy(threading.Thread):
 			self.listener = None
 		if self.conn is not None:
 			self.conn.close()
-		self.handlers = {}
 		if self.is_alive():
 			self.join()
 
@@ -855,49 +1018,10 @@ class _ServerProxy(threading.Thread):
 			while True:
 				ready = multiprocessing.connection.wait([ self.conn ], 0.5)
 				if ready:
-					data = self.conn.recv_bytes()
-					try:
-						handler, name, args, kwargs = multiprocessing.reduction.ForkingPickler.loads(data)
-					except Exception as e:
-						# es. un argomento di una classe definita dallo script stesso
-						_logger.error("[ServerProxy] unable to decode the call from the script: %s" % e)
-						self._reply((('Unable to decode the call from the script: %s' % e, None), None))
-						continue
-					if (handler == 'builtin') and (name == _STOP_HANDLED):
-						func = self._stop_handled
-					elif (handler == 'builtin') and (name == _SCRIPT_DONE):
-						func = self._script_done
-					elif handler in self.handlers:
-						# debug_log("[kongaprint:%s] %s(%s)" % (handler, name, ', '.join([ repr(arg) for arg in args ] + [ '%s=%s' % (key, repr(value)) for key, value in kwargs.iteritems() ])))
-						func = getattr(self.handlers[handler], name, None)
-					else:
-						func = None
-					try:
-						if func is None:
-							raise RuntimeError('Method "%s" unavailable in this context' % name)
-						result = func(*args, **kwargs)
-						if asyncio.iscoroutine(result):
-							if self.loop is None:
-								result = asyncio.run(result)
-							else:
-								result = asyncio.run_coroutine_threadsafe(result, self.loop).result()
-						if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
-							self.watchdog.start()
-						result = (None, result)
-					except (Exception, InterpreterTimeout) as e:
-						import traceback
-						_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
-						# sys.__stderr__.write('SCRIPTING EXCEPTION:\n%s\n' % traceback.format_exc())
-						if isinstance(e, Error):
-							errno = e.errno
-						else:
-							errno = None
-						result = ((str(e), errno), None)
-					finally:
-						self._reply(result)
-					if self.done and (self.run_state is not None):
-						self.done = False
-						self.run_state.set_done(self.done_exc_info)
+					reply = self.dispatcher.dispatch(self.conn.recv_bytes())
+					if reply is not None:
+						self.conn.send_bytes(reply)
+					self.dispatcher.replied()
 		except IOError:
 			if self.listener is not None:
 				import traceback
@@ -1023,10 +1147,11 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
 	run = _Run()
 	watchdog = _StopWatchdog(interpreter)
+	dispatcher = _CallDispatcher(_handlers, loop, watchdog, run)
 	result = None
 	try:
 		while True:
-			p = _ServerProxy(_handlers, loop, watchdog, run)
+			p = _ServerProxy(dispatcher)
 			try:
 				p.start()
 				address = p.listener.address
@@ -1057,6 +1182,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			break
 	finally:
 		watchdog.cancel()
+		dispatcher.close()
 		_handlers['builtin']._set_interpreter(None)
 		_handlers['builtin']._atexit()
 		debug_log("[ServerProxy] done")

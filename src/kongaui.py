@@ -258,7 +258,7 @@ def set_progress(progress=None, message=None, state=None):
 	per specificare un avanzamento indefinito, oppure un valore compreso tra 0 e 100 per specificare la percentuale di avanzamento completata. *message* e
 	*state* sono messaggi aggiuntivi da mostrare nella finestra di avanzamento."""
 	if _proxy.is_valid():
-		_proxy.ui.set_progress(progress, message, state)
+		_proxy.ui.set_progress.notify(progress, message, state)
 	else:
 		term_width = _get_term_width()
 		def elide(s, width):
