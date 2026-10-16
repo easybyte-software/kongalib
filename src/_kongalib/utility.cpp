@@ -390,6 +390,8 @@ MGA::Table_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_Table *table)
 
 
 
+#ifndef KONGALIB_CORE_ONLY
+
 static void
 sem_dealloc(MGA::NamedSemaphoreObject *self)
 {
@@ -481,6 +483,9 @@ PyType_Spec NamedSemaphore_spec = {
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
 	NamedSemaphore_slots,
 };
+
+#endif	/* KONGALIB_CORE_ONLY */
+
 
 /* NamedSemaphoreType is now stored in MODULE_STATE */
 
