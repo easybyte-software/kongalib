@@ -617,7 +617,7 @@ MGA_Client_disconnect(MGA::ClientObject *self, PyObject *args)
 static PyObject *
 MGA_Client_get_id(MGA::ClientObject *self, PyObject *args)
 {
-	return PyLong_FromLong(self->fClient->GetID());
+	return PyLong_FromUnsignedLong(self->fClient->GetID());
 }
 
 

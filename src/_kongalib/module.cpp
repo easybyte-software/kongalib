@@ -592,7 +592,7 @@ checksum(PyObject *self, PyObject *args, PyObject *kwds)
 	data.Set((const char *)view.buf, (uint32)view.len);
 	PyBuffer_Release(&view);
 
-	return PyLong_FromLong(data.CheckSum());
+	return PyLong_FromUnsignedLong(data.CheckSum());
 }
 
 
