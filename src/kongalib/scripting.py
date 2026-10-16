@@ -59,8 +59,9 @@ _NOTIFY = b'N'
 # Rinvio (ms) di un controllo del timeout scaduto dentro questo stesso modulo
 _DEFER_INTERVAL = 50
 _THIS_FILE = __file__
-# Segnale simulato (mai inviato dal sistema operativo) con cui il thread di controllo
-# dell'interprete fa eseguire al thread dello script la richiesta di interruzione dell'host
+# Segnale simulato (mai inviato dal sistema operativo) con cui i thread dell'interprete
+# fanno eseguire al thread dello script la scadenza del timeout o la richiesta di
+# interruzione dell'host
 _INTERRUPT_SIGNAL = getattr(signal, 'SIGUSR1', None) or getattr(signal, 'SIGBREAK', None)
 
 
@@ -234,14 +235,79 @@ class Proxy:
 		return _MethodHandler(self, name)
 
 
+class _TraceClock:
+	"""Scadenza del timeout misurata dalla trace C di _kongalib, che la controlla a ogni
+	evento dello script e alla scadenza chiama timeout_handler(): per dove non ci sono
+	thread (Pyodide), e fuori da un interprete di scripting."""
+	def arm(self, timeout):
+		set_interpreter_timeout(timeout or 0)
+
+	def time_left(self):
+		if get_interpreter_timeout() is None:
+			return None
+		# un timeout scaduto ma non ancora rilevato va comunque riarmato
+		return max(get_interpreter_time_left() or 0, 1)
+
+
+
+class _TimerClock:
+	"""Scadenza del timeout misurata da un thread, che alla scadenza sveglia il thread dello
+	script (il principale) con un segnale simulato: a differenza della trace, nessun costo
+	per ogni riga eseguita."""
+	def __init__(self):
+		self.cond = threading.Condition()
+		self.deadline = None
+		self.thread = None
+
+	def arm(self, timeout):
+		with self.cond:
+			self.deadline = (time.monotonic() + timeout / 1000) if timeout else None
+			if (self.thread is None) and (self.deadline is not None):
+				self.thread = threading.Thread(target=self._run, name='timeout', daemon=True)
+				self.thread.start()
+			self.cond.notify()
+
+	def time_left(self):
+		with self.cond:
+			if self.deadline is None:
+				return None
+			return max(int((self.deadline - time.monotonic()) * 1000), 1)
+
+	def _run(self):
+		with self.cond:
+			while True:
+				if self.deadline is None:
+					self.cond.wait()
+					continue
+				left = self.deadline - time.monotonic()
+				if left > 0:
+					self.cond.wait(left)
+					continue
+				self.deadline = None
+				_thread.interrupt_main(_INTERRUPT_SIGNAL)
+
+
+
+def _select_clock():
+	# KONGALIB_TIMEOUT_CLOCK=trace sceglie la trace C anche dove ci sono i thread (prove)
+	if (os.environ.get('KONGALIB_TIMEOUT_CLOCK') != 'trace') and (_INTERRUPT_SIGNAL is not None):
+		try:
+			threading.Thread(target=lambda: None, daemon=True).start()
+			return _TimerClock()
+		except RuntimeError:
+			pass
+	return _TraceClock()
+
+
+
 class _State:
 	io = []
 	atexit_registered = False
-	# Il timeout è controllato dalla trace C, che è installata per thread: solo il thread
-	# che esegue lo script lo arma, lo sospende e lo ripristina. None fuori da un
-	# interprete di scripting, dove agisce il thread chiamante.
+	# Solo il thread che esegue lo script arma, sospende e ripristina il timeout. None
+	# fuori da un interprete di scripting, dove agisce il thread chiamante.
 	script_thread = None
 	timeout_lock = threading.RLock()
+	clock = _TraceClock()
 	# Timeout configurato (ms), riarmato quando l'utente sceglie di continuare
 	timeout = 0
 	# Sospensioni annidate in corso (chiamate all'host) e tempo da riarmare alla fine
@@ -252,6 +318,10 @@ class _State:
 	stopping = False
 	# Uno script è in esecuzione
 	running = False
+	# Il thread dello script sta comunicando con l'host: la scadenza va rinviata alla fine
+	# della comunicazione
+	in_channel = 0
+	expiry_pending = False
 
 
 proxy = Proxy()
@@ -267,17 +337,14 @@ def _arm_timeout(timeout):
 	if _State.pause_depth > 0:
 		_State.paused_left = timeout or None
 	elif _on_script_thread():
-		set_interpreter_timeout(timeout or 0)
+		_State.clock.arm(timeout or 0)
 
 
 def _time_left():
 	# da chiamare con _State.timeout_lock acquisito
 	if _State.pause_depth > 0:
 		return _State.paused_left
-	if get_interpreter_timeout() is None:
-		return None
-	# un timeout scaduto ma non ancora rilevato dalla trace va comunque riarmato
-	return max(get_interpreter_time_left() or 0, 1)
+	return _State.clock.time_left()
 
 
 def _pause_timeout():
@@ -292,7 +359,7 @@ def _pause_timeout():
 				except:
 					pass
 			try:
-				set_interpreter_timeout(0)
+				_State.clock.arm(0)
 			except:
 				pass
 			_State.paused_left = left
@@ -308,7 +375,7 @@ def _resume_timeout():
 			left, _State.paused_left = _State.paused_left, None
 			if left:
 				try:
-					set_interpreter_timeout(left)
+					_State.clock.arm(left)
 				except:
 					pass
 
@@ -356,12 +423,10 @@ def get_script_time_left():
 		return _time_left() or 0
 
 
-def _interrupt_script(signo=None, stack_frame=None):
-	# Eseguita sul thread dello script alla richiesta di interruzione dell'host: fa scadere
-	# subito il timeout, così lo script viene fermato come allo scadere del timeout
-	with _State.timeout_lock:
-		if _State.running:
-			_arm_timeout(1)
+def _on_expiry_signal(signo=None, frame=None):
+	# Sul thread dello script: il timeout è scaduto (_TimerClock) o l'host ha chiesto di
+	# interrompere lo script, che vale come la scadenza immediata del timeout
+	_expired(frame)
 
 
 def _read_control(conn, requests):
@@ -381,18 +446,34 @@ def _read_control(conn, requests):
 
 
 def timeout_handler():
-	# Chiamata dalla trace C a timeout scaduto, con la trace già rimossa; il timeout resta
-	# quello che viene armato qui. La domanda all'host tiene lo script fermo finché
-	# l'utente non risponde.
-	if sys._getframe(1).f_code.co_filename == _THIS_FILE:
-		# mai interrompere il codice di questo modulo (es. a metà di una chiamata
-		# all'host): il controllo si ripete appena torna a girare lo script
-		with _State.timeout_lock:
-			_arm_timeout(_DEFER_INTERVAL)
-		return
+	# Chiamata dalla trace C di _kongalib (_TraceClock) a timeout scaduto, con la trace già
+	# rimossa: il timeout resta quello che viene armato da qui
+	_expired(sys._getframe(1))
+
+
+def _expired(frame):
+	# Scadenza del timeout sul thread dello script; *frame* è il codice che stava girando
 	with _State.timeout_lock:
+		if (not _State.running) or _State.handling_timeout:
+			return
+		if (_State.in_channel > 0) or ((frame is not None) and (frame.f_code.co_filename == _THIS_FILE)):
+			# mai interrompere una comunicazione con l'host o il codice di questo modulo: la
+			# scadenza arriva alla fine della comunicazione (_ChannelUse), altrimenti si
+			# ripete a breve
+			_State.expiry_pending = True
+			if _State.pause_depth > 0:
+				_State.paused_left = 1
+			else:
+				_State.clock.arm(_DEFER_INTERVAL)
+			return
+		if _State.pause_depth > 0:
+			# lo script attende l'host: la scadenza arriva quando la chiamata finisce
+			_State.paused_left = 1
+			return
+		_State.expiry_pending = False
 		stopping = _State.stopping
 		_State.handling_timeout = not stopping
+	# La domanda all'host tiene lo script fermo finché l'utente non risponde
 	if not stopping:
 		try:
 			stop = proxy.builtin.handle_timeout()
@@ -524,6 +605,8 @@ def _run_job(job, channel):
 		_State.handling_timeout = False
 		_State.stopping = False
 		_State.running = True
+		_State.in_channel = 0
+		_State.expiry_pending = False
 	exc_info = None
 	try:
 		script = compile(script, filename, 'exec', dont_inherit=1)
@@ -572,8 +655,10 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		def terminate(signo=None, stack_frame=None):
 			raise _Terminate
 		signal.signal(signal.SIGTERM, terminate)
+		_State.clock = _select_clock()
+		logger.debug('timeout clock: %s' % type(_State.clock).__name__)
 		if _INTERRUPT_SIGNAL is not None:
-			signal.signal(_INTERRUPT_SIGNAL, _interrupt_script)
+			signal.signal(_INTERRUPT_SIGNAL, _on_expiry_signal)
 		requests = _queue.Queue()
 		threading.Thread(target=_read_control, args=(conn, requests), name='control', daemon=True).start()
 
@@ -599,8 +684,9 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		import traceback
 		logger.critical('unhandled error in interpreter process: %s' % traceback.format_exc())
 	finally:
-		# la trace del timeout non deve restare attiva mentre l'interprete si chiude
+		# il timeout non deve restare armato mentre l'interprete si chiude
 		try:
+			_State.clock.arm(0)
 			set_interpreter_timeout(0)
 		except:
 			pass
@@ -902,13 +988,14 @@ class _Method:
 	def __call__(self, *args, **kwargs):
 		data = self._encode(args, kwargs)
 		proxy = self.handler._proxy
-		with proxy._lock:
-			if DEBUG:
-				s = time.time()
-				debug_log('[Proxy] call: %s' % str((self.handler._name, self.name, args, kwargs)))
-			reply = proxy._channel.call(data)
-			if DEBUG:
-				debug_log('[Proxy] got reply in %f secs: %s' % (time.time() - s, str((self.handler._name, self.name))))
+		with _ChannelUse():
+			with proxy._lock:
+				if DEBUG:
+					s = time.time()
+					debug_log('[Proxy] call: %s' % str((self.handler._name, self.name, args, kwargs)))
+				reply = proxy._channel.call(data)
+				if DEBUG:
+					debug_log('[Proxy] got reply in %f secs: %s' % (time.time() - s, str((self.handler._name, self.name))))
 		e, result = _loads(reply)
 		if e is None:
 			return result
@@ -924,8 +1011,23 @@ class _Method:
 		fatte."""
 		data = self._encode(args, kwargs)
 		proxy = self.handler._proxy
-		with proxy._lock.lock:
-			proxy._channel.notify(data)
+		with _ChannelUse():
+			with proxy._lock.lock:
+				proxy._channel.notify(data)
+
+
+
+class _ChannelUse:
+	# Segna che il thread dello script sta comunicando con l'host (vedi _expired())
+	def __enter__(self):
+		self.counted = threading.get_ident() == _State.script_thread
+		if self.counted:
+			_State.in_channel += 1
+	def __exit__(self, exc_type, exc_value, exc_traceback):
+		if self.counted:
+			_State.in_channel -= 1
+			if (_State.in_channel == 0) and _State.expiry_pending:
+				_expired(None)
 
 
 
