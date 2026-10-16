@@ -14,9 +14,10 @@
 
 
 from kongalib import Error
-from _kongalib import get_application_log_path, set_interpreter_timeout, get_interpreter_timeout, get_interpreter_time_left, _set_process_foreground
+from _kongalib import get_application_log_path, set_interpreter_timeout, _set_process_foreground
 
 import sys
+import math
 import os
 import atexit
 import io
@@ -58,6 +59,8 @@ _CALL = b'C'
 _NOTIFY = b'N'
 # Rinvio (ms) di un controllo del timeout scaduto dentro questo stesso modulo
 _DEFER_INTERVAL = 50
+# Riarmo minimo (ms) di un timeout scaduto mentre era sospeso
+_MIN_REARM = 0.001
 _THIS_FILE = __file__
 # Segnale simulato (mai inviato dal sistema operativo) con cui i thread dell'interprete
 # fanno eseguire al thread dello script la scadenza del timeout o la richiesta di
@@ -240,13 +243,8 @@ class _TraceClock:
 	evento dello script e alla scadenza chiama timeout_handler(): per dove non ci sono
 	thread (Pyodide), e fuori da un interprete di scripting."""
 	def arm(self, timeout):
-		set_interpreter_timeout(timeout or 0)
-
-	def time_left(self):
-		if get_interpreter_timeout() is None:
-			return None
-		# un timeout scaduto ma non ancora rilevato va comunque riarmato
-		return max(get_interpreter_time_left() or 0, 1)
+		# la trace conta in millisecondi interi
+		set_interpreter_timeout(math.ceil(timeout) if timeout else 0)
 
 
 
@@ -266,12 +264,6 @@ class _TimerClock:
 				self.thread = threading.Thread(target=self._run, name='timeout', daemon=True)
 				self.thread.start()
 			self.cond.notify()
-
-	def time_left(self):
-		with self.cond:
-			if self.deadline is None:
-				return None
-			return max(int((self.deadline - time.monotonic()) * 1000), 1)
 
 	def _run(self):
 		with self.cond:
@@ -322,6 +314,10 @@ class _State:
 	# della comunicazione
 	in_channel = 0
 	expiry_pending = False
+	# Quando e per quanti millisecondi (frazionari) è stato armato l'orologio: il tempo
+	# rimasto si conta da qui, non dall'orologio, che arrotonda al millisecondo
+	armed_at = None
+	armed_for = None
 
 
 proxy = Proxy()
@@ -332,19 +328,43 @@ def _on_script_thread():
 	return _State.script_thread in (None, threading.get_ident())
 
 
+def _clock_arm(timeout):
+	# da chiamare con _State.timeout_lock acquisito; *timeout* in millisecondi, anche
+	# frazionari; 0 o None disarma
+	if timeout:
+		_State.armed_at = time.monotonic()
+		_State.armed_for = float(timeout)
+	else:
+		_State.armed_at = _State.armed_for = None
+	_State.clock.arm(timeout or 0)
+
+
+def _clock_left():
+	# da chiamare con _State.timeout_lock acquisito: millisecondi esatti alla scadenza (0 o
+	# meno se è scaduto ma non ancora gestito), None se l'orologio è disarmato
+	if _State.armed_at is None:
+		return None
+	return _State.armed_for - (time.monotonic() - _State.armed_at) * 1000
+
+
 def _arm_timeout(timeout):
 	# da chiamare con _State.timeout_lock acquisito
 	if _State.pause_depth > 0:
 		_State.paused_left = timeout or None
 	elif _on_script_thread():
-		_State.clock.arm(timeout or 0)
+		_clock_arm(timeout)
 
 
 def _time_left():
 	# da chiamare con _State.timeout_lock acquisito
 	if _State.pause_depth > 0:
-		return _State.paused_left
-	return _State.clock.time_left()
+		left = _State.paused_left
+	else:
+		left = _clock_left()
+	if left is None:
+		return None
+	# un timeout scaduto ma non ancora rilevato va comunque riarmato
+	return max(int(left), 1)
 
 
 def _pause_timeout():
@@ -352,14 +372,13 @@ def _pause_timeout():
 		if not _on_script_thread():
 			return
 		if _State.pause_depth == 0:
+			# il tempo rimasto si conserva esatto: arrotondato al millisecondo, uno script
+			# che chiama l'host più volte per millisecondo non arriverebbe mai alla scadenza
 			left = None
 			if not _State.handling_timeout:
-				try:
-					left = _time_left()
-				except:
-					pass
+				left = _clock_left()
 			try:
-				_State.clock.arm(0)
+				_clock_arm(0)
 			except:
 				pass
 			_State.paused_left = left
@@ -373,9 +392,10 @@ def _resume_timeout():
 		_State.pause_depth -= 1
 		if _State.pause_depth == 0:
 			left, _State.paused_left = _State.paused_left, None
-			if left:
+			if left is not None:
 				try:
-					_State.clock.arm(left)
+					# già scaduto durante la sospensione: scade appena possibile
+					_clock_arm(max(left, _MIN_REARM))
 				except:
 					pass
 
@@ -464,7 +484,7 @@ def _expired(frame):
 			if _State.pause_depth > 0:
 				_State.paused_left = 1
 			else:
-				_State.clock.arm(_DEFER_INTERVAL)
+				_clock_arm(_DEFER_INTERVAL)
 			return
 		if _State.pause_depth > 0:
 			# lo script attende l'host: la scadenza arriva quando la chiamata finisce
@@ -607,6 +627,7 @@ def _run_job(job, channel):
 		_State.running = True
 		_State.in_channel = 0
 		_State.expiry_pending = False
+		_State.armed_at = _State.armed_for = None
 	exc_info = None
 	try:
 		script = compile(script, filename, 'exec', dont_inherit=1)
