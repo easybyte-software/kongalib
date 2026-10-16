@@ -393,8 +393,13 @@ def _resume_timeout():
 		if _State.pause_depth == 0:
 			left, _State.paused_left = _State.paused_left, None
 			if left is not None:
+				if left <= 0:
+					# già scaduto: la scadenza arriva alla fine della comunicazione con l'host
+					# (_ChannelUse) senza aspettare l'orologio; la trace conta in millisecondi
+					# interi e non la vedrebbe mai in uno script che chiama l'host più volte
+					# per millisecondo
+					_State.expiry_pending = True
 				try:
-					# già scaduto durante la sospensione: scade appena possibile
 					_clock_arm(max(left, _MIN_REARM))
 				except:
 					pass
