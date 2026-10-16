@@ -165,7 +165,7 @@ Entry_FromCLU(MGA::MODULE_STATE *state, CLU_Entry *entry)
  *	- None => #CLU_NULL.
  *	- bool => #CLU_BOOL.
  *	- int or long => #CLU_INTEGER.
- *	- MGA.Decimal => #CLU_DECIMAL.
+ *	- MGA.Decimal or decimal.Decimal => #CLU_DECIMAL.
  *	- float => #CLU_FLOAT.
  *	- datetime.datetime => #CLU_TIMESTAMP.
  *	- string or unicode => #CLU_TEXT.
@@ -181,6 +181,8 @@ Entry_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_Entry *entry)
 	char *text;
 	Py_buffer buffer;
 	Py_ssize_t size;
+	CL_Decimal decimal;
+	int converted;
 	
 	if (object == Py_None) {
 		entry->Set(CLU_Null);
@@ -232,6 +234,10 @@ Entry_FromPy(MGA::MODULE_STATE *state, PyObject *object, CLU_Entry *entry)
 		CLU_Table temp;
 		MGA::Table_FromPy(state, object, &temp);
 		entry->Set(temp);
+	}
+	else if ((converted = MGA::ConvertPyDecimal(object, &decimal)) != 0) {
+		if (converted > 0)
+			entry->Set(decimal);
 	}
 	else if ((PyObject_CheckBuffer(object)) && (!PyObject_GetBuffer(object, &buffer, PyBUF_SIMPLE))) {
 		entry->Set(CL_Blob((const void *)buffer.buf, (uint32)buffer.len));

@@ -203,6 +203,8 @@ extern void untrackClient(MGA::ClientObject *client);
 
 extern int ConvertString(PyObject *object, string *string);
 extern int ConvertDecimal(PyObject *object, DecimalObject **decimal);
+extern PyTypeObject *GetPyDecimalType();
+extern int ConvertPyDecimal(PyObject *object, CL_Decimal *value);
 extern PyObject *List_FromCLU(MODULE_STATE *state, CLU_List *list);
 extern void List_FromPy(MODULE_STATE *state, PyObject *object, CLU_List *list);
 extern PyObject *Table_FromCLU(MODULE_STATE *state, CLU_Table *table);

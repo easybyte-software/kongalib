@@ -233,8 +233,17 @@ encode_object(MGA::JSONEncoderObject *self, PyObject *object)
 		Py_DECREF(seq);
 	}
 	else {
-		PyErr_Format(PyExc_ValueError, "Unexpected type %s, expecting bool, int, long, float, Decimal, date, datetime or str/unicode object", Py_TYPE(object)->tp_name);
-		return false;
+		CL_Decimal decimal;
+		int converted = MGA::ConvertPyDecimal(object, &decimal);
+		if (converted < 0)
+			return false;
+		if (converted == 0) {
+			PyErr_Format(PyExc_ValueError, "Unexpected type %s, expecting bool, int, long, float, Decimal, date, datetime or str/unicode object", Py_TYPE(object)->tp_name);
+			return false;
+		}
+		string number = decimal.ToString();
+		if (!checkGen(yajl_gen_number(self->fHandle, number.c_str(), number.size())))
+			return false;
 	}
 	return true;
 }

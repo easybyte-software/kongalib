@@ -497,6 +497,20 @@ MGA_Decimal_richcompare(MGA::DecimalObject *self, PyObject *other, int op)
 		}
 	}
 	else {
+		PyTypeObject *pyDecimalType = MGA::GetPyDecimalType();
+		if ((pyDecimalType) && (PyObject_TypeCheck(other, pyDecimalType))) {
+			// Compare as decimal.Decimal, so that NaN, infinities and values beyond our precision behave as expected
+			PyObject *str = MGA_Decimal_str(self);
+			PyObject *value = str ? PyObject_CallOneArg((PyObject *)pyDecimalType, str) : NULL;
+			Py_XDECREF(str);
+			Py_DECREF(pyDecimalType);
+			if (!value)
+				return NULL;
+			PyObject *comparison = PyObject_RichCompare(value, other, op);
+			Py_DECREF(value);
+			return comparison;
+		}
+		Py_XDECREF(pyDecimalType);
 		Py_INCREF(Py_NotImplemented);
 		return Py_NotImplemented;
 	}
@@ -552,6 +566,7 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		return -1;
 	
 	if (value) {
+		int converted;
 		if (PyObject_TypeCheck(value, ((MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self)))->fDecimalType)) {
 			self->fValue = ((MGA::DecimalObject *)value)->fValue;
 		}
@@ -562,6 +577,10 @@ MGA_Decimal_init(MGA::DecimalObject *self, PyObject *args, PyObject *kwds)
 		}
 		else if (PyFloat_Check(value)) {
 			self->fValue = PyFloat_AS_DOUBLE(value);
+		}
+		else if ((PyNumber_Check(value)) && ((converted = MGA::ConvertPyDecimal(value, &self->fValue)) != 0)) {
+			if (converted < 0)
+				return -1;
 		}
 		else if (PyNumber_Check(value)) {
 			number = PyNumber_Float(value);
@@ -957,6 +976,7 @@ MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 {
 	MGA::MODULE_STATE *state = MGA::getModuleState();
 	CL_Decimal value;
+	int converted;
 	if (state && PyObject_TypeCheck(object, state->fDecimalType)) {
 		*decimal = (MGA::DecimalObject *)object;
 		Py_INCREF(object);
@@ -974,6 +994,10 @@ MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 	}
 	else if (PyFloat_Check(object)) {
 		value = PyFloat_AS_DOUBLE(object);
+	}
+	else if ((PyNumber_Check(object)) && ((converted = MGA::ConvertPyDecimal(object, &value)) != 0)) {
+		if (converted < 0)
+			return 0;
 	}
 	else if (PyNumber_Check(object)) {
 		PyObject *number = PyNumber_Float(object);
@@ -1000,3 +1024,77 @@ MGA::ConvertDecimal(PyObject *object, MGA::DecimalObject **decimal)
 	return 1;
 }
 
+
+/**
+ *	Returns the decimal.Decimal type of the Python standard library. The decimal module is not imported here: as long as
+ *	nobody imported it there cannot be any instance of its Decimal type around.
+ *	\return						A new reference to the decimal.Decimal type, or NULL if the decimal module is not loaded.
+ */
+PyTypeObject *
+MGA::GetPyDecimalType()
+{
+	PyObject *name = PyUnicode_FromString("decimal");
+	PyObject *module = name ? PyImport_GetModule(name) : NULL;
+	PyObject *type = module ? PyObject_GetAttrString(module, "Decimal") : NULL;
+
+	Py_XDECREF(name);
+	Py_XDECREF(module);
+	PyErr_Clear();
+	if ((type) && (!PyType_Check(type))) {
+		Py_DECREF(type);
+		type = NULL;
+	}
+	return (PyTypeObject *)type;
+}
+
+
+/**
+ *	Converts a decimal.Decimal object to a #CL_Decimal, going through its string representation so that no digit is lost.
+ *	\param	object				Python object to be converted.
+ *	\param	value				On exit, holds the converted value.
+ *	\retval	1					\a object was a decimal.Decimal and has been converted.
+ *	\retval	0					\a object is not a decimal.Decimal; \a value is untouched.
+ *	\retval	-1					\a object is a decimal.Decimal that cannot be represented (NaN, infinity or too many digits), and an exception was raised.
+ */
+int
+MGA::ConvertPyDecimal(PyObject *object, CL_Decimal *value)
+{
+	PyTypeObject *type = MGA::GetPyDecimalType();
+	bool isDecimal = (type) && (PyObject_TypeCheck(object, type));
+	Py_XDECREF(type);
+	if (!isDecimal)
+		return 0;
+
+	PyObject *finite = PyObject_CallMethod(object, "is_finite", NULL);
+	if (!finite)
+		return -1;
+	int isFinite = PyObject_IsTrue(finite);
+	Py_DECREF(finite);
+	if (isFinite < 0)
+		return -1;
+	if (!isFinite) {
+		PyErr_Format(PyExc_ValueError, "Bad Decimal initializer: %R", object);
+		return -1;
+	}
+
+	PyObject *str = PyObject_Str(object);
+	if (!str)
+		return -1;
+	Py_ssize_t size;
+	const char *text = PyUnicode_AsUTF8AndSize(str, &size);
+	if (!text) {
+		Py_DECREF(str);
+		return -1;
+	}
+	bool invalid = false, overflow = false;
+	*value = CL_Decimal::FromString(string(text, size), &invalid, &overflow);
+	Py_DECREF(str);
+	if (invalid) {
+		if (overflow)
+			PyErr_SetString(PyExc_OverflowError, "Arithmetic overflow");
+		else
+			PyErr_Format(PyExc_ValueError, "Bad Decimal initializer: %R", object);
+		return -1;
+	}
+	return 1;
+}
