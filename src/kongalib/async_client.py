@@ -55,7 +55,7 @@ class AsyncClient(Client):
 				if future.cancelled() or (progress is None):
 					result = not future.cancelled()
 				else:
-					if asyncio.iscoroutinefunction(progress):
+					if inspect.iscoroutinefunction(progress):
 						coro = progress
 					else:
 						async def coro(*args):
