@@ -27,6 +27,7 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.reduction
 import asyncio
+import inspect
 import signal
 import logging
 import logging.handlers
@@ -631,18 +632,22 @@ class _ProcessBackend:
 	def exitcode(self):
 		return self.process.exitcode
 
-	def kill(self):
-		"""Termina il processo: prima con una richiesta (SIGTERM), poi d'autorità."""
+	def terminate(self):
+		"""Chiede al processo di terminare (SIGTERM su POSIX, d'autorità su Windows)."""
 		try:
 			self.process.terminate()
 		except:
 			pass
-		self.process.join(3)
-		if self.process.is_alive():
-			try:
-				self.process.kill()
-			except Exception as e:
-				debug_log('Interpreter.stop() failed with error: %s' % str(e))
+
+	def kill(self):
+		"""Termina il processo d'autorità."""
+		try:
+			self.process.kill()
+		except Exception as e:
+			debug_log('Interpreter.stop() failed with error: %s' % str(e))
+
+	def join(self, timeout=None):
+		self.process.join(timeout)
 
 	def close(self):
 		try:
@@ -694,6 +699,34 @@ class Interpreter:
 		l'interprete non riesce a collegarsi."""
 		if run is None:
 			run = _Run()
+		backend = self._start_run(script, filename, argv, path, timeout, connection)
+		state = {}
+		while True:
+			result = self._check(backend, run, state)
+			if result is not None:
+				break
+			run.finished.wait(0.05)
+		with self.lock:
+			self.exc_info = result.exc_info
+		return result
+
+	async def execute_async(self, script=None, filename=None, argv=None, path=None, timeout=None, run=None, connection=None):
+		"""Come :meth:`execute`, ma attende la fine dell'esecuzione senza bloccare il loop
+		corrente."""
+		if run is None:
+			run = _Run(asyncio.get_running_loop())
+		backend = self._start_run(script, filename, argv, path, timeout, connection)
+		state = {}
+		while True:
+			result = self._check(backend, run, state)
+			if result is not None:
+				break
+			await run.wait_async(0.05)
+		with self.lock:
+			self.exc_info = result.exc_info
+		return result
+
+	def _start_run(self, script, filename, argv, path, timeout, connection):
 		with self.lock:
 			self.ensure_proc()
 			backend = self.backend
@@ -710,41 +743,64 @@ class Interpreter:
 				cwd = None
 			job = (args, path, timeout, script or '', cwd)
 			backend.send(('run', job, connection or (None, None)))
-			self.lock.release()
-			try:
-				result = self._wait(backend, run)
-			finally:
-				self.lock.acquire()
-			self.exc_info = result.exc_info
-			return result
+			return backend
 
-	def _wait(self, backend, run):
-		while not run.finished.wait(0.05):
-			message = backend.receive()
-			if (message is not None) and (message[0] == 'bad_connection'):
-				raise BadConnection(message[1])
-			with self.lock:
-				stopped = self.backend is not backend
-			if stopped:
-				return ExecutionResult(ExecutionResult.TERMINATED)
-			if not backend.is_alive():
-				# la notifica della fine dell'esecuzione potrebbe essere ancora in viaggio
-				if run.finished.wait(0.5):
-					break
+	def _check(self, backend, run, state):
+		# Un passo dell'attesa della fine di un'esecuzione: restituisce l'esito se è finita,
+		# altrimenti None. *state* è conservato tra un passo e l'altro.
+		if run.finished.is_set():
+			exc_info = run.exc_info
+			if exc_info is None:
+				return ExecutionResult(ExecutionResult.COMPLETED)
+			if exc_info[0] is InterpreterTimeout:
+				return ExecutionResult(ExecutionResult.TIMEOUT, exc_info)
+			return ExecutionResult(ExecutionResult.FAILED, exc_info)
+		message = backend.receive()
+		if (message is not None) and (message[0] == 'bad_connection'):
+			raise BadConnection(message[1])
+		with self.lock:
+			stopped = self.backend is not backend
+		if stopped:
+			return ExecutionResult(ExecutionResult.TERMINATED)
+		if not backend.is_alive():
+			# la notifica della fine dell'esecuzione potrebbe essere ancora in viaggio
+			now = time.monotonic()
+			dead_since = state.setdefault('dead_since', now)
+			if now - dead_since > 0.5:
 				return ExecutionResult(ExecutionResult.CRASHED, exitcode=backend.exitcode)
-		exc_info = run.exc_info
-		if exc_info is None:
-			return ExecutionResult(ExecutionResult.COMPLETED)
-		if exc_info[0] is InterpreterTimeout:
-			return ExecutionResult(ExecutionResult.TIMEOUT, exc_info)
-		return ExecutionResult(ExecutionResult.FAILED, exc_info)
+		return None
 
 	def stop(self):
+		"""Arresta l'interprete: prima con una richiesta, poi d'autorità dopo 3 secondi."""
 		with self.lock:
 			backend, self.backend = self.backend, None
 		if backend is not None:
-			backend.kill()
+			backend.terminate()
+			backend.join(3)
+			if backend.is_alive():
+				backend.kill()
+				backend.join(3)
 			backend.close()
+
+	async def stop_async(self):
+		"""Come :meth:`stop`, senza bloccare il loop corrente."""
+		with self.lock:
+			backend, self.backend = self.backend, None
+		if backend is not None:
+			backend.terminate()
+			if not await self._wait_exit(backend, 3):
+				backend.kill()
+				await self._wait_exit(backend, 3)
+			backend.close()
+
+	@staticmethod
+	async def _wait_exit(backend, timeout):
+		deadline = time.monotonic() + timeout
+		while backend.is_alive():
+			if time.monotonic() > deadline:
+				return False
+			await asyncio.sleep(0.05)
+		return True
 
 	def interrupt(self):
 		"""Chiede all'interprete di interrompere al più presto lo script in esecuzione, come
@@ -886,14 +942,29 @@ class _StopWatchdog:
 
 
 class _Run:
-	"""Un'esecuzione in corso: l'interprete ne notifica la fine con il suo esito."""
-	def __init__(self):
+	"""Un'esecuzione in corso: l'interprete ne notifica la fine con il suo esito. Con *loop*
+	la fine si può anche attendere da una coroutine su quel loop."""
+	def __init__(self, loop=None):
 		self.finished = threading.Event()
 		self.exc_info = None
+		self.loop = loop
+		self.async_finished = asyncio.Event() if loop is not None else None
 
 	def set_done(self, exc_info):
 		self.exc_info = exc_info
 		self.finished.set()
+		if self.loop is not None:
+			try:
+				self.loop.call_soon_threadsafe(self.async_finished.set)
+			except RuntimeError:
+				# il loop è già chiuso
+				pass
+
+	async def wait_async(self, timeout):
+		try:
+			await asyncio.wait_for(self.async_finished.wait(), timeout)
+		except asyncio.TimeoutError:
+			pass
 
 
 
@@ -1098,6 +1169,14 @@ class BuiltinHandler:
 			func, args, kwargs = self.__exit_funcs.pop()
 			func(*args, **kwargs)
 
+	async def _atexit_async(self):
+		# come _atexit(), ma sul loop: le funzioni che restituiscono una coroutine vengono attese
+		while self.__exit_funcs:
+			func, args, kwargs = self.__exit_funcs.pop()
+			result = func(*args, **kwargs)
+			if inspect.isawaitable(result):
+				await result
+
 
 def set_connection_family(family):
 	global gConnFamily
@@ -1109,31 +1188,67 @@ def add_dll_directory(path):
 		_DLL_PATHS.append(path)
 
 
-def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None, loop=None):
-	"""Esegue uno script in un interprete separato e ne attende la fine; le eccezioni dello
-	script vengono riportate tramite ``print_exception()`` dell'handler ``builtin``.
-	Restituisce un :class:`ExecutionResult`."""
-	global gConnFamilyOverride
-	import traceback
-	if (script is None) and (filename is None):
-		raise ValueError('Either script or filename must be specified')
-	if loop is None:
-		try:
-			loop = asyncio.get_running_loop()
-		except RuntimeError:
-			pass
-	debug_log("[ServerProxy] launching...")
-	if filename is None:
-		filename = '<script>'
-	if argv is None:
-		argv = [ filename ]
-	if interpreter is None:
-		interpreter = Interpreter()
-	debug_log("[ServerProxy] instantiating ServerProxy")
-	_handlers = { 'builtin': BuiltinHandler() }
-	_handlers.update(handlers or {})
-	_handlers['builtin']._set_interpreter(interpreter)
-	def report(exc_info):
+class _Execution:
+	"""Preparazione, esito e chiusura di un'esecuzione, comuni a :func:`execute` e
+	:func:`execute_async`."""
+	def __init__(self, script, filename, argv, path, timeout, handlers, interpreter, loop, run):
+		if (script is None) and (filename is None):
+			raise ValueError('Either script or filename must be specified')
+		if filename is None:
+			filename = '<script>'
+		if argv is None:
+			argv = [ filename ]
+		if interpreter is None:
+			interpreter = Interpreter()
+		self.args = (script, filename, argv, path or [], timeout)
+		self.interpreter = interpreter
+		self.handlers = { 'builtin': BuiltinHandler() }
+		self.handlers.update(handlers or {})
+		self.builtin = self.handlers['builtin']
+		self.builtin._set_interpreter(interpreter)
+		self.run = run
+		self.watchdog = _StopWatchdog(interpreter)
+		self.dispatcher = _CallDispatcher(self.handlers, loop, self.watchdog, run)
+
+	def start_server(self):
+		"""Avvia il listener a cui l'interprete si collegherà per questa esecuzione;
+		restituisce il server e la coppia ``(famiglia, indirizzo)`` da passare all'interprete."""
+		server = _ServerProxy(self.dispatcher)
+		server.start()
+		address = server.listener.address
+		debug_log("[ServerProxy] listener address is: %s" % repr(address))
+		return server, (multiprocessing.connection.address_type(address), address)
+
+	def finished(self, result):
+		if self.watchdog.fired:
+			result = ExecutionResult(ExecutionResult.TIMEOUT, (InterpreterTimeout, InterpreterTimeout(), []))
+		elif result.status == ExecutionResult.CRASHED:
+			error = RuntimeError('The interpreter process exited unexpectedly (exit code %s)' % result.exitcode)
+			result.exc_info = (RuntimeError, error, [])
+		if result.exc_info is not None:
+			self.report(result.exc_info)
+		return result
+
+	def failed(self, e):
+		"""Gestisce un errore dell'esecuzione: restituisce None se va ritentata, altrimenti
+		l'esito."""
+		global gConnFamilyOverride
+		import traceback
+		# se la famiglia di connessione scelta non funziona (es. bloccata da un antivirus) si
+		# ripiega una volta per tutte su quella predefinita
+		if getattr(e, '_bad_connection', False) and (not gConnFamilyOverride) and (gConnFamily is not None):
+			debug_log("[ServerProxy] bad connection (%s), trying default connection family" % e)
+			gConnFamilyOverride = True
+			set_connection_family(None)
+			return None
+		debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
+		type, value, tb = sys.exc_info()
+		result = ExecutionResult(ExecutionResult.FAILED, (type, value, [ tuple(entry) for entry in traceback.extract_tb(tb) ]))
+		self.report(result.exc_info)
+		return result
+
+	def report(self, exc_info):
+		import traceback
 		type, value, tb = exc_info
 		def do_filter(entry):
 			filename = entry[0].replace('\\', '/')
@@ -1142,48 +1257,76 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 			return True
 		tb = list(filter(do_filter, tb))
 		try:
-			_handlers['builtin'].print_exception(type, value, tb)
+			self.builtin.print_exception(type, value, tb)
 		except:
 			debug_log('proxy.builtin.print_exception exception:\n%s' % traceback.format_exc())
-	run = _Run()
-	watchdog = _StopWatchdog(interpreter)
-	dispatcher = _CallDispatcher(_handlers, loop, watchdog, run)
+
+	def close(self):
+		self.watchdog.cancel()
+		self.dispatcher.close()
+		self.builtin._set_interpreter(None)
+
+
+
+def execute(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None, loop=None):
+	"""Esegue uno script in un interprete separato e ne attende la fine; le eccezioni dello
+	script vengono riportate tramite ``print_exception()`` dell'handler ``builtin``.
+	Restituisce un :class:`ExecutionResult`. I metodi degli handler vengono eseguiti in un
+	thread dedicato; quelli che restituiscono una coroutine, sul loop *loop* (predefinito:
+	quello in esecuzione nel thread chiamante, se c'è)."""
+	if loop is None:
+		try:
+			loop = asyncio.get_running_loop()
+		except RuntimeError:
+			pass
+	ex = _Execution(script, filename, argv, path, timeout, handlers, interpreter, loop, _Run())
 	result = None
 	try:
 		while True:
-			p = _ServerProxy(dispatcher)
+			server = None
 			try:
-				p.start()
-				address = p.listener.address
-				conn_type = multiprocessing.connection.address_type(address)
-				debug_log("[ServerProxy] listener address is: %s" % repr(address))
-				result = interpreter.execute(script, filename, argv, path or [], timeout, run=run, connection=(conn_type, address))
-				if watchdog.fired:
-					result = ExecutionResult(ExecutionResult.TIMEOUT, (InterpreterTimeout, InterpreterTimeout(), []))
-				elif result.status == ExecutionResult.CRASHED:
-					error = RuntimeError('The interpreter process exited unexpectedly (exit code %s)' % result.exitcode)
-					result.exc_info = (RuntimeError, error, [])
-				if result.exc_info is not None:
-					report(result.exc_info)
+				server, connection = ex.start_server()
+				result = ex.finished(ex.interpreter.execute(*ex.args, run=ex.run, connection=connection))
 			except Exception as e:
-				# se la famiglia di connessione scelta non funziona (es. bloccata da un
-				# antivirus) si ripiega una volta per tutte su quella predefinita
-				if getattr(e, '_bad_connection', False) and (not gConnFamilyOverride) and (gConnFamily is not None):
-					debug_log("[ServerProxy] bad connection (%s), trying default connection family" % e)
-					gConnFamilyOverride = True
-					set_connection_family(None)
+				result = ex.failed(e)
+				if result is None:
 					continue
-				debug_log("[ServerProxy] unhandled execute exception: %s" % traceback.format_exc())
-				type, value, tb = sys.exc_info()
-				result = ExecutionResult(ExecutionResult.FAILED, (type, value, [ tuple(entry) for entry in traceback.extract_tb(tb) ]))
-				report(result.exc_info)
 			finally:
-				p.stop()
+				if server is not None:
+					server.stop()
 			break
 	finally:
-		watchdog.cancel()
-		dispatcher.close()
-		_handlers['builtin']._set_interpreter(None)
-		_handlers['builtin']._atexit()
+		ex.close()
+		ex.builtin._atexit()
+		debug_log("[ServerProxy] done")
+	return result
+
+
+
+async def execute_async(script=None, filename=None, argv=None, path=None, timeout=0, handlers=None, interpreter=None):
+	"""Come :func:`execute`, ma attende la fine dello script senza bloccare il loop corrente,
+	su cui vengono eseguiti i metodi degli handler che restituiscono una coroutine e le
+	funzioni registrate con ``atexit()`` dell'handler ``builtin`` (attese, se restituiscono
+	una coroutine)."""
+	loop = asyncio.get_running_loop()
+	ex = _Execution(script, filename, argv, path, timeout, handlers, interpreter, loop, _Run(loop))
+	result = None
+	try:
+		while True:
+			server = None
+			try:
+				server, connection = ex.start_server()
+				result = ex.finished(await ex.interpreter.execute_async(*ex.args, run=ex.run, connection=connection))
+			except Exception as e:
+				result = ex.failed(e)
+				if result is None:
+					continue
+			finally:
+				if server is not None:
+					server.stop()
+			break
+	finally:
+		ex.close()
+		await ex.builtin._atexit_async()
 		debug_log("[ServerProxy] done")
 	return result
