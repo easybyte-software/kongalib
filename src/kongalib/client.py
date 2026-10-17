@@ -13,6 +13,7 @@
 #	https://github.com/easybyte-software/kongalib
 
 
+import os
 import sys
 import threading
 import warnings
@@ -22,8 +23,22 @@ from .constants import *
 from .expression import *
 from .data_dictionary import *
 
-from _kongalib import Client as ClientImpl
-import threading
+import _kongalib
+try:
+	from _kongalib import Client as ClientImpl
+except ImportError:
+	# modulo ridotto al nucleo (CORE_ONLY, es. nel browser): solo il trasporto scritto in Python
+	ClientImpl = None
+
+
+def _new_impl():
+	"""L'implementazione di un nuovo client: quella nativa di _kongalib, oppure quella scritta in
+	Python (:mod:`kongalib.wire`) se il modulo nativo è quello ridotto al nucleo o se la variabile
+	d'ambiente ``KONGALIB_TRANSPORT`` vale ``wire``."""
+	if (ClientImpl is None) or getattr(_kongalib, 'CORE_ONLY', False) or (os.environ.get('KONGALIB_TRANSPORT') == 'wire'):
+		from kongalib.wire.client import WireClient
+		return WireClient()
+	return ClientImpl()
 
 
 DEFAULT_DISCOVER_TIMEOUT		= 5000
@@ -153,7 +168,7 @@ class Client:
 	
 	def __init__(self, impl=None):
 		if impl is None:
-			impl = ClientImpl()
+			impl = _new_impl()
 		self._impl = impl
 	
 	def __enter__(self):

@@ -28,6 +28,7 @@ un WebSocket nel browser.
 
 import asyncio
 import base64
+import collections
 import datetime
 import inspect
 import json
@@ -112,10 +113,19 @@ class TCPStream(Stream):
 
 class _Request(object):
 	# Una richiesta in attesa di risposta: gli eventi (Ping, Reply, eccezioni) arrivano dal
-	# compito che legge il flusso
+	# compito che legge il flusso, e svegliano chi aspetta (waiter)
+	__slots__ = ('assembler', 'events', 'waiter')
+
 	def __init__(self, cipher):
 		self.assembler = P.ReplyAssembler(cipher)
-		self.events = asyncio.Queue()
+		self.events = collections.deque()
+		self.waiter = None
+
+	def post(self, event):
+		self.events.append(event)
+		waiter = self.waiter
+		if (waiter is not None) and (not waiter.done()):
+			waiter.set_result(None)
 
 
 class Session(object):
@@ -209,7 +219,7 @@ class Session(object):
 				pass
 			self.stream = None
 		for request in self.requests.values():
-			request.events.put_nowait(error(code))
+			request.post(error(code))
 		self.requests.clear()
 		self.codec = None
 		self.client_id = 0
@@ -259,7 +269,7 @@ class Session(object):
 					if event is not None:
 						if isinstance(event, P.Reply):
 							del self.requests[header.sequence]
-						request.events.put_nowait(event)
+						request.post(event)
 		except asyncio.CancelledError:
 			return
 		except (P.ProtocolError, OSError):
@@ -278,32 +288,46 @@ class Session(object):
 
 	async def _exchange(self, build, cipher, timeout, progress=None, userdata=None):
 		"""Invia una richiesta e ne attende la risposta: timeout di inattività (si azzera a ogni
-		pacchetto ricevuto), progresso dai PING, interruzione."""
+		pacchetto ricevuto, anche di altre richieste), progresso dai PING, interruzione."""
 		timeout = (timeout or self.timeout) / 1000
+		loop = asyncio.get_running_loop()
 		sequence, request = self._send(build, cipher)
 		started = time.monotonic()
+		timer = None
+
+		def check():
+			# un solo timer per richiesta: allo scadere guarda quando è arrivato l'ultimo
+			# pacchetto, e se è recente si riarma per il resto del tempo
+			nonlocal timer
+			last = max(self.last_activity, started)
+			left = timeout - (time.monotonic() - last)
+			if left > 0:
+				timer = loop.call_later(left, check)
+			else:
+				timer = None
+				request.post(error(P.TIMED_OUT))
+
+		timer = loop.call_later(timeout, check)
 		try:
 			await self.stream.drain()
+			events = request.events
 			while True:
-				idle = time.monotonic() - max(self.last_activity, started)
-				try:
-					event = await asyncio.wait_for(request.events.get(), max(timeout - idle, 0))
-				except asyncio.TimeoutError:
-					if time.monotonic() - max(self.last_activity, started) < timeout:
+				while events:
+					event = events.popleft()
+					if isinstance(event, BaseException):
+						raise event
+					if isinstance(event, P.Ping):
+						if progress is not None:
+							result = progress(PROGRESS_EXECUTE, event.completeness, event.message, userdata)
+							if inspect.isawaitable(result):
+								result = await result
+							if result is False:
+								raise asyncio.CancelledError()
 						continue
-					self.requests.pop(sequence, None)
-					raise error(P.TIMED_OUT)
-				if isinstance(event, BaseException):
-					raise event
-				if isinstance(event, P.Ping):
-					if progress is not None:
-						result = progress(PROGRESS_EXECUTE, event.completeness, event.message, userdata)
-						if inspect.isawaitable(result):
-							result = await result
-						if result is False:
-							raise asyncio.CancelledError()
-					continue
-				return event
+					return event
+				request.waiter = loop.create_future()
+				await request.waiter
+				request.waiter = None
 		except asyncio.CancelledError:
 			# annullata (o interrotta dal progresso): il server la ferma, la sua risposta
 			# verrà scartata
@@ -313,6 +337,9 @@ class Session(object):
 		except BaseException:
 			self.requests.pop(sequence, None)
 			raise
+		finally:
+			if timer is not None:
+				timer.cancel()
 
 	async def execute(self, command, data=None, timeout=10000, progress=None, userdata=None, idle=None):
 		"""Esegue *command* con i dati *data* e restituisce l'intera tabella di risposta;
@@ -398,10 +425,11 @@ class Session(object):
 		}, timeout, progress, userdata)
 		return int(output.get(C.OUT_AFFECTED_ROWS) or 0), output.get(C.OUT_COLUMNS_LIST), output.get(C.OUT_RESULT_SET)
 
-	async def backup_database(self, password, backup_name, driver='', name='', auto=True, overwrite=False, position=0, store_index=False, progress=None, userdata=None, timeout=10000):
+	async def backup_database(self, password, backup_name, driver='', name='', auto=True, overwrite=False, position=0, store_index=False, progress=None, userdata=None, timeout=10000, include_empty_database=False):
 		input = { C.IN_PASSWORD: password }
-		if driver:
-			# come il client nativo in modalità asincrona: database solo se indicato
+		if driver or include_empty_database:
+			# come il client nativo: in modalità asincrona il database solo se indicato, in
+			# quella sincrona sempre
 			input[C.IN_DRIVER] = driver
 			input[C.IN_NAME] = name
 		input.update({
@@ -492,14 +520,3 @@ class WireBackend(object):
 
 	def interrupt(self):
 		self.session.interrupt()
-
-
-class AsyncImpl(object):
-	"""Implementazione di un client per il solo :class:`kongalib.AsyncClient`, sul trasporto
-	scritto in Python: ``kongalib.AsyncClient(AsyncImpl())``."""
-
-	def __init__(self, open_stream=None):
-		self.session = Session(open_stream)
-
-	def async_backend(self):
-		return WireBackend(self.session)
