@@ -30,6 +30,7 @@ Come nel client nativo, in modalità sincrona i metodi di comodo (tutti tranne `
 import asyncio
 import concurrent.futures
 import inspect
+import os
 import sys
 import threading
 import traceback
@@ -45,7 +46,8 @@ from kongalib.wire.session import Session
 # un'applicazione può non gestire i socket (quello di slew sul backend Qt è un SelectorEventLoop
 # che gira sul ciclo di Qt, e il suo selector non viene mai interrogato). Senza thread (Pyodide)
 # gira sul loop di chi la usa, con un flusso che non passa dai socket di asyncio (WebSocket).
-THREADS = sys.platform != 'emscripten'
+# KONGALIB_WIRE_THREADS=0 forza il comportamento senza thread anche su CPython, per provarlo.
+THREADS = (sys.platform != 'emscripten') and (os.environ.get('KONGALIB_WIRE_THREADS') != '0')
 
 # Timeout dei metodi di comodo in modalità sincrona (MGA_DEFAULT_EXECUTE_TIMEOUT)
 SYNC_TIMEOUT = 10000

@@ -14,7 +14,12 @@
 
 
 from kongalib import Error
-from _kongalib import get_application_log_path, set_interpreter_timeout, _set_process_foreground
+from _kongalib import set_interpreter_timeout
+try:
+	from _kongalib import _set_process_foreground
+except ImportError:
+	# modulo ridotto al nucleo (es. nel browser): nessun processo da portare in primo piano
+	_set_process_foreground = None
 
 import sys
 import math
@@ -664,7 +669,8 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 	logger.addHandler(handler)
 	logger.debug('entering interpreter process')
 	try:
-		_set_process_foreground(foreground)
+		if _set_process_foreground is not None:
+			_set_process_foreground(foreground)
 		for path in dll_paths:
 			try:
 				os.add_dll_directory(path)

@@ -321,12 +321,21 @@ def ensure_text(text, error='replace'):
 
 
 
-from _kongalib import Decimal, Deferred, JSONEncoder, JSONDecoder, NamedSemaphore, hash_password, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, set_default_idle_callback, set_power_callbacks, checksum, _apply_stylesheet, regexp_find_all, _check_all
+import _kongalib
+from _kongalib import Decimal, JSONEncoder, JSONDecoder, hash_password, checksum, _check_all
+if not getattr(_kongalib, 'CORE_ONLY', False):
+	from _kongalib import Deferred, NamedSemaphore, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, set_default_idle_callback, set_power_callbacks, _apply_stylesheet, regexp_find_all
+else:
+	# modulo ridotto al nucleo (es. nel browser): niente client nativo né funzioni di rete e di
+	# sistema; il client è quello scritto in Python (kongalib.wire)
+	_cleanup = None
 from .constants import *
 from .client import *
 from .expression import *
 from .data_dictionary import *
 from .async_client import AsyncClient
+if getattr(_kongalib, 'CORE_ONLY', False):
+	from .wire.client import Deferred
 
 
 class ErrorMessage:
@@ -386,4 +395,5 @@ def escape(query):
 	return query.replace("'", "''")
 
 
-atexit.register(_cleanup)
+if _cleanup is not None:
+	atexit.register(_cleanup)
