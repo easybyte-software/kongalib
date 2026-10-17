@@ -957,35 +957,27 @@ _check_all(PyObject *self, PyObject *args)
 
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
+	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
+	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
+	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
+	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
+	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
+	{	"_check_all",					(PyCFunction)_check_all, 					METH_VARARGS | METH_KEYWORDS,	"_check_all(ids) -> Returns true if all elements of array ids are non-zero." },
+	{	"_clu_encode",					(PyCFunction)MGA::CLU_Encode,				METH_VARARGS,					"_clu_encode(dict) -> bytes\n\nEncodes a dict as a CLU table, as sent to the server." },
+	{	"_clu_decode",					(PyCFunction)MGA::CLU_Decode,				METH_VARARGS,					"_clu_decode(bytes) -> dict\n\nDecodes a CLU table as received from the server." },
 #ifndef KONGALIB_CORE_ONLY
 	{	"host_lookup",					(PyCFunction)host_lookup,					METH_VARARGS | METH_KEYWORDS,	"host_lookup(str) -> str\n\nPerforms a forward or reverse DNS lookup given an IP/host name." },
 	{	"get_network_interfaces",		(PyCFunction)get_network_interfaces,		METH_VARARGS | METH_KEYWORDS,	"get_network_interfaces() -> tuple\n\nReturns a list of dicts holding informations on all the available network interfaces." },
 	{	"get_machine_uuid",				(PyCFunction)get_machine_uuid,				METH_NOARGS,					"get_machine_uuid() -> str\n\nGets machine unique UUID." },
 	{	"get_system_info",				(PyCFunction)get_system_info,				METH_NOARGS,					"get_system_info() -> str\n\nGets informations on the operating system." },
-#endif
-	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
-#ifndef KONGALIB_CORE_ONLY
+	{	"get_application_log_path",		(PyCFunction)get_application_log_path,		METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
+	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_VARARGS | METH_KEYWORDS,	"_set_process_foreground(foreground)\n\nSets process foreground status." },
+	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
+	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
 	{	"_cleanup",						(PyCFunction)_cleanup,						METH_NOARGS,					"_cleanup()\n\nCleanup resources." },
 	{	"set_default_idle_callback",	(PyCFunction)set_default_idle_callback,		METH_VARARGS | METH_KEYWORDS,	"set_default_idle_callback(callback)\n\nSets the default callback to be issued during client sync operations." },
 	{	"set_power_callbacks",			(PyCFunction)set_power_callbacks,			METH_VARARGS | METH_KEYWORDS,	"set_power_callbacks(suspend, resume)\n\nSets callbacks for suspend/resume system events." },
 #endif
-	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
-#ifndef KONGALIB_CORE_ONLY
-	{	"get_application_log_path",		(PyCFunction)get_application_log_path,		METH_NOARGS,					"get_application_log_path() -> str\n\nReturns the user log path concatenated with the application name." },
-#endif
-	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
-	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
-	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
-#ifndef KONGALIB_CORE_ONLY
-	{	"_set_process_foreground",		(PyCFunction)_set_process_foreground,		METH_VARARGS | METH_KEYWORDS,	"_set_process_foreground(foreground)\n\nSets process foreground status." },
-	{	"_apply_stylesheet",			(PyCFunction)_apply_stylesheet,				METH_VARARGS | METH_KEYWORDS,	"_apply_stylesheet(xml, xslt) -> str\n\nApplies given xslt transform to xml (both specified as strings) and returns transform result." },
-#endif
-	{	"_check_all",					(PyCFunction)_check_all, 					METH_VARARGS | METH_KEYWORDS,	"_check_all(ids) -> Returns true if all elements of array ids are non-zero." },
-#ifndef KONGALIB_CORE_ONLY
-	{	"regexp_find_all",				(PyCFunction)regexp_find_all,				METH_VARARGS | METH_KEYWORDS,	"regexp_find_all(pattern, text) -> list(tuple)\n\nPerforms a regular expression findall operation optimized for multithreading." },
-#endif
-	{	"_clu_encode",					(PyCFunction)MGA::CLU_Encode,				METH_VARARGS,					"_clu_encode(dict) -> bytes\n\nEncodes a dict as a CLU table, as sent to the server." },
-	{	"_clu_decode",					(PyCFunction)MGA::CLU_Decode,				METH_VARARGS,					"_clu_decode(bytes) -> dict\n\nDecodes a CLU table as received from the server." },
 	{	NULL,							NULL,										0,								NULL }
 };
 
@@ -1128,6 +1120,12 @@ module_exec(PyObject *module)
 		return -1;
 	if (PyModule_AddType(module, state->fDeferredType) < 0)
 		return -1;
+
+	state->fNamedSemaphoreType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &NamedSemaphore_spec, NULL);
+	if (!state->fNamedSemaphoreType)
+		return -1;
+	if (PyModule_AddType(module, state->fNamedSemaphoreType) < 0)
+		return -1;
 #endif
 
 	state->fJSONEncoderType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &JSONEncoder_spec, NULL);
@@ -1141,14 +1139,6 @@ module_exec(PyObject *module)
 		return -1;
 	if (PyModule_AddType(module, state->fJSONDecoderType) < 0)
 		return -1;
-
-#ifndef KONGALIB_CORE_ONLY
-	state->fNamedSemaphoreType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &NamedSemaphore_spec, NULL);
-	if (!state->fNamedSemaphoreType)
-		return -1;
-	if (PyModule_AddType(module, state->fNamedSemaphoreType) < 0)
-		return -1;
-#endif
 
 	state->fCipherType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Cipher_spec, NULL);
 	if (!state->fCipherType)
