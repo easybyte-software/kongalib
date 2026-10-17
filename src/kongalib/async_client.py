@@ -18,6 +18,7 @@ import inspect
 import warnings
 
 from kongalib import *
+from kongalib.client import _split_host_port
 
 
 class AsyncClient(Client):
@@ -191,13 +192,7 @@ class AsyncClient(Client):
 		if isinstance(server, str) and (host is None):
 			host = server
 			server = None
-		if isinstance(host, str) and (port is None) and (':' in host):
-			pos = host.rfind(':')
-			host = host[:pos]
-			try:
-				port = int(host[pos+1:])
-			except:
-				raise ValueError("Invalid port value embedded in host string")
+		host, port = _split_host_port(host, port)
 		fut = asyncio.get_running_loop().create_future()
 		self._impl.connect(server, host or '', port, options, timeout, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata))
 		return fut

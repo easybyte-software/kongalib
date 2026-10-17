@@ -100,6 +100,34 @@ def _check_result(output, result_callback=None):
 
 
 
+def _split_host_port(host, port):
+	"""Separa da *host* la porta, se vi è indicata e *port* non è specificata (``0`` o ``None``):
+	``'nome:porta'``, ``'1.2.3.4:porta'`` o ``'[indirizzo IPv6]:porta'``. Un indirizzo IPv6 senza
+	parentesi quadre resta com'è. Restituisce la coppia ``(host, port)``."""
+	if (not isinstance(host, str)) or port:
+		return host, port
+	if host.startswith('['):
+		end = host.find(']')
+		if end < 0:
+			return host, port
+		address, rest = host[1:end], host[end + 1:]
+		if not rest:
+			return address, port
+		if not rest.startswith(':'):
+			raise ValueError("Invalid port value embedded in host string")
+		host, port = address, rest[1:]
+	elif host.count(':') == 1:
+		host, port = host.split(':')
+	else:
+		return host, port
+	try:
+		port = int(port)
+	except ValueError:
+		raise ValueError("Invalid port value embedded in host string")
+	return host, port
+
+
+
 class Client:
 	"""La classe Client permette di connettersi ad un server Konga e di eseguire comandi sullo stesso.
 	
@@ -144,16 +172,17 @@ class Client:
 		import kongalib
 		return kongalib.AsyncClient(self._impl)
 	
-	def list_servers(self, timeout=DEFAULT_DISCOVER_TIMEOUT, port=0, success=None, progress=None, userdata=None):
+	def list_servers(self, timeout=DEFAULT_DISCOVER_TIMEOUT, port=0, success=None, error=None, progress=None, userdata=None):
 		"""Esegue una scansione della rete locale alla ricerca dei server Konga disponibili, attendendo al massimo *timeout* millisecondi
 		per una risposta. *port* specifica la porta da cui far partire la scansione (default = 51967); sono controllate le successive 10
 		porte UDP con intervallo di 20 porte (quindi di default vengono scansionate le porte 51967, 51987, 52007, ... 52147). Se *success*
 		è ``None``, la funzione è bloccante e scaduto il *timeout* restituisce una lista di ``dict``, le cui chiavi principali sono *host*,
 		*port*, *name* e *description*. Al contrario, se *success* è una funzione nella forma ``success(servers, userdata)``, ``list_servers``
 		restituisce immediatamente un oggetto :class:`~kongalib.Deferred` e la chiamata viene eseguita in modo asincrono; la callback *success*
-		verrà invocata a tempo debito con la lista dei risultati (come nel risultato del caso sincrono) ed il parametro *userdata*.
+		verrà invocata a tempo debito con la lista dei risultati (come nel risultato del caso sincrono) ed il parametro *userdata*;
+		in caso di errore viene invece invocata *error*, se specificata, nella forma ``error(errno, errstr, userdata)``.
 		"""
-		return self._impl.list_servers(timeout, port, success, progress, userdata)
+		return self._impl.list_servers(timeout, port, success, error, progress, userdata)
 	
 	def connect(self, server=None, host=None, port=0, options=None, timeout=DEFAULT_CONNECT_TIMEOUT, success=None, error=None, progress=None, userdata=None):
 		"""Tenta una connessione ad un server Konga. Il server a cui ci si vuole connettere può essere specificato in due modi: tramite i
@@ -173,13 +202,7 @@ class Client:
 		if isinstance(server, str) and (host is None):
 			host = server
 			server = None
-		if isinstance(host, str) and (port is None) and (':' in host):
-			pos = host.rfind(':')
-			host = host[:pos]
-			try:
-				port = int(host[pos+1:])
-			except:
-				raise ValueError("Invalid port value embedded in host string")
+		host, port = _split_host_port(host, port)
 		return self._impl.connect(server, host or '', port, options, timeout, success, error, progress, userdata)
 	
 	def disconnect(self):
@@ -1044,7 +1067,7 @@ class Client:
 			def errback(errno, errstr, dummy):
 				if error is not None:
 					error(Error(errno, errstr))
-			self.execute(CMD_SET_DATABASE_LANGUAGE, {
+			return self.execute(CMD_SET_DATABASE_LANGUAGE, {
 				IN_LANGUAGE: language,
 			}, success=callback, error=errback, progress=progress)
 		else:
