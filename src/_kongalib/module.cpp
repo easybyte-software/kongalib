@@ -596,6 +596,17 @@ set_power_callbacks(PyObject *self, PyObject *args, PyObject *kwds)
 
 
 static PyObject *
+_error_message(PyObject *self, PyObject *args)
+{
+	int code;
+	if (!PyArg_ParseTuple(args, "i", &code))
+		return NULL;
+	string message = MGA::translate(code);
+	return PyUnicode_DecodeUTF8(message.data(), message.size(), "replace");
+}
+
+
+static PyObject *
 checksum(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	char *kwlist[] = { "callback", NULL };
@@ -958,6 +969,7 @@ _check_all(PyObject *self, PyObject *args)
 /** Vtable declaring MGA module methods. */
 static PyMethodDef sMGA_Methods[] = {
 	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
+	{	"_error_message",				(PyCFunction)_error_message,				METH_VARARGS,					"_error_message(code) -> str\n\nReturns the message of an error code, as the native client reports it." },
 	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
 	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
 	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
