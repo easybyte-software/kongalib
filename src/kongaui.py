@@ -18,7 +18,12 @@ import threading
 import time
 import textwrap
 import string
-import colorama
+try:
+	import colorama
+except ImportError:
+	# Nel browser (Pyodide) colorama non c'è: lì gli script girano sempre con il proxy di Konga,
+	# e colorama serve solo alle alternative da terminale
+	colorama = None
 
 import kongautil
 
@@ -51,7 +56,7 @@ ICON_INFORMATION					= 27			#: Icona informativa
 
 
 
-if not _proxy.is_valid():
+if (not _proxy.is_valid()) and (colorama is not None):
 	colorama.init()
 
 
