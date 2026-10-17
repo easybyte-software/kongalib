@@ -14,11 +14,11 @@
 
 
 import asyncio
-import inspect
 import warnings
 
 from kongalib import *
 from kongalib.client import _split_host_port
+from kongalib.async_backend import make_backend
 
 
 class AsyncClient(Client):
@@ -41,99 +41,60 @@ class AsyncClient(Client):
 	costrutto ``async with`` al posto del semplice ``with``.
 	"""
 
-	def _safe_set_result(self, future, result):
-		if not future.done():
-			future.set_result(result)
-	
-	def _safe_set_exception(self, future, e):
-		if not future.done():
-			future.set_exception(e)
-	
-	def _make_progress(self, future, progress, userdata):
-		def callback(ptype, completeness, state, dummy):
-			loop = future.get_loop()
+	@property
+	def _backend(self):
+		# il back-end asincrono dell'implementazione, creato al primo uso (vedi kongalib.async_backend)
+		backend = self.__dict__.get('_async_backend')
+		if backend is None:
+			backend = self.__dict__['_async_backend'] = make_backend(self._impl)
+		return backend
+
+	@staticmethod
+	def _then(future, transform):
+		"""Restituisce un future con il risultato di *transform* applicata a quello di *future*;
+		un'eccezione o un annullamento di *future* passano al nuovo future, e annullare il nuovo
+		future annulla *future* (cioè l'operazione)."""
+		result = future.get_loop().create_future()
+		def done(future):
+			if result.done():
+				return
+			if future.cancelled():
+				result.cancel()
+				return
+			e = future.exception()
+			if e is not None:
+				result.set_exception(e)
+				return
 			try:
-				if future.cancelled() or (progress is None):
-					result = not future.cancelled()
-				else:
-					if inspect.iscoroutinefunction(progress):
-						coro = progress
-					else:
-						async def coro(*args):
-							return progress(*args)
-					result = asyncio.run_coroutine_threadsafe(coro(ptype, completeness, state, userdata), loop).result()
-				if result is False:
-					return False
+				value = transform(future.result())
 			except Exception as e:
-				result = False
-				loop.call_soon_threadsafe(self._safe_set_exception, future, e)
-			return result
-		return callback
+				result.set_exception(e)
+			else:
+				result.set_result(value)
+		def cancel(result):
+			if result.cancelled():
+				future.cancel()
+		future.add_done_callback(done)
+		result.add_done_callback(cancel)
+		return result
 
-	def _make_error(self, future):
-		def error(errno, *args):
-			loop = future.get_loop()
-			if isinstance(errno, int) and (errno in (ABORTED, EXECUTE_ABORTED)):
-				errno = Error(errno, '')
-			if isinstance(errno, Error):
-				if errno.errno in (ABORTED, EXECUTE_ABORTED):
-					loop.call_soon_threadsafe(future.cancel)
-				else:
-					loop.call_soon_threadsafe(self._safe_set_exception, future, errno)
-			elif isinstance(errno, Exception):
-				loop.call_soon_threadsafe(self._safe_set_exception, future, errno)
-			else:
-				if len(args) > 0:
-					errstr = ensure_text(args[0])
-				else:
-					errstr = '<unknown>'
-				loop.call_soon_threadsafe(self._safe_set_exception, future, Error(errno, errstr))
-		return error
-	
-	def _make_success_tuple(self, future, count):
-		def success(*args):
-			loop = future.get_loop()
-			if count == 0:
-				loop.call_soon_threadsafe(self._safe_set_result, future, None)
-			elif count == 1:
-				loop.call_soon_threadsafe(self._safe_set_result, future, args[0])
-			else:
-				loop.call_soon_threadsafe(self._safe_set_result, future, args[:count])
-		return success
+	@staticmethod
+	def _check_output(output, log=None, finalize_output=None):
+		# esito di un comando del server: ERRNO, ed eventuali errori nel LOG
+		answer = output[OUT_LOG] or []
+		error_list = ErrorList(answer)
+		if output[OUT_ERRNO] == OK:
+			if error_list.errno != OK:
+				if log is None:
+					raise error_list
+				error_list.prepare_log(log)
+				if log.has_errors():
+					raise error_list
+			if finalize_output is not None:
+				output = finalize_output(output)
+			return output
+		raise ErrorList.from_error(output[OUT_ERRNO], output[OUT_ERROR])
 
-	def _make_success(self, future, log=None, finalize_output=None):
-		def success(output, *args):
-			loop = future.get_loop()
-			answer = output[OUT_LOG] or []
-			error_list = ErrorList(answer)
-			if output[OUT_ERRNO] == OK:
-				if error_list.errno != OK:
-					if log is None:
-						loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
-					else:
-						error_list.prepare_log(log)
-						if log.has_errors():
-							loop.call_soon_threadsafe(self._safe_set_exception, future, error_list)
-						else:
-							try:
-								if finalize_output is not None:
-									output = finalize_output(output)
-							except Exception as e:
-								loop.call_soon_threadsafe(self._safe_set_exception, future, e)
-							else:
-								loop.call_soon_threadsafe(self._safe_set_result, future, output)
-				else:
-					try:
-						if finalize_output is not None:
-							output = finalize_output(output)
-					except Exception as e:
-						loop.call_soon_threadsafe(self._safe_set_exception, future, e)
-					else:
-						loop.call_soon_threadsafe(self._safe_set_result, future, output)
-			else:
-				loop.call_soon_threadsafe(self._safe_set_exception, future, ErrorList.from_error(output[OUT_ERRNO], output[OUT_ERROR]))
-		return success
-	
 	def _execute(self, cmd, in_params, out_params=None, progress=None, log=None):
 		def finalize(output):
 			if out_params:
@@ -145,9 +106,8 @@ class AsyncClient(Client):
 					return output[out_params]
 			else:
 				return None
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.execute(cmd, in_params or {}, DEFAULT_EXECUTE_TIMEOUT, self._make_success(fut, log, finalize), self._make_error(fut), self._make_progress(fut, progress, None))
-		return fut
+		return self._then(self._backend.call('execute', cmd, in_params or {}, DEFAULT_EXECUTE_TIMEOUT, progress=progress),
+			lambda output: self._check_output(output, log, finalize))
 
 	async def __aenter__(self):
 		await self.begin_transaction()
@@ -171,9 +131,7 @@ class AsyncClient(Client):
 		restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà una lista di ``dict``, le cui chiavi principali
 		sono *host*, *port*, *name* e *description*.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_servers(timeout, port, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata))
-		return fut
+		return self._backend.call('list_servers', timeout, port, progress=progress, userdata=userdata)
 	
 	def connect(self, server=None, host=None, port=0, options=None, timeout=DEFAULT_CONNECT_TIMEOUT, progress=None, userdata=None):
 		"""Tenta una connessione ad un server Konga. Il server a cui ci si vuole connettere può essere specificato in due modi: tramite i
@@ -193,52 +151,45 @@ class AsyncClient(Client):
 			host = server
 			server = None
 		host, port = _split_host_port(host, port)
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.connect(server, host or '', port, options, timeout, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata))
-		return fut
+		return self._backend.call('connect', server, host or '', port, options, timeout, progress=progress, userdata=userdata)
 
 	def disconnect(self):
 		"""Disconnette il server attualmente connesso, oppure non fa nulla se non si è al momento connessi."""
-		self._impl.disconnect()
+		self._backend.disconnect()
 	
 	def get_id(self):
 		"""Restituisce un ID numerico univoco assegnato dal server alla connessione con questo client, o 0 se non si è connessi."""
-		return self._impl.get_id()
+		return self._backend.get_id()
 	
 	def get_connection_info(self):
 		"""Restituisce un ``dict`` con informazioni sulla connessione corrente, o ``None`` se non si è connessi."""
-		return self._impl.get_connection_info()
+		return self._backend.get_connection_info()
 
 	def execute(self, command, data=None, timeout=DEFAULT_EXECUTE_TIMEOUT, progress=None, userdata=None, log=None):
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.execute(command, data or {}, timeout, self._make_success(fut, log), self._make_error(fut), self._make_progress(fut, progress, userdata))
-		return fut
+		return self._then(self._backend.call('execute', command, data or {}, timeout, progress=progress, userdata=userdata),
+			lambda output: self._check_output(output, log))
 	
 	def interrupt(self):
 		"""Interrompe tutte le operazioni al momento in esecuzione da parte di questo client."""
-		self._impl.interrupt()
+		self._backend.interrupt()
 
 	def get_data_dictionary(self, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà il dizionario dei dati disponibile sul server
 		attualmente connesso, sotto forma di oggetto di classe :class:`kongalib.DataDictionary`.
 		"""
-		fut = asyncio.get_running_loop().create_future()
 		uuid = self.get_connection_info().get('uuid', None)
 		with Client.DATA_DICTIONARY_LOCK:
-			if uuid is None:
-				data = None
-			else:
-				data = Client.DATA_DICTIONARY_CACHE.get(uuid, None)
-			if data is None:
-				def success(d, userdata):
-					with Client.DATA_DICTIONARY_LOCK:
-						d = DataDictionary(d)
-						Client.DATA_DICTIONARY_CACHE[uuid] = d
-						fut.get_loop().call_soon_threadsafe(self._safe_set_result, fut, d)
-				self._impl.get_data_dictionary(success, self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-			else:
-				fut.set_result(data)
-		return fut
+			data = None if uuid is None else Client.DATA_DICTIONARY_CACHE.get(uuid, None)
+		if data is not None:
+			fut = asyncio.get_running_loop().create_future()
+			fut.set_result(data)
+			return fut
+		def cache(d):
+			with Client.DATA_DICTIONARY_LOCK:
+				d = DataDictionary(d)
+				Client.DATA_DICTIONARY_CACHE[uuid] = d
+			return d
+		return self._then(self._backend.call('get_data_dictionary', progress=progress, userdata=userdata, timeout=timeout), cache)
 
 	def list_drivers(self, configured=True, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà la lista dei driver di database presenti
@@ -247,9 +198,7 @@ class AsyncClient(Client):
 		server sono restituiti, altrimenti verranno restituite solo le informazioni sui driver configurati correttamente ed in esecuzione
 		sul server.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_drivers(configured, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('list_drivers', configured, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def list_databases(self, driver=None, quick=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà la lista dei database disponibili sul server
@@ -259,9 +208,7 @@ class AsyncClient(Client):
 		verifica un errore. Se *quick* è ``True``, la funzione ritorna il più velocemente possibile ma la scansione dei database disponibili
 		potrebbe risultare ancora incompleta.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_databases(driver, quick, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('list_databases', driver, quick, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def create_database(self, password, driver, name, desc='', progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Crea un nuovo database sul server attualmente connesso; il database avrà nome *name* e descrizione *desc*.
@@ -270,18 +217,14 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.create_database(password, driver, name, desc, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('create_database', password, driver, name, desc, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def open_database(self, driver, name, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Apre un database rendendolo il database attivo per la connessione corrente. La funzione restituisce un oggetto ``asyncio.Future`` il
 		cui risultato una volta completato sarà un ``dict`` con le informazioni sul database connesso, oppure viene lanciata l'eccezione
 		:class:`~kongalib.Error` in caso di errore.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.open_database(driver, name, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('open_database', driver, name, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def close_database(self, backup=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Chiude il database attivo sulla connessione corrente, restituendo un oggetto ``asyncio.Future`` per l'esecuzione asincrona; in caso
@@ -289,9 +232,7 @@ class AsyncClient(Client):
 		
 		.. note:: Se *backup* è ``True``, il server esegue un backup automatico del database prima di chiuderlo.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.close_database(backup, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('close_database', backup, progress=progress, userdata=userdata, timeout=timeout)
 
 	def upgrade_database(self, password, driver, name, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Aggiorna il database specificato all'ultima versione disponibile.
@@ -301,9 +242,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.upgrade_database(password, driver, name, self._make_success_tuple(fut, 3), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('upgrade_database', password, driver, name, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def delete_database(self, password, driver, name, delete_cloud_data=None, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Cancella il database specificato. Se *delete_cloud_data* è ``None`` (valore predefinito) la cancellazione sarà negata nel caso ci siano
@@ -314,9 +253,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.delete_database(password, driver, name, delete_cloud_data, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('delete_database', password, driver, name, delete_cloud_data, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def query(self, query, native=False, full_column_names=False, collapse_blobs=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una query SQL sul database attivo nella connessione corrente. Se *native* è ``True``, la query viene passata al driver
@@ -329,9 +266,7 @@ class AsyncClient(Client):
 		.. note:: Se *full_column_names* è ``False``, *column_names* includerà i nomi delle colonne senza nome tabella, altrimenti saranno
 			inclusi i nomi completi delle colonne. Se *collapse_blobs* è ``True``, i dati di tipo BLOB binari verranno restituiti come ``[...]``.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.query_database(query, native, full_column_names, collapse_blobs, self._make_success_tuple(fut, 3), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('query_database', query, native, full_column_names, collapse_blobs, progress=progress, userdata=userdata, timeout=timeout)
 
 	def backup_database(self, password, backup_name, driver, name, auto=True, overwrite=False, position=0, store_index=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue un backup del database specificato sul server attualmente connesso. Se *auto* è ``False``, è necessario specificare un nome
@@ -344,9 +279,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.backup_database(password, backup_name, driver, name, auto, overwrite, position, store_index, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('backup_database', password, backup_name, driver, name, auto, overwrite, position, store_index, progress=progress, userdata=userdata, timeout=timeout)
 
 	def restore_database(self, password, backup_name, driver, name, change_uuid=True, overwrite=False, position=0, restore_index=True, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Ripristina un database a partire da un backup effettuato in precedenza sul server connesso. Se *overwrite* è False ed esiste un
@@ -360,9 +293,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.restore_database(password, backup_name, driver, name, change_uuid, overwrite, position, restore_index, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('restore_database', password, backup_name, driver, name, change_uuid, overwrite, position, restore_index, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def list_backups(self, position=0, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Ottiene la lista dei backup disponibili sul server connesso.
@@ -370,9 +301,7 @@ class AsyncClient(Client):
 		``dict`` che contiene almeno le chiavi *backup_name*, *uuid*, *date* e *size*; se si verifica un errore viene lanciata l'eccezione
 		:class:`~kongalib.Error`.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_backups(position, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('list_backups', position, progress=progress, userdata=userdata, timeout=timeout)
 
 	def delete_backup(self, password, backup_name, position, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Cancella il backup identificato da *backup_name* dal server connesso.
@@ -381,9 +310,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.delete_backup(password, backup_name, position, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('delete_backup', password, backup_name, position, progress=progress, userdata=userdata, timeout=timeout)
 
 	def optimize_database(self, password, driver, name, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una ottimizzazione del database specificato sul server attualmente connesso.
@@ -392,9 +319,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.optimize_database(password, driver, name, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('optimize_database', password, driver, name, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def repair_database(self, password, driver, name, output, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Prova a riparare il database danneggiato specificato, salvando il database recuperato in *output*.
@@ -405,9 +330,7 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.repair_database(password, driver, name, output, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('repair_database', password, driver, name, output, progress=progress, userdata=userdata, timeout=timeout)
 
 	def index_database(self, password, driver, name, reset=False, run=True, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una indicizzazione del database specificato sul server attualmente connesso. Se *reset* è ``False``, l'indicizzazione è
@@ -418,33 +341,23 @@ class AsyncClient(Client):
 		
 		.. warning:: E' necessaria la *password* del server per poter eseguire questa operazione.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.index_database(password, driver, name, reset, run, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('index_database', password, driver, name, reset, run, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def list_clients(self, full=True, any=False, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.list_clients(full, any, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('list_clients', full, any, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def get_client_info(self, id, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.get_client_info(id, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('get_client_info', id, progress=progress, userdata=userdata, timeout=timeout)
 
 	def kill_client(self, id, password, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.kill_client(id, password, self._make_success_tuple(fut, 0), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('kill_client', id, password, progress=progress, userdata=userdata, timeout=timeout)
 	
 	def authenticate(self, username, password, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT, new_password=None):
 		"""Effettua un accesso al database attivo sulla connessione corrente, identificando l'utente tramite i parametri *username* e *password*.
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà un ``dict`` con informazioni dettagliate
 		sull'utente autenticato, oppure viene lanciata l'eccezione :class:`~kongalib.Error` in caso di errore.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.authenticate(username, password, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout, new_password)
-		return fut
+		return self._backend.call('authenticate', username, password, progress=progress, userdata=userdata, timeout=timeout, new_password=new_password)
 
 	def full_text_search(self, text, limit, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Esegue una ricerca full-text sul database attivo sulla connessione corrente, limitando la ricerca di *text* a *limit* risultati.
@@ -452,9 +365,7 @@ class AsyncClient(Client):
 		risultato è ``dict`` con almeno le chiavi *score*, *tablename*, *id* e *display*; in caso di errore viene lanciata l'eccezione
 		:class:`~kongalib.Error`.
 		"""
-		fut = asyncio.get_running_loop().create_future()
-		self._impl.full_text_search(text, limit, self._make_success_tuple(fut, 1), self._make_error(fut), self._make_progress(fut, progress, userdata), None, timeout)
-		return fut
+		return self._backend.call('full_text_search', text, limit, progress=progress, userdata=userdata, timeout=timeout)
 
 	def get_permissions(self, user_id):
 		return self._execute(CMD_GET_PERMISSIONS, {
