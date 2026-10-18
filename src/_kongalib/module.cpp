@@ -671,6 +671,10 @@ static uint32 sTraceInterval = 1;
 static uint32 sTraceLastCheck = 0;
 
 
+static int interpreter_timeout_check(MGA::MODULE_STATE *state, uint32 now);
+static void interpreter_trace_update(MGA::MODULE_STATE *state);
+
+
 static void
 interpreter_timeout_reset()
 {
@@ -700,6 +704,32 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 	// controllare; restituire -1 senza un'eccezione impostata sarebbe un SystemError
 	if (!state)
 		return 0;
+
+	result = interpreter_timeout_check(state, now);
+	if ((result == 0) && (state->fYieldFunc) && ((now - state->fYieldLast) >= state->fYieldInterval)) {
+		// L'aggancio periodico (set_interpreter_yield): nel browser il punto di yield degli script nei
+		// worker, dove non ci sono thread per interromperli. Senza trace mentre gira; un'eccezione
+		// che solleva interrompe lo script
+		PyObject *func = state->fYieldFunc;
+		state->fYieldLast = now;
+		Py_INCREF(func);
+		PyEval_SetTrace(NULL, NULL);
+		PyObject *res = PyObject_CallNoArgs(func);
+		Py_DECREF(func);
+		if (res)
+			Py_DECREF(res);
+		else
+			result = -1;
+		interpreter_trace_update(state);
+	}
+	return result;
+}
+
+
+static int
+interpreter_timeout_check(MGA::MODULE_STATE *state, uint32 now)
+{
+	int result = 0;
 
 	if (state->fTimeOut > 0) {
 		if ((now - state->fStartTime) > state->fTimeOut) {
@@ -744,6 +774,17 @@ interpreter_timeout_handler(void *unused, PyObject *frame, int what, PyObject *a
 }
 
 
+/* La trace serve finché c'è un timeout armato o un aggancio periodico */
+static void
+interpreter_trace_update(MGA::MODULE_STATE *state)
+{
+	if ((state->fTimeOut > 0) || (state->fYieldFunc))
+		PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
+	else
+		PyEval_SetTrace(NULL, NULL);
+}
+
+
 static PyObject *
 set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -772,16 +813,43 @@ set_interpreter_timeout(PyObject *self, PyObject *args, PyObject *kwds)
 	if (timeout) {
 		state->fStartTime = CL_GetTime();
 		interpreter_timeout_reset();
-		PyEval_SetTrace((Py_tracefunc)interpreter_timeout_handler, NULL);
 	}
-	else {
-		PyEval_SetTrace(NULL, NULL);
-	}
+	interpreter_trace_update(state);
 
 	if (!oldTimeout)
 		Py_RETURN_NONE;
 	else
 		return PyLong_FromLong((long)oldTimeout);
+}
+
+
+static PyObject *
+set_interpreter_yield(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	char *kwlist[] = { "interval", "func", NULL };
+	unsigned int interval = 0;
+	PyObject *func = Py_None;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|IO", kwlist, &interval, &func))
+		return NULL;
+	if ((func != Py_None) && (!PyCallable_Check(func))) {
+		PyErr_SetString(PyExc_TypeError, "func must be callable or None");
+		return NULL;
+	}
+	MGA::MODULE_STATE *state = ((MGA::MODULE_STATE *)PyModule_GetState(self));
+	if (!state) {
+		PyErr_SetString(PyExc_RuntimeError, "no module state!");
+		return NULL;
+	}
+	Py_CLEAR(state->fYieldFunc);
+	if (func != Py_None) {
+		Py_INCREF(func);
+		state->fYieldFunc = func;
+		state->fYieldInterval = interval;
+		state->fYieldLast = CL_GetTime();
+		interpreter_timeout_reset();
+	}
+	interpreter_trace_update(state);
+	Py_RETURN_NONE;
 }
 
 
@@ -971,6 +1039,7 @@ static PyMethodDef sMGA_Methods[] = {
 	{	"hash_password",				(PyCFunction)hash_password,					METH_VARARGS | METH_KEYWORDS,	"hash_password(password) -> str\n\nReturns the hashed version of given plain password." },
 	{	"_error_message",				(PyCFunction)_error_message,				METH_VARARGS,					"_error_message(code) -> str\n\nReturns the message of an error code, as the native client reports it." },
 	{	"checksum",						(PyCFunction)checksum,						METH_VARARGS | METH_KEYWORDS,	"checksum(buffer) -> int\n\nComputes a fast checksum of a buffer." },
+	{	"set_interpreter_yield",		(PyCFunction)set_interpreter_yield,			METH_VARARGS | METH_KEYWORDS,	"set_interpreter_yield(interval, func)\n\nMakes the interpreter trace call func() at most every interval ms (None removes it)."},
 	{	"set_interpreter_timeout",		(PyCFunction)set_interpreter_timeout,		METH_VARARGS | METH_KEYWORDS,	"set_interpreter_timeout(timeout) -> int\n\nSets new interpreter timeout and returns previous one or None."},
 	{	"get_interpreter_timeout",		(PyCFunction)get_interpreter_timeout,		METH_NOARGS,					"get_interpreter_timeout() -> int\n\nReturns the currently set interpreter timeout or None."},
 	{	"get_interpreter_time_left",	(PyCFunction)get_interpreter_time_left,		METH_NOARGS,					"get_interpreter_time_left() -> int\n\nReturns the current time left for interpreter timeout or None."},
@@ -1006,6 +1075,7 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fSuspendCB);
 	Py_CLEAR(s->fResumeCB);
 	Py_CLEAR(s->fException);
+	Py_CLEAR(s->fYieldFunc);
 	Py_CLEAR(s->fJSONException);
 	Py_CLEAR(s->fMethodRead);
 	Py_CLEAR(s->fMethodReadKey);
@@ -1071,6 +1141,7 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fSuspendCB);
 	Py_VISIT(s->fResumeCB);
 	Py_VISIT(s->fException);
+	Py_VISIT(s->fYieldFunc);
 	Py_VISIT(s->fJSONException);
 	Py_VISIT(s->fMethodRead);
 	Py_VISIT(s->fMethodReadKey);
@@ -1177,6 +1248,9 @@ module_exec(PyObject *module)
 	state->fResumeCB = NULL;
 	state->fTimeOut = 0;
 	state->fStartTime = 0;
+	state->fYieldFunc = NULL;
+	state->fYieldInterval = 0;
+	state->fYieldLast = 0;
 	state->fMethodRead = PyUnicode_FromString("read");
 	state->fMethodReadKey = PyUnicode_FromString("read_key");
 	state->fMethodStartMap = PyUnicode_FromString("start_map");

@@ -188,6 +188,9 @@ typedef struct MODULE_STATE
 	string							fLanguage;
 	std::atomic<uint32>				fTimeOut;
 	std::atomic<uint32>				fStartTime;
+	PyObject						*fYieldFunc;		/* aggancio periodico della trace (set_interpreter_yield) */
+	uint32							fYieldInterval;
+	uint32							fYieldLast;
 	PyObject						*fJSONException;
 	PyObject						*fMethodRead;
 	PyObject						*fMethodReadKey;
