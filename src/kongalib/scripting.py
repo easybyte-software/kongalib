@@ -26,6 +26,7 @@ import math
 import os
 import collections
 import json
+import uuid
 import atexit
 import io
 import threading
@@ -922,6 +923,8 @@ class _WorkerBackend:
 		self.messages = collections.deque()
 		self.alive = False
 		self.exitcode = None
+		# il Web Lock tenuto dal worker per tutta la sua vita (vedi scripting_worker.mjs)
+		self.lock = None
 		# il trasporto delle chiamate dell'esecuzione in corso (_WorkerCalls)
 		self.calls = None
 
@@ -943,7 +946,8 @@ class _WorkerBackend:
 		self.worker.onerror = on_error
 		self.alive = True
 		_WorkerBackend.live += 1
-		self._post('init', 0, json.dumps(WORKER_CONFIG).encode('utf-8'))
+		self.lock = 'kongalib-worker-%s' % uuid.uuid4()
+		self._post('init', 0, json.dumps(dict(WORKER_CONFIG, lock=self.lock)).encode('utf-8'))
 
 	def _post(self, kind, id, payload=b''):
 		from pyodide.ffi import to_js
@@ -958,8 +962,18 @@ class _WorkerBackend:
 				calls.feed(id, payload)
 		elif kind == 'control':
 			self.messages.append(_loads(payload))
+		elif kind == 'locked':
+			# il lock si ottiene solo quando il worker non c'è più: anche senza alcun errore (si è chiuso
+			# da sé, il browser lo ha terminato), mentre l'host lo crede vivo
+			import js
+			from pyodide.ffi import create_once_callable
+			js.navigator.locks.request(self.lock, create_once_callable(self._lock_granted))
 		elif kind == 'error':
 			self._died(payload.decode('utf-8', 'replace'))
+
+	def _lock_granted(self, lock):
+		if self.alive:
+			self._died('the worker ended without an error')
 
 	def _on_error(self, event):
 		self._died(str(getattr(event, 'message', '') or 'worker error'))

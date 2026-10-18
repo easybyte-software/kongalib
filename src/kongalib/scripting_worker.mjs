@@ -5,8 +5,12 @@
 // Messages, both ways, are [ kind, id, payload ] with payload a Uint8Array:
 //   host -> worker: 'init' (JSON of the configuration), 'control' (pickled run/quit), 'interrupt',
 //                   'reply' (to the call with that id)
-//   worker -> host: 'control' (pickled bad_connection), 'call' (call or notification of the script),
-//                   'ready', 'error' (UTF-8 text)
+//   worker -> host: 'locked' (the worker holds its lock, see below), 'control' (pickled bad_connection),
+//                   'call' (call or notification of the script), 'ready', 'error' (UTF-8 text)
+//
+// A worker can die without an error event (it closes itself, the browser kills it): it holds an
+// exclusive Web Lock (configuration's "lock") for its whole life, which the host then requests and
+// gets only once the worker is gone, even while it is busy in C code.
 //
 // Control requests run one after the other with callPromising, so the script can suspend its stack
 // (pyodide.ffi.run_sync) while it waits for the host; replies and interrupts are delivered at once,
@@ -27,6 +31,15 @@ function fail(error) {
 }
 
 async function init(config) {
+	if (config.lock) {
+		await new Promise((locked) => {
+			navigator.locks.request(config.lock, () => {
+				locked();
+				return new Promise(() => {});
+			});
+		});
+		post('locked', 0);
+	}
 	const { loadPyodide } = await import(new URL('pyodide.mjs', config.index_url).href);
 	pyodide = await loadPyodide({ indexURL: config.index_url });
 	if (config.packages && config.packages.length)
