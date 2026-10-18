@@ -22,6 +22,9 @@ chiamate sincrone attendono il risultato da un altro thread (non dal thread di q
 resterebbe bloccato); le callback girano in thread di un executor, come quelle del client nativo
 nei thread del dispatcher, così possono anche fare chiamate sincrone sullo stesso client.
 
+Nel browser (Pyodide con JSPI) non ci sono thread: la sessione usa il loop di Pyodide, le chiamate
+sincrone sospendono lo stack di Python con ``pyodide.ffi.run_sync`` e le callback girano sul loop.
+
 Come nel client nativo, in modalità sincrona i metodi di comodo (tutti tranne ``connect`` ed
 ``execute``) ignorano *timeout* e *progress* e riportano il solo messaggio generico dell'errore
 (``query_database`` anche quello del server).
@@ -48,6 +51,9 @@ from kongalib.wire.session import Session
 # gira sul loop di chi la usa, con un flusso che non passa dai socket di asyncio (WebSocket).
 # KONGALIB_WIRE_THREADS=0 forza il comportamento senza thread anche su CPython, per provarlo.
 THREADS = (sys.platform != 'emscripten') and (os.environ.get('KONGALIB_WIRE_THREADS') != '0')
+# Nel browser (Pyodide, solo con JSPI): un solo loop, quello di Pyodide, e la modalità sincrona con
+# pyodide.ffi.run_sync, che sospende lo stack di Python mentre il loop del browser prosegue
+WEB = sys.platform == 'emscripten'
 
 # Timeout dei metodi di comodo in modalità sincrona (MGA_DEFAULT_EXECUTE_TIMEOUT)
 SYNC_TIMEOUT = 10000
@@ -100,14 +106,27 @@ _service_loop = None
 
 
 def service_loop():
-	"""Il loop del thread di servizio del processo, avviato al primo uso."""
+	"""Il loop del thread di servizio del processo, avviato al primo uso; nel browser il loop di Pyodide."""
 	global _service_loop
+	if WEB:
+		return asyncio.get_event_loop()
 	with _service_lock:
 		if _service_loop is None:
 			loop = asyncio.new_event_loop()
 			threading.Thread(target=loop.run_forever, name='kongalib-wire', daemon=True).start()
 			_service_loop = loop
 		return _service_loop
+
+
+def _web_run_sync(coro):
+	"""Una chiamata sincrona nel browser: sospende lo stack di Python (JSPI) finché *coro* non finisce
+	sul loop di Pyodide. Possibile solo partendo da un punto d'ingresso che lo consente
+	(``runPythonAsync``, un gestore asincrono, un'applicazione di slew)."""
+	from pyodide.ffi import can_run_sync, run_sync
+	if not can_run_sync():
+		coro.close()
+		raise RuntimeError('synchronous kongalib call where the stack cannot be suspended: use kongalib.AsyncClient, or call it from code started by runPythonAsync')
+	return run_sync(coro)
 
 
 def _running_loop():
@@ -234,6 +253,8 @@ class WireClient(object):
 
 	def _run_sync(self, coro_factory):
 		loop = self._use()
+		if WEB:
+			return _web_run_sync(coro_factory())
 		if _running_loop() is loop:
 			raise RuntimeError('synchronous kongalib call from the event loop of its own connection')
 		return asyncio.run_coroutine_threadsafe(coro_factory(), loop).result()
@@ -241,7 +262,7 @@ class WireClient(object):
 	def _call_soon(self, callback):
 		# esegue callback() sul loop della sessione e ne attende la fine
 		loop = self.loop
-		if (loop is None) or loop.is_closed() or (_running_loop() is loop) or not loop.is_running():
+		if WEB or (loop is None) or loop.is_closed() or (_running_loop() is loop) or not loop.is_running():
 			return callback()
 		async def run():
 			return callback()
@@ -260,7 +281,7 @@ class WireClient(object):
 
 	def interrupt(self):
 		loop = self.loop
-		if (loop is None) or loop.is_closed() or (_running_loop() is loop) or not loop.is_running():
+		if WEB or (loop is None) or loop.is_closed() or (_running_loop() is loop) or not loop.is_running():
 			self.session.interrupt()
 		else:
 			loop.call_soon_threadsafe(self.session.interrupt)
@@ -307,14 +328,16 @@ class WireClient(object):
 		loop = self._use()
 
 		async def call(callback, *args):
-			# le callback girano in un thread dell'executor, come quelle del client nativo; le
-			# eccezioni sono stampate e ignorate
+			# le callback girano in un thread dell'executor, come quelle del client nativo (nel
+			# browser, senza thread, sul loop); le eccezioni sono stampate e ignorate
 			def run():
 				try:
 					return callback(*args)
 				except Exception:
 					traceback.print_exc()
 					raise
+			if WEB:
+				return run()
 			return await loop.run_in_executor(None, run)
 
 		async def on_progress(ptype, completeness, state, data):

@@ -327,7 +327,9 @@ if not getattr(_kongalib, 'CORE_ONLY', False):
 	from _kongalib import Deferred, NamedSemaphore, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, _cleanup, set_default_idle_callback, set_power_callbacks, _apply_stylesheet, regexp_find_all
 else:
 	# modulo ridotto al nucleo (es. nel browser): niente client nativo né funzioni di rete e di
-	# sistema; il client è quello scritto in Python (kongalib.wire)
+	# sistema; il client è quello scritto in Python (kongalib.wire), le funzioni di sistema quelle di
+	# kongalib._web (regexp_find_all, inutilizzata dal client, non c'è)
+	from ._web import NamedSemaphore, host_lookup, get_network_interfaces, get_machine_uuid, get_system_info, set_default_idle_callback, set_power_callbacks, _apply_stylesheet, get_application_log_path, _set_process_foreground
 	_cleanup = None
 from .constants import *
 from .client import *

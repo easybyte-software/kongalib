@@ -32,6 +32,7 @@ import collections
 import datetime
 import inspect
 import json
+import sys
 import time
 
 from _kongalib import _clu_encode, _clu_decode, _error_message, checksum, hash_password
@@ -133,7 +134,14 @@ class Session(object):
 	Stream``; di default una connessione TCP."""
 
 	def __init__(self, open_stream=None):
-		self.open_stream = open_stream or TCPStream.open
+		if open_stream is None:
+			if sys.platform == 'emscripten':
+				# nel browser: il WebSocket verso il gateway del server che ha servito la pagina
+				from .websocket import WebSocketStream
+				open_stream = WebSocketStream.open
+			else:
+				open_stream = TCPStream.open
+		self.open_stream = open_stream
 		self.stream = None
 		self.reader_task = None
 		self.packets = None
