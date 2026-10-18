@@ -14,7 +14,7 @@
 
 
 from kongalib import Error
-from _kongalib import set_interpreter_timeout
+from _kongalib import set_interpreter_timeout, set_interpreter_yield
 try:
 	from _kongalib import _set_process_foreground
 except ImportError:
@@ -24,6 +24,8 @@ except ImportError:
 import sys
 import math
 import os
+import collections
+import json
 import atexit
 import io
 import threading
@@ -71,6 +73,17 @@ _THIS_FILE = __file__
 # fanno eseguire al thread dello script la scadenza del timeout o la richiesta di
 # interruzione dell'host
 _INTERRUPT_SIGNAL = getattr(signal, 'SIGUSR1', None) or getattr(signal, 'SIGBREAK', None)
+
+# Nel browser (Pyodide, con JSPI) l'interprete è un Web Worker: niente processi né thread
+_WEB = sys.platform == 'emscripten'
+# Ogni quanti millisecondi lo script nel worker cede il passo, perché arrivino i messaggi dell'host
+_YIELD_INTERVAL = 100
+
+#: Nel browser, come caricare un interprete (un Web Worker con la propria Pyodide): ``index_url``
+#: (l'URL di Pyodide, con la barra finale), ``packages`` (pacchetti di Pyodide da caricare) e
+#: ``wheels`` (URL delle wheel da installare, kongalib compresa). Lo imposta l'applicazione, con gli
+#: stessi valori con cui si è caricata lei.
+WORKER_CONFIG = None
 
 
 class BadConnection(Exception):
@@ -730,6 +743,103 @@ def _trampoline(conn, foreground, env, dll_paths, queue, level):
 		logger.debug('exiting interpreter process')
 	
 
+# --- interprete nel browser: lato worker (scripting_worker.mjs) -------------------------------
+
+class _Worker:
+	"""Stato del Web Worker dell'interprete (lato interprete, nel browser)."""
+	# risposte attese dall'host, per id della chiamata
+	pending = {}
+	next_id = 0
+	# l'host ha chiesto di interrompere lo script: si vede al prossimo punto di yield
+	interrupt = False
+	# sys.path del worker, da tenere oltre a quello dell'host
+	path = []
+
+
+def _worker_post(kind, id, payload=b''):
+	import js
+	from pyodide.ffi import to_js
+	js.postMessage(to_js([ kind, id, to_js(memoryview(payload)) ]))
+
+
+class _WorkerChannel:
+	"""Canale delle chiamate dello script verso l'host nel browser: messaggi del worker, con la
+	risposta attesa sospendendo lo stack dello script (``run_sync``)."""
+	def call(self, data):
+		from pyodide.ffi import run_sync
+		_Worker.next_id += 1
+		id = _Worker.next_id
+		future = asyncio.get_event_loop().create_future()
+		_Worker.pending[id] = future
+		try:
+			_worker_post('call', id, _CALL + data)
+			return run_sync(future)
+		finally:
+			_Worker.pending.pop(id, None)
+
+	def notify(self, data):
+		_worker_post('call', 0, _NOTIFY + data)
+
+	def close(self):
+		pass
+
+
+def _worker_setup():
+	# Una volta, a worker pronto (Pyodide, i pacchetti e le wheel caricati)
+	_State.clock = _select_clock()
+	_Worker.path = list(sys.path)
+
+
+def _worker_message(kind, id, payload):
+	# Messaggi dell'host che arrivano anche mentre lo script è sospeso in attesa di una risposta
+	if kind == 'reply':
+		future = _Worker.pending.get(id)
+		if (future is not None) and (not future.done()):
+			future.set_result(payload.to_bytes())
+	elif kind == 'interrupt':
+		_Worker.interrupt = True
+
+
+def _worker_yield():
+	# Punto di yield, chiamato dall'aggancio periodico della trace C: i messaggi dell'host arrivano
+	# solo mentre lo script cede il passo; un'interruzione chiesta dall'host vale come la scadenza
+	# immediata del timeout, come il segnale simulato su CPython
+	from pyodide.ffi import run_sync
+	run_sync(asyncio.sleep(0))
+	if _Worker.interrupt:
+		_Worker.interrupt = False
+		_expired(sys._getframe(1))
+
+
+def _worker_control(payload):
+	# Una richiesta di controllo dell'host (run, quit); con callPromising, così lo script può
+	# sospendere lo stack
+	request = _loads(payload.to_bytes())
+	if request[0] != 'run':
+		return
+	_, job, connection = request
+	args, path, timeout, script, cwd = job
+	# i percorsi vengono dall'host: si tengono anche quelli del worker, e la cartella di lavoro solo
+	# se esiste anche qui (il filesystem del worker è un altro)
+	path = list(path) + [ entry for entry in _Worker.path if entry not in path ]
+	if cwd and (not os.path.isdir(cwd)):
+		cwd = None
+	_Worker.interrupt = False
+	set_interpreter_yield(_YIELD_INTERVAL, _worker_yield)
+	try:
+		_run_job((args, path, timeout, script, cwd), _WorkerChannel())
+	except BadConnection as e:
+		_logger.error(str(e))
+		_worker_post('control', 0, _dumps(('bad_connection', str(e))))
+	finally:
+		set_interpreter_yield(0, None)
+		try:
+			_State.clock.arm(0)
+		except:
+			pass
+
+
+
 class _ProcessBackend:
 	"""Backend dell'interprete per CPython: un processo multiprocessing, con una pipe per i
 	messaggi di controllo e una coda per i log; le chiamate dello script arrivano all'host
@@ -796,6 +906,227 @@ class _ProcessBackend:
 
 
 
+class _WorkerBackend:
+	"""Backend dell'interprete nel browser: un Web Worker con la propria Pyodide
+	(``scripting_worker.mjs``, da un URL ``blob:``), caricato secondo :data:`WORKER_CONFIG`; i
+	messaggi di controllo e le chiamate dello script viaggiano negli stessi messaggi del worker."""
+	process = None
+	# worker avviati e non ancora terminati, riserve comprese
+	live = 0
+
+	def __init__(self, foreground, env):
+		self.env = env
+		self.worker = None
+		self.url = None
+		self.proxies = []
+		self.messages = collections.deque()
+		self.alive = False
+		self.exitcode = None
+		# il trasporto delle chiamate dell'esecuzione in corso (_WorkerCalls)
+		self.calls = None
+
+	def start(self):
+		import js
+		from pyodide.ffi import create_proxy, to_js
+		if not WORKER_CONFIG:
+			raise RuntimeError('kongalib.scripting.WORKER_CONFIG is not set: the application must say how to load an interpreter')
+		with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripting_worker.mjs'), encoding='utf-8') as f:
+			source = f.read()
+		def options(value):
+			return to_js(value, dict_converter=js.Object.fromEntries)
+		self.url = js.URL.createObjectURL(js.Blob.new(to_js([ source ]), options({ 'type': 'text/javascript' })))
+		self.worker = js.Worker.new(self.url, options({ 'type': 'module' }))
+		on_message = create_proxy(self._on_message)
+		on_error = create_proxy(self._on_error)
+		self.proxies = [ on_message, on_error ]
+		self.worker.onmessage = on_message
+		self.worker.onerror = on_error
+		self.alive = True
+		_WorkerBackend.live += 1
+		self._post('init', 0, json.dumps(WORKER_CONFIG).encode('utf-8'))
+
+	def _post(self, kind, id, payload=b''):
+		from pyodide.ffi import to_js
+		self.worker.postMessage(to_js([ kind, id, to_js(memoryview(payload)) ]))
+
+	def _on_message(self, event):
+		data = event.data
+		kind, id, payload = str(data[0]), int(data[1]), data[2].to_bytes()
+		if kind == 'call':
+			calls = self.calls
+			if calls is not None:
+				calls.feed(id, payload)
+		elif kind == 'control':
+			self.messages.append(_loads(payload))
+		elif kind == 'error':
+			self._died(payload.decode('utf-8', 'replace'))
+
+	def _on_error(self, event):
+		self._died(str(getattr(event, 'message', '') or 'worker error'))
+
+	def _died(self, message):
+		# il worker non può più eseguire nulla: va trattato come un processo terminato
+		_logger.error('[Interpreter] worker error: %s' % message)
+		if self.alive:
+			self.alive = False
+			self.exitcode = 1
+			_WorkerBackend.live -= 1
+			try:
+				self.worker.terminate()
+			except:
+				pass
+
+	def send(self, message):
+		"""Invia un messaggio di controllo all'interprete."""
+		if not self.alive:
+			raise OSError('the interpreter worker is not running')
+		if message[0] == 'interrupt':
+			# non in coda dietro all'esecuzione in corso, che deve riceverlo
+			self._post('interrupt', 0)
+		elif message[0] == 'quit':
+			# un processo esce da sé; un worker va terminato
+			self.terminate()
+		else:
+			self._post('control', 0, _dumps(message))
+
+	def reply(self, id, data):
+		if self.alive:
+			self._post('reply', id, data)
+
+	def receive(self):
+		"""Restituisce il prossimo messaggio di controllo dell'interprete, se ce n'è uno."""
+		return self.messages.popleft() if self.messages else None
+
+	def is_alive(self):
+		return self.alive
+
+	def terminate(self):
+		"""Termina il worker: nel browser non c'è una richiesta più gentile che lo script possa
+		vedere mentre gira."""
+		if self.worker is not None:
+			try:
+				self.worker.terminate()
+			except:
+				pass
+		if self.alive:
+			self.alive = False
+			_WorkerBackend.live -= 1
+
+	def kill(self):
+		self.terminate()
+
+	def join(self, timeout=None):
+		pass
+
+	def close(self):
+		import js
+		if self.url is not None:
+			js.URL.revokeObjectURL(self.url)
+			self.url = None
+		for proxy in self.proxies:
+			proxy.destroy()
+		self.proxies = []
+
+
+
+class _WorkerReserve:
+	"""Riserve di interpreti nel browser: worker già avviati (Pyodide e pacchetti caricati, ~1 s) e
+	mai usati, da cui un nuovo :class:`Interpreter` parte subito. Il numero si adatta: cresce di uno
+	(fino a *maximum*) ogni volta che una richiesta le trova esaurite, come durante una raffica di
+	trigger, e torna verso *minimum* dopo :attr:`IDLE` secondi senza richieste. Un worker passa da
+	riserva a interprete una volta sola: non torna mai riserva."""
+	IDLE = 60
+	minimum = 0
+	maximum = 0
+	target = 0
+	ready = collections.deque()
+	last_take = 0.0
+
+	@classmethod
+	def configure(cls, minimum, maximum):
+		cls.minimum = max(0, minimum)
+		cls.maximum = max(cls.minimum, maximum)
+		cls.target = cls.minimum
+		while len(cls.ready) > cls.maximum:
+			cls.ready.pop().terminate()
+		cls.fill()
+
+	@classmethod
+	def take(cls):
+		now = time.monotonic()
+		if (now - cls.last_take > cls.IDLE) and (cls.target > cls.minimum):
+			cls.target -= 1
+		cls.last_take = now
+		backend = None
+		while cls.ready and (backend is None):
+			candidate = cls.ready.popleft()
+			if candidate.is_alive():
+				backend = candidate
+			else:
+				candidate.close()
+		if (backend is None) and (cls.target < cls.maximum):
+			cls.target += 1
+		cls.fill()
+		return backend
+
+	@classmethod
+	def fill(cls):
+		if not WORKER_CONFIG:
+			return
+		while len(cls.ready) < cls.target:
+			backend = _WorkerBackend(None, None)
+			backend.start()
+			cls.ready.append(backend)
+
+
+def set_worker_reserve(minimum=1, maximum=3):
+	"""Nel browser: quanti interpreti tenere pronti (vedi :class:`_WorkerReserve`); da chiamare
+	dopo aver impostato :data:`WORKER_CONFIG`. Senza effetto altrove."""
+	if _WEB:
+		_WorkerReserve.configure(minimum, maximum)
+
+
+
+class _WorkerCalls:
+	"""Trasporto delle chiamate dello script nel browser, al posto di :class:`_ServerProxy`: i
+	messaggi ``call`` del worker, eseguiti in ordine da un task sul loop; i metodi degli handler
+	girano sul loop (main thread), le coroutine attese."""
+	def __init__(self, dispatcher, backend):
+		self.dispatcher = dispatcher
+		self.backend = backend
+		self.queue = asyncio.Queue()
+		self.task = None
+
+	def start(self):
+		self.backend.calls = self
+		self.task = asyncio.get_event_loop().create_task(self._run())
+
+	def feed(self, id, payload):
+		self.queue.put_nowait((id, payload))
+
+	async def _run(self):
+		while True:
+			id, data = await self.queue.get()
+			reply = await self.dispatcher.dispatch_async(data)
+			if reply is not None:
+				self.backend.reply(id, reply)
+			self.dispatcher.replied()
+
+	def close(self):
+		if self.backend.calls is self:
+			self.backend.calls = None
+		if self.task is not None:
+			self.task.cancel()
+			self.task = None
+
+	def stop(self):
+		self.close()
+
+	async def stop_async(self):
+		self.close()
+
+
+
 class Interpreter:
 	"""Interprete separato in cui eseguire gli script con :func:`execute`; può essere riusato
 	per più esecuzioni."""
@@ -826,8 +1157,12 @@ class Interpreter:
 	def ensure_proc(self):
 		with self.lock:
 			if self.backend is None:
-				backend = _ProcessBackend(self.foreground, self.env)
-				backend.start()
+				backend = None
+				if _WEB:
+					backend = _WorkerReserve.take()
+				if backend is None:
+					backend = (_WorkerBackend if _WEB else _ProcessBackend)(self.foreground, self.env)
+					backend.start()
 				self.backend = backend
 				self.started = True
 
@@ -836,6 +1171,10 @@ class Interpreter:
 		*connection* è la coppia ``(famiglia, indirizzo)`` del listener a cui l'interprete si
 		collega per chiamare l'host durante l'esecuzione. Solleva :class:`BadConnection` se
 		l'interprete non riesce a collegarsi."""
+		if _WEB:
+			# nel browser l'attesa sospende lo stack (run_sync) mentre il loop prosegue
+			from pyodide.ffi import run_sync
+			return run_sync(self.execute_async(script, filename, argv, path, timeout, run, connection))
 		if run is None:
 			run = _Run()
 		backend = self._start_run(script, filename, argv, path, timeout, connection)
@@ -1075,9 +1414,13 @@ class _StopWatchdog:
 	def start(self):
 		with self.lock:
 			if self.timer is None:
-				self.timer = threading.Timer(STOP_GRACE, self._fire)
-				self.timer.daemon = True
-				self.timer.start()
+				if _WEB:
+					# nel browser niente thread: un timer del loop
+					self.timer = asyncio.get_event_loop().call_later(STOP_GRACE, self._fire)
+				else:
+					self.timer = threading.Timer(STOP_GRACE, self._fire)
+					self.timer.daemon = True
+					self.timer.start()
 
 	def cancel(self):
 		with self.lock:
@@ -1137,31 +1480,61 @@ class _CallDispatcher:
 	def dispatch(self, data):
 		"""Esegue la chiamata nel messaggio *data*; restituisce la risposta da inviare
 		all'interprete, o None se il messaggio è una notifica."""
-		kind, payload = data[:1], data[1:]
-		try:
-			handler, name, args, kwargs = _loads(payload)
-		except Exception as e:
-			# es. un argomento di una classe che solo lo script può importare
-			_logger.error("[ServerProxy] unable to decode the call from the script: %s" % e)
-			return self._reply(kind, (('Unable to decode the call from the script: %s' % e, None), None))
-		func = self._lookup(handler, name)
+		kind, call, error = self._decode(data)
+		if call is None:
+			return error
+		handler, name, func, args, kwargs = call
 		try:
 			if func is None:
 				raise RuntimeError('Method "%s" unavailable in this context' % name)
 			result = func(*args, **kwargs)
 			if asyncio.iscoroutine(result):
 				result = _run_coroutine(result, self.loop)
-			if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
-				self.watchdog.start()
 		except (Exception, InterpreterTimeout) as e:
-			import traceback
-			_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
-			if isinstance(e, Error):
-				errno = e.errno
-			else:
-				errno = None
-			return self._reply(kind, ((str(e), errno), None))
+			return self._failed(kind, e)
+		return self._done(kind, handler, name, result)
+
+	async def dispatch_async(self, data):
+		"""Come :meth:`dispatch`, sul loop: le coroutine degli handler sono attese (backend Web
+		Worker, dove tutto gira sul loop)."""
+		kind, call, error = self._decode(data)
+		if call is None:
+			return error
+		handler, name, func, args, kwargs = call
+		try:
+			if func is None:
+				raise RuntimeError('Method "%s" unavailable in this context' % name)
+			result = func(*args, **kwargs)
+			if inspect.isawaitable(result):
+				result = await result
+		except (Exception, InterpreterTimeout) as e:
+			return self._failed(kind, e)
+		return self._done(kind, handler, name, result)
+
+	def _decode(self, data):
+		# (tipo, (handler, nome, funzione, args, kwargs), None), o (tipo, None, risposta d'errore)
+		kind, payload = data[:1], data[1:]
+		try:
+			handler, name, args, kwargs = _loads(payload)
+		except Exception as e:
+			# es. un argomento di una classe che solo lo script può importare
+			_logger.error("[ServerProxy] unable to decode the call from the script: %s" % e)
+			return kind, None, self._reply(kind, (('Unable to decode the call from the script: %s' % e, None), None))
+		return kind, (handler, name, self._lookup(handler, name), args, kwargs), None
+
+	def _done(self, kind, handler, name, result):
+		if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
+			self.watchdog.start()
 		return self._reply(kind, (None, result))
+
+	def _failed(self, kind, e):
+		import traceback
+		_logger.error("[ServerProxy] method error: %s" % traceback.format_exc())
+		if isinstance(e, Error):
+			errno = e.errno
+		else:
+			errno = None
+		return self._reply(kind, ((str(e), errno), None))
 
 	def replied(self):
 		"""Da chiamare dopo aver inviato all'interprete la risposta dell'ultima chiamata."""
@@ -1367,6 +1740,9 @@ class _Execution:
 			filename = '<script>'
 		if argv is None:
 			argv = [ filename ]
+		# un interprete creato per questa esecuzione: nel browser si termina alla fine (il suo worker
+		# altrimenti resterebbe in vita finché il garbage collector non raccoglie l'Interpreter)
+		self.owned = interpreter is None
 		if interpreter is None:
 			interpreter = Interpreter()
 		self.args = (script, filename, argv, path or [], timeout)
@@ -1385,6 +1761,12 @@ class _Execution:
 	def start_server(self):
 		"""Avvia il listener a cui l'interprete si collegherà per questa esecuzione;
 		restituisce il server e la coppia ``(famiglia, indirizzo)`` da passare all'interprete."""
+		if _WEB:
+			# nel browser le chiamate viaggiano nei messaggi del worker dell'interprete
+			self.interpreter.ensure_proc()
+			server = _WorkerCalls(self.dispatcher, self.interpreter.backend)
+			server.start()
+			return server, ('worker', None)
 		server = _ServerProxy(self.dispatcher)
 		server.start()
 		address = server.listener.address
@@ -1467,6 +1849,10 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	Restituisce un :class:`ExecutionResult`. I metodi degli handler vengono eseguiti in un
 	thread dedicato; quelli che restituiscono una coroutine, sul loop *loop* (predefinito:
 	quello in esecuzione nel thread chiamante, se c'è)."""
+	if _WEB:
+		# nel browser l'attesa sospende lo stack (run_sync) mentre il loop prosegue
+		from pyodide.ffi import run_sync
+		return run_sync(execute_async(script, filename, argv, path, timeout, handlers, interpreter))
 	if loop is None:
 		try:
 			loop = asyncio.get_running_loop()
@@ -1523,5 +1909,7 @@ async def execute_async(script=None, filename=None, argv=None, path=None, timeou
 		await ex.complete_async()
 		ex.close()
 		await ex.builtin._atexit_async()
+		if _WEB and ex.owned:
+			await ex.interpreter.stop_async()
 		debug_log("[ServerProxy] done")
 	return result
