@@ -818,7 +818,9 @@ def _worker_control(payload):
 	request = _loads(payload.to_bytes())
 	if request[0] != 'run':
 		return
-	_, job, connection = request
+	_, job, connection, env = request
+	for key, value in env.items():
+		os.environ[str(key)] = str(value)
 	args, path, timeout, script, cwd = job
 	# i percorsi vengono dall'host: si tengono anche quelli del worker, e la cartella di lavoro solo
 	# se esiste anche qui (il filesystem del worker è un altro)
@@ -1000,6 +1002,10 @@ class _WorkerBackend:
 		elif message[0] == 'quit':
 			# un processo esce da sé; un worker va terminato
 			self.terminate()
+		elif message[0] == 'run':
+			# l'ambiente dell'interprete, applicato dal worker prima dello script (su CPython lo
+			# riceve il processo all'avvio)
+			self._post('control', 0, _dumps(tuple(message) + (self.env or {},)))
 		else:
 			self._post('control', 0, _dumps(message))
 
@@ -1174,6 +1180,9 @@ class Interpreter:
 				backend = None
 				if _WEB:
 					backend = _WorkerReserve.take()
+					# (una riserva nasce senza: l'ambiente arriva con ogni esecuzione)
+					if backend is not None:
+						backend.env = self.env
 				if backend is None:
 					backend = (_WorkerBackend if _WEB else _ProcessBackend)(self.foreground, self.env)
 					backend.start()

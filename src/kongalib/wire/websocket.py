@@ -20,6 +20,7 @@ Il client web parla sempre con il server che lo ha servito: l'URL viene dalla pa
 da un altro server)."""
 
 import asyncio
+import urllib.parse
 
 from .session import Stream
 
@@ -37,11 +38,13 @@ _HIGH_WATER = 4 * 1024 * 1024
 
 
 def default_url():
-	"""L'URL del gateway del server che ha servito la pagina (``location`` esiste anche nei worker)."""
+	"""L'URL del gateway del server che ha servito la pagina: dall'origine di ``location``, che
+	esiste anche nei worker e, per quelli avviati da un URL ``blob:`` (gli interpreti di
+	:mod:`kongalib.scripting`), è quella della pagina che li ha creati."""
 	import js
-	location = js.location
-	scheme = 'wss:' if str(location.protocol) == 'https:' else 'ws:'
-	return '%s//%s%s' % (scheme, location.host, PATH)
+	origin = urllib.parse.urlsplit(str(js.location.origin))
+	scheme = 'wss:' if origin.scheme == 'https' else 'ws:'
+	return '%s//%s%s' % (scheme, origin.netloc, PATH)
 
 
 async def discover():
