@@ -572,7 +572,8 @@ def init_interpreter(channel):
 			if filename.endswith('kongalib/scripting.py'):
 				return False
 			return True
-		tb = list(filter(do_filter, tb))
+		# (come tuple: i FrameSummary di Python 3.13+ tengono il codice, che non si serializza)
+		tb = [ tuple(entry) for entry in filter(do_filter, tb) ]
 		try:
 			proxy.builtin.print_exception(type, value, tb)
 		except:
