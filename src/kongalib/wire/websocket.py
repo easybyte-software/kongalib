@@ -26,6 +26,9 @@ from .session import Stream
 
 PATH = '/socket/client'
 
+#: Dove il server che ha servito la pagina dice di sé quello che direbbe a una scoperta in UDP
+DISCOVERY_PATH = '/client/discovery'
+
 #: URL esplicito del gateway; ``None`` lo ricava dalla posizione della pagina
 URL = None
 
@@ -39,6 +42,18 @@ def default_url():
 	location = js.location
 	scheme = 'wss:' if str(location.protocol) == 'https:' else 'ws:'
 	return '%s//%s%s' % (scheme, location.host, PATH)
+
+
+async def discover():
+	"""Il server che ha servito la pagina come lo darebbe ``list_servers()``: una tupla con un
+	dizionario (``host`` è quello della pagina), vuota se il server non si fa trovare."""
+	import js
+	response = await js.fetch(DISCOVERY_PATH, js.Object.fromEntries([ [ 'cache', 'no-store' ] ]))
+	if not response.ok:
+		return ()
+	info = (await response.json()).to_py()
+	info['host'] = str(js.location.hostname)
+	return ( info, )
 
 
 class WebSocketStream(Stream):

@@ -253,9 +253,21 @@ class Session(object):
 			self.stream.write(P.abort_all_request())
 
 	async def list_servers(self, timeout=5000, port=0, progress=None, userdata=None):
-		# la scoperta dei server in broadcast UDP non esiste nel browser, e il client web vede
-		# solo il server che lo serve
-		return ()
+		# la scoperta dei server in broadcast UDP non esiste nel browser: il client web vede solo il
+		# server che lo serve, che risponde in HTTP; come in una scoperta, la risposta arriva allo
+		# scadere di *timeout* (chi cerca i server di continuo non gira a vuoto)
+		if sys.platform != 'emscripten':
+			return ()
+		from .websocket import discover
+		start = time.monotonic()
+		try:
+			servers = await discover()
+		except Exception:
+			servers = ()
+		rest = (timeout / 1000) - (time.monotonic() - start)
+		if rest > 0:
+			await asyncio.sleep(rest)
+		return servers
 
 	# --- lettura e richieste -----------------------------------------------------------------
 
