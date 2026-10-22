@@ -86,6 +86,10 @@ _YIELD_INTERVAL = 100
 #: stessi valori con cui si è caricata lei.
 WORKER_CONFIG = None
 
+#: Nel browser, la Cache Storage in cui il worker cerca le wheel di un'esecuzione (vedi :class:`Interpreter`)
+#: prima di scaricarle: l'applicazione ve le tiene, scaricate una volta.
+WHEEL_CACHE = 'kongalib-wheels'
+
 
 class BadConnection(Exception):
 	"""L'interprete non riesce a collegarsi all'host con la famiglia di connessione in uso."""
@@ -756,6 +760,8 @@ class _Worker:
 	interrupt = False
 	# sys.path del worker, da tenere oltre a quello dell'host
 	path = []
+	# URL delle wheel già spacchettate nel worker
+	wheels = set()
 
 
 def _worker_post(kind, id, payload=b''):
@@ -813,13 +819,39 @@ def _worker_yield():
 		_expired(sys._getframe(1))
 
 
+def _worker_wheels(urls):
+	# Le wheel di un'esecuzione, spacchettate una volta per worker: dalla Cache Storage dell'applicazione
+	# (WHEEL_CACHE), altrimenti scaricate
+	import importlib
+	import js
+	import pyodide_js
+	from pyodide.ffi import run_sync, to_js
+	import site
+	urls = [ url for url in urls if url not in _Worker.wheels ]
+	if not urls:
+		return
+	site_packages = site.getsitepackages()[0]
+	cache = run_sync(js.caches.open(WHEEL_CACHE))
+	for url in urls:
+		response = run_sync(cache.match(url))
+		if not response:
+			response = run_sync(js.fetch(url))
+			if not response.ok:
+				raise OSError('%s: %s %s' % (url, response.status, response.statusText))
+		data = run_sync(response.arrayBuffer())
+		pyodide_js.unpackArchive(data, 'wheel', to_js({ 'extractDir': site_packages }, dict_converter=js.Object.fromEntries))
+		_Worker.wheels.add(url)
+	importlib.invalidate_caches()
+
+
 def _worker_control(payload):
 	# Una richiesta di controllo dell'host (run, quit); con callPromising, così lo script può
 	# sospendere lo stack
 	request = _loads(payload.to_bytes())
 	if request[0] != 'run':
 		return
-	_, job, connection, env = request
+	_, job, connection, env = request[:4]
+	_worker_wheels(request[4] if len(request) > 4 else ())
 	for key, value in env.items():
 		os.environ[str(key)] = str(value)
 	args, path, timeout, script, cwd = job
@@ -918,8 +950,9 @@ class _WorkerBackend:
 	# worker avviati e non ancora terminati, riserve comprese
 	live = 0
 
-	def __init__(self, foreground, env):
+	def __init__(self, foreground, env, wheels=None):
 		self.env = env
+		self.wheels = wheels
 		self.worker = None
 		self.url = None
 		self.proxies = []
@@ -1005,8 +1038,8 @@ class _WorkerBackend:
 			self.terminate()
 		elif message[0] == 'run':
 			# l'ambiente dell'interprete, applicato dal worker prima dello script (su CPython lo
-			# riceve il processo all'avvio)
-			self._post('control', 0, _dumps(tuple(message) + (self.env or {},)))
+			# riceve il processo all'avvio), e le wheel da spacchettarvi
+			self._post('control', 0, _dumps(tuple(message) + (self.env or {}, list(self.wheels or ()))))
 		else:
 			self._post('control', 0, _dumps(message))
 
@@ -1150,14 +1183,16 @@ class _WorkerCalls:
 
 class Interpreter:
 	"""Interprete separato in cui eseguire gli script con :func:`execute`; può essere riusato
-	per più esecuzioni."""
-	def __init__(self, foreground=True, env=None):
+	per più esecuzioni. Nel browser *wheels* sono gli URL delle wheel da spacchettare
+	nell'interprete prima di ogni esecuzione (cercate prima in :data:`WHEEL_CACHE`)."""
+	def __init__(self, foreground=True, env=None, wheels=None):
 		self.backend = None
 		self.started = False
 		self.exc_info = None
 		self.lock = threading.RLock()
 		self.foreground = foreground
 		self.env = env
+		self.wheels = list(wheels or ())
 
 	@property
 	def proc(self):
@@ -1181,11 +1216,12 @@ class Interpreter:
 				backend = None
 				if _WEB:
 					backend = _WorkerReserve.take()
-					# (una riserva nasce senza: l'ambiente arriva con ogni esecuzione)
+					# (una riserva nasce senza: l'ambiente e le wheel arrivano con ogni esecuzione)
 					if backend is not None:
 						backend.env = self.env
+						backend.wheels = self.wheels
 				if backend is None:
-					backend = (_WorkerBackend if _WEB else _ProcessBackend)(self.foreground, self.env)
+					backend = _WorkerBackend(self.foreground, self.env, self.wheels) if _WEB else _ProcessBackend(self.foreground, self.env)
 					backend.start()
 				self.backend = backend
 				self.started = True
