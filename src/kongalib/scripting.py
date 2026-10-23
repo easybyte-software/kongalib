@@ -812,7 +812,11 @@ def _worker_yield():
 	# Punto di yield, chiamato dall'aggancio periodico della trace C: i messaggi dell'host arrivano
 	# solo mentre lo script cede il passo; un'interruzione chiesta dall'host vale come la scadenza
 	# immediata del timeout, come il segnale simulato su CPython
-	from pyodide.ffi import run_sync
+	from pyodide.ffi import can_run_sync, run_sync
+	# (non da un ingresso sincrono da JavaScript, come la risposta dell'host gestita mentre lo script la
+	# attende: lì lo stack non si può sospendere, e provarci uccide Pyodide)
+	if not can_run_sync():
+		return
 	run_sync(asyncio.sleep(0))
 	if _Worker.interrupt:
 		_Worker.interrupt = False
