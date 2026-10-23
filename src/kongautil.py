@@ -610,6 +610,15 @@ def notify_data_changes(table_name, row_id=None):
 
 def open_uri(uri):
 	"""Tenta di aprire l'URI specificato con l'applicazione predefinita di sistema (se configurata)."""
+	if _proxy.is_valid() and (sys.platform == 'emscripten'):
+		# nel browser lo apre Konga: un file locale gli arriva con i suoi dati (l'interprete dello script ha un
+		# filesystem suo)
+		data = None
+		if os.path.isfile(uri):
+			with open(uri, 'rb') as f:
+				data = f.read()
+		_proxy.util.open_uri(uri, data)
+		return
 	import subprocess
 	if sys.platform == 'darwin':
 		subprocess.call(('open', uri))

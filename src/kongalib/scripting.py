@@ -61,6 +61,8 @@ STOP_GRACE = 5
 _STOP_HANDLED = '_timeout_stop_handled'
 # Chiamata con cui l'interprete comunica all'host la fine di un'esecuzione e il suo esito
 _SCRIPT_DONE = '_script_done'
+# Notifica con cui l'interprete nel browser rimanda all'host i file scritti nei percorsi condivisi in scrittura
+_HOST_FILES = '_host_files'
 # Tipo di un messaggio dello script verso l'host, in testa alla chiamata serializzata: una
 # chiamata attende la risposta, una notifica no
 _CALL = b'C'
@@ -636,6 +638,89 @@ def _send_done(exc_info):
 
 
 
+def _read_files(paths):
+	"""{ percorso: byte } dei file in *paths* (file, o cartelle con tutto quello che contengono); i percorsi che
+	non esistono non ci sono."""
+	files = {}
+	for path in paths or ():
+		if os.path.isfile(path):
+			with open(path, 'rb') as f:
+				files[path] = f.read()
+		elif os.path.isdir(path):
+			for folder, _dirs, names in os.walk(path):
+				for name in names:
+					full = os.path.join(folder, name)
+					with open(full, 'rb') as f:
+						files[full] = f.read()
+	return files
+
+
+def _write_files(files):
+	for path, data in files.items():
+		folder = os.path.dirname(path)
+		if folder:
+			os.makedirs(folder, exist_ok=True)
+		with open(path, 'wb') as f:
+			f.write(data)
+
+
+class _SharedPaths:
+	"""Il risultato di un metodo di un handler con i file dell'host che lo accompagnano (vedi :func:`share_paths`)."""
+	def __init__(self, value, files, folders, writable):
+		self.value = value
+		self.files = files
+		self.folders = folders
+		self.writable = writable
+
+	def unpack(self):
+		# (nel worker: le cartelle e i file agli stessi percorsi dell'host, i percorsi in scrittura seguiti da qui in poi)
+		for folder in self.folders:
+			os.makedirs(folder, exist_ok=True)
+		_write_files(self.files)
+		for path in self.writable:
+			_Worker.outgoing[path] = _scan_files(path)
+		return self.value
+
+
+def share_paths(value, paths, writable=False):
+	"""Il risultato *value* di un metodo di un handler che dà allo script percorsi dell'host (*paths*, file o
+	cartelle). Nel browser l'interprete ha un filesystem suo: i file di *paths* gli arrivano con il risultato, agli
+	stessi percorsi, e con *writable* quello che lo script vi scrive torna all'host (a ogni chiamata dello script
+	all'host e alla fine dell'esecuzione). Sul desktop, dove il filesystem è lo stesso, *value* così com'è."""
+	if not _WEB:
+		return value
+	paths = [ paths ] if isinstance(paths, str) else [ path for path in paths or () if path ]
+	# (le cartelle ci sono anche vuote, e quella di un file da scrivere)
+	folders = [ path if os.path.isdir(path) else os.path.dirname(path) for path in paths ]
+	return _SharedPaths(value, _read_files(paths), [ folder for folder in folders if folder ], paths if writable else [])
+
+
+def _scan_files(path):
+	"""{ percorso: (mtime, dimensione) } dei file in *path* (un file o una cartella)."""
+	found = {}
+	paths = [ path ] if os.path.isfile(path) else [ os.path.join(folder, name) for folder, _dirs, names in os.walk(path) for name in names ]
+	for full in paths:
+		try:
+			st = os.stat(full)
+		except OSError:
+			continue
+		found[full] = (st.st_mtime_ns, st.st_size)
+	return found
+
+
+def _send_outgoing():
+	"""Nel worker: i file nuovi o cambiati nei percorsi condivisi in scrittura, rimandati all'host."""
+	changed = {}
+	for root, seen in _Worker.outgoing.items():
+		for path, state in _scan_files(root).items():
+			if seen.get(path) != state:
+				with open(path, 'rb') as f:
+					changed[path] = f.read()
+				seen[path] = state
+	if changed:
+		getattr(proxy.builtin, _HOST_FILES).notify(changed)
+
+
 def _run_job(job, channel):
 	"""Esegue lo script descritto da *job* con *channel* per le chiamate all'host, e ne
 	notifica la fine; non dipende dal backend. Solleva :class:`BadConnection` se l'host non
@@ -673,6 +758,12 @@ def _run_job(job, channel):
 		_State.running = False
 	set_script_timeout(0)
 	exit_interpreter()
+	if _Worker.outgoing:
+		try:
+			_send_outgoing()
+		except Exception:
+			import traceback
+			_logger.error('[Interpreter] unable to send the files written: %s' % traceback.format_exc())
 	sent = _send_done(exc_info)
 	proxy.close()
 	return sent
@@ -762,6 +853,8 @@ class _Worker:
 	path = []
 	# URL delle wheel già spacchettate nel worker
 	wheels = set()
+	# i percorsi condivisi in scrittura dall'host nell'esecuzione in corso: { percorso: { file: (mtime, dimensione) } }
+	outgoing = {}
 
 
 def _worker_post(kind, id, payload=b''):
@@ -856,6 +949,9 @@ def _worker_control(payload):
 		return
 	_, job, connection, env = request[:4]
 	_worker_wheels(request[4] if len(request) > 4 else ())
+	# (i file delle cartelle condivise dall'interprete, agli stessi percorsi dell'host)
+	_write_files(request[5] if len(request) > 5 else {})
+	_Worker.outgoing = {}
 	for key, value in env.items():
 		os.environ[str(key)] = str(value)
 	args, path, timeout, script, cwd = job
@@ -954,9 +1050,10 @@ class _WorkerBackend:
 	# worker avviati e non ancora terminati, riserve comprese
 	live = 0
 
-	def __init__(self, foreground, env, wheels=None):
+	def __init__(self, foreground, env, wheels=None, shared=None):
 		self.env = env
 		self.wheels = wheels
+		self.shared = shared
 		self.worker = None
 		self.url = None
 		self.proxies = []
@@ -1042,8 +1139,8 @@ class _WorkerBackend:
 			self.terminate()
 		elif message[0] == 'run':
 			# l'ambiente dell'interprete, applicato dal worker prima dello script (su CPython lo
-			# riceve il processo all'avvio), e le wheel da spacchettarvi
-			self._post('control', 0, _dumps(tuple(message) + (self.env or {}, list(self.wheels or ()))))
+			# riceve il processo all'avvio), le wheel da spacchettarvi e i file delle cartelle condivise
+			self._post('control', 0, _dumps(tuple(message) + (self.env or {}, list(self.wheels or ()), _read_files(self.shared))))
 		else:
 			self._post('control', 0, _dumps(message))
 
@@ -1188,8 +1285,10 @@ class _WorkerCalls:
 class Interpreter:
 	"""Interprete separato in cui eseguire gli script con :func:`execute`; può essere riusato
 	per più esecuzioni. Nel browser *wheels* sono gli URL delle wheel da spacchettare
-	nell'interprete prima di ogni esecuzione (cercate prima in :data:`WHEEL_CACHE`)."""
-	def __init__(self, foreground=True, env=None, wheels=None):
+	nell'interprete prima di ogni esecuzione (cercate prima in :data:`WHEEL_CACHE`), e *shared* le
+	cartelle dell'host i cui file vi si copiano, agli stessi percorsi (l'interprete ha un filesystem
+	suo; per esempio i moduli che gli script importano dalla loro cartella)."""
+	def __init__(self, foreground=True, env=None, wheels=None, shared=None):
 		self.backend = None
 		self.started = False
 		self.exc_info = None
@@ -1197,6 +1296,7 @@ class Interpreter:
 		self.foreground = foreground
 		self.env = env
 		self.wheels = list(wheels or ())
+		self.shared = list(shared or ())
 
 	@property
 	def proc(self):
@@ -1224,8 +1324,9 @@ class Interpreter:
 					if backend is not None:
 						backend.env = self.env
 						backend.wheels = self.wheels
+						backend.shared = self.shared
 				if backend is None:
-					backend = _WorkerBackend(self.foreground, self.env, self.wheels) if _WEB else _ProcessBackend(self.foreground, self.env)
+					backend = _WorkerBackend(self.foreground, self.env, self.wheels, self.shared) if _WEB else _ProcessBackend(self.foreground, self.env)
 					backend.start()
 				self.backend = backend
 				self.started = True
@@ -1421,6 +1522,8 @@ class _Method:
 		return _dumps((self.handler._name, self.name, args, kwargs))
 
 	def __call__(self, *args, **kwargs):
+		if _Worker.outgoing:
+			_send_outgoing()
 		data = self._encode(args, kwargs)
 		proxy = self.handler._proxy
 		with _ChannelUse():
@@ -1433,6 +1536,8 @@ class _Method:
 					debug_log('[Proxy] got reply in %f secs: %s' % (time.time() - s, str((self.handler._name, self.name))))
 		e, result = _loads(reply)
 		if e is None:
+			if isinstance(result, _SharedPaths):
+				result = result.unpack()
 			return result
 		errmsg, errno = e
 		if errno is None:
@@ -1540,6 +1645,8 @@ class _CallDispatcher:
 		self.run = run
 		self.done = False
 		self.done_exc_info = None
+		# i percorsi che l'host ha condiviso in scrittura con lo script (vedi share_paths())
+		self.writable = set()
 
 	def dispatch(self, data):
 		"""Esegue la chiamata nel messaggio *data*; restituisce la risposta da inviare
@@ -1589,6 +1696,8 @@ class _CallDispatcher:
 	def _done(self, kind, handler, name, result):
 		if (handler == 'builtin') and (name == 'handle_timeout') and result and (self.watchdog is not None):
 			self.watchdog.start()
+		if isinstance(result, _SharedPaths):
+			self.writable.update(result.writable)
 		return self._reply(kind, (None, result))
 
 	def _failed(self, kind, e):
@@ -1617,6 +1726,8 @@ class _CallDispatcher:
 				return self._stop_handled
 			if name == _SCRIPT_DONE:
 				return self._script_done
+			if name == _HOST_FILES:
+				return self._host_files
 		if handler in self.handlers:
 			return getattr(self.handlers[handler], name, None)
 		return None
@@ -1638,6 +1749,17 @@ class _CallDispatcher:
 	def _script_done(self, exc_info):
 		self.done_exc_info = exc_info
 		self.done = True
+
+	def _host_files(self, files):
+		# (solo nei percorsi condivisi in scrittura: un file o quello che c'è sotto una cartella)
+		allowed = {}
+		for path, data in files.items():
+			path = os.path.normpath(path)
+			if any((path == root) or path.startswith(os.path.join(root, '')) for root in map(os.path.normpath, self.writable)):
+				allowed[path] = data
+			else:
+				_logger.error('[ServerProxy] file outside the paths shared with the script: %s' % path)
+		_write_files(allowed)
 
 
 
