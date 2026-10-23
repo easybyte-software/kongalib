@@ -1,6 +1,6 @@
 // The Web Worker of an interpreter of kongalib.scripting in the browser (Pyodide): started by _WorkerBackend
 // from a blob: URL, so nothing has to be served; it gets Pyodide, its packages and the wheels from the URLs
-// in the 'init' message, then runs the requests of the host (see plans/scripting_web_worker.md, phase B).
+// in the 'init' message, then runs the requests of the host (see konga's plans/konga_client_web.md).
 //
 // Messages, both ways, are [ kind, id, payload ] with payload a Uint8Array:
 //   host -> worker: 'init' (JSON of the configuration), 'control' (pickled run/quit), 'interrupt',
