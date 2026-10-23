@@ -96,7 +96,15 @@ class TCPStream(Stream):
 
 	@classmethod
 	async def open(cls, host, port):
-		reader, writer = await asyncio.open_connection(host or '127.0.0.1', port)
+		import socket
+		host = host or '127.0.0.1'
+		# Come il client nativo (CL_NetAddress): il primo indirizzo IPv4, e IPv6 solo se non ce n'è.
+		# Nell'ordine del sistema, su Windows "localhost" prova prima ::1, che il server può non
+		# ascoltare: il rifiuto arriva dopo un paio di secondi, oltre il timeout di molte connessioni
+		try:
+			reader, writer = await asyncio.open_connection(host, port, family=socket.AF_INET)
+		except socket.gaierror:
+			reader, writer = await asyncio.open_connection(host, port)
 		return cls(reader, writer)
 
 	async def read(self):
