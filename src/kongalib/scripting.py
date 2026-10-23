@@ -71,7 +71,8 @@ _NOTIFY = b'N'
 _DEFER_INTERVAL = 50
 # Riarmo minimo (ms) di un timeout scaduto mentre era sospeso
 _MIN_REARM = 0.001
-_THIS_FILE = __file__
+# Il nome del file del codice di questo modulo (il .py da cui è compilato: senza sorgenti __file__ è il .pyc)
+_THIS_FILE = sys._getframe().f_code.co_filename
 # Segnale simulato (mai inviato dal sistema operativo) con cui i thread dell'interprete
 # fanno eseguire al thread dello script la scadenza del timeout o la richiesta di
 # interruzione dell'host
