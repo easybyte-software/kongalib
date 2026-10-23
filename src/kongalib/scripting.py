@@ -1064,6 +1064,9 @@ class _WorkerBackend:
 		self.lock = None
 		# il trasporto delle chiamate dell'esecuzione in corso (_WorkerCalls)
 		self.calls = None
+		# le richieste della dimensione della memoria in attesa, per id
+		self.memory_requests = {}
+		self.next_memory_request = 0
 
 	def start(self):
 		import js
@@ -1105,8 +1108,26 @@ class _WorkerBackend:
 			import js
 			from pyodide.ffi import create_once_callable
 			js.navigator.locks.request(self.lock, create_once_callable(self._lock_granted))
+		elif kind == 'memory':
+			future = self.memory_requests.pop(id, None)
+			if (future is not None) and (not future.done()):
+				future.set_result(int(payload.decode('ascii') or 0))
 		elif kind == 'error':
 			self._died(payload.decode('utf-8', 'replace'))
+
+	async def memory_size(self):
+		"""La dimensione in byte della memoria del worker (quella di WebAssembly, che non cala mai)."""
+		if not self.alive:
+			return None
+		self.next_memory_request += 1
+		id = self.next_memory_request
+		future = asyncio.get_running_loop().create_future()
+		self.memory_requests[id] = future
+		self._post('memory', id)
+		try:
+			return await future
+		finally:
+			self.memory_requests.pop(id, None)
 
 	def _lock_granted(self, lock):
 		if self.alive:
@@ -1462,6 +1483,14 @@ class Interpreter:
 	def is_running(self):
 		backend = self.backend
 		return (not self.started) or ((backend is not None) and backend.is_alive())
+
+	async def memory_size_async(self):
+		"""Nel browser, la dimensione in byte della memoria del worker dell'interprete (quella di WebAssembly, che non
+		cala mai: un interprete cresciuto molto conviene fermarlo, non riusarlo); None sul desktop, o se non è avviato."""
+		backend = self.backend
+		if (not _WEB) or (backend is None):
+			return None
+		return await backend.memory_size()
 
 	def get_exc_info(self):
 		with self.lock:

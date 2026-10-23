@@ -4,9 +4,10 @@
 //
 // Messages, both ways, are [ kind, id, payload ] with payload a Uint8Array:
 //   host -> worker: 'init' (JSON of the configuration), 'control' (pickled run/quit), 'interrupt',
-//                   'reply' (to the call with that id)
+//                   'reply' (to the call with that id), 'memory' (the size of its memory, asked)
 //   worker -> host: 'locked' (the worker holds its lock, see below), 'control' (pickled bad_connection),
-//                   'call' (call or notification of the script), 'ready', 'error' (UTF-8 text)
+//                   'call' (call or notification of the script), 'ready', 'error' (UTF-8 text),
+//                   'memory' (its memory's size in bytes, as text, for the request with that id)
 //
 // A worker can die without an error event (it closes itself, the browser kills it): it holds an
 // exclusive Web Lock (configuration's "lock") for its whole life, which the host then requests and
@@ -71,6 +72,11 @@ self.onmessage = (event) => {
 	}
 	if (kind === 'control') {
 		chain = chain.then(() => handle.control.callPromising(payload)).catch(fail);
+		return;
+	}
+	if (kind === 'memory') {
+		// the size of the worker's memory (WebAssembly's, which never shrinks), at once, also while a script runs
+		ready.then(() => post('memory', id, new TextEncoder().encode(String(pyodide._module.HEAP8.length)))).catch(fail);
 		return;
 	}
 	// 'reply', 'interrupt': not behind the running request, which may be waiting for them
