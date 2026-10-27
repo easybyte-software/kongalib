@@ -706,6 +706,13 @@ def _scan_files(path):
 		except OSError:
 			continue
 		found[full] = (st.st_mtime_ns, st.st_size)
+	# (l'mtime del filesystem del worker va al millisecondo, Date.now(): una scrittura della stessa dimensione
+	# nello stesso millisecondo di un file appena visto lascerebbe lo stato uguale, e non tornerebbe all'host;
+	# si attende che il millisecondo dell'ultimo file sia passato)
+	latest = max((state[0] for state in found.values()), default=0)
+	end = time.monotonic() + 0.005
+	while (time.time_ns() < latest + 1000000) and (time.monotonic() < end):
+		pass
 	return found
 
 
