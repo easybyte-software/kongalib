@@ -166,12 +166,23 @@ class Deferred(object):
 		self._executed = False
 		self._pending = True
 		self._future = None
+		self._task = None
 
 	def cancel(self):
 		"""Interrompe la richiesta."""
+		# Si annulla il task dell'operazione, non quello che la esegue: annullato prima di partire, quello non
+		# eseguirebbe nulla, neanche la callback d'errore. Se il task non c'è ancora, lo annulla chi lo crea
 		self._aborted = True
-		if self._future is not None:
-			self._future.cancel()
+		task = self._task
+		if task is not None:
+			loop = task.get_loop()
+			if _running_loop() is loop:
+				task.cancel()
+			else:
+				try:
+					loop.call_soon_threadsafe(task.cancel)
+				except RuntimeError:
+					pass
 
 	@property
 	def aborted(self):
@@ -408,8 +419,16 @@ class WireClient(object):
 			deferred._executed = True
 
 		async def run():
+			task = None
+			if not deferred._aborted:
+				task = deferred._task = asyncio.ensure_future(getattr(self.session, name)(*operation, progress=on_progress, userdata=userdata, **extra))
+				# (a cancel() meanwhile found no task to cancel)
+				if deferred._aborted:
+					task.cancel()
 			try:
-				result = await getattr(self.session, name)(*operation, progress=on_progress, userdata=userdata, **extra)
+				if task is None:
+					raise asyncio.CancelledError()
+				result = await task
 			except asyncio.CancelledError:
 				deferred._aborted = True
 				await on_error(P.EXECUTE_ABORTED, None)
