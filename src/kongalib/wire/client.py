@@ -224,6 +224,32 @@ class _LoopBackend(object):
 	def interrupt(self):
 		self.client.interrupt()
 
+	def send_user_message(self, text, targets=None):
+		self.client.send_user_message(text, targets)
+
+	def set_user_message_handler(self, handler):
+		if handler is None:
+			self.client.session.set_user_message_handler(None)
+			return
+		loop = asyncio.get_running_loop()
+		session_loop = self.client._use(loop)
+		if session_loop is loop:
+			self.client.session.set_user_message_handler(handler)
+			return
+		# l'handler gira sul loop di chi l'ha impostato, come con il client nativo
+		def relay(source, text):
+			loop.call_soon_threadsafe(_call_user_message_handler, handler, source, text)
+		self.client.session.set_user_message_handler(relay)
+
+
+def _call_user_message_handler(handler, source, text):
+	try:
+		result = handler(source, text)
+		if inspect.isawaitable(result):
+			asyncio.ensure_future(result)
+	except Exception:
+		traceback.print_exc()
+
 
 class WireClient(object):
 	"""Implementazione di :class:`kongalib.Client` sul trasporto scritto in Python."""
@@ -232,6 +258,7 @@ class WireClient(object):
 		self.session = Session(open_stream)
 		self.loop = None
 		self._lock = threading.Lock()
+		self._user_messages = None
 
 	def async_backend(self):
 		return _LoopBackend(self)
@@ -285,6 +312,23 @@ class WireClient(object):
 			self.session.interrupt()
 		else:
 			loop.call_soon_threadsafe(self.session.interrupt)
+
+	def send_user_message(self, text, targets=None):
+		self._call_soon(lambda: self.session.send_user_message(text, targets))
+
+	def set_user_message_handler(self, handler):
+		"""*handler(source, text)* gira, come le callback, in un thread (sempre lo stesso, così i messaggi
+		arrivano in ordine); nel browser sul loop."""
+		if (handler is None) or WEB:
+			self.session.set_user_message_handler(handler)
+			return
+		with self._lock:
+			if self._user_messages is None:
+				self._user_messages = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='kongalib-user-messages')
+			executor = self._user_messages
+		def relay(source, text):
+			executor.submit(_call_user_message_handler, handler, source, text)
+		self.session.set_user_message_handler(relay)
 
 	# --- metodi con modalità sincrona e a callback --------------------------------------------
 

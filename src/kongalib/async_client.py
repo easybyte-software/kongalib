@@ -141,6 +141,8 @@ class AsyncClient(Client):
 		aggiuntive per la connessione; al momento le opzioni supportate sono:
 
 		- ``tenant_key`` (*str*): chiave del tenant per stabilire la connessione con un server multitenant.
+		- ``user_messages`` (*bool*): se ``True``, il client riceve i messaggi utente inviati dagli altri client (vedi
+		  :meth:`set_user_message_handler`).
 
 		La funzione restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà un ``dict`` contenente le informazioni
 		sulla connessione stabilita.
@@ -172,6 +174,20 @@ class AsyncClient(Client):
 	def interrupt(self):
 		"""Interrompe tutte le operazioni al momento in esecuzione da parte di questo client."""
 		self._backend.interrupt()
+
+	def send_user_message(self, text, targets=None):
+		"""Invia il messaggio *text* ai client con gli ID *targets* (uno o una lista), o a tutti se ``None``, attraverso il server;
+		non c'è risposta, e lo ricevono solo i client che alla connessione hanno chiesto i messaggi utente (l'opzione ``user_messages``
+		di :meth:`connect`). Il mittente che il destinatario riceve è l'ID di questo client, come lo conosce il server.
+		"""
+		self._backend.send_user_message(text, targets)
+
+	def set_user_message_handler(self, handler):
+		"""Imposta la funzione ``handler(source, text)`` (anche una coroutine) che riceve i messaggi utente inoltrati dal server, se
+		alla connessione il client li ha chiesti (l'opzione ``user_messages`` di :meth:`connect`); *source* è l'ID del client che l'ha
+		inviato. La funzione viene eseguita sul loop da cui la si imposta; ``None`` smette di ricevere i messaggi.
+		"""
+		self._backend.set_user_message_handler(handler)
 
 	def get_data_dictionary(self, progress=None, userdata=None, timeout=DEFAULT_EXECUTE_TIMEOUT):
 		"""Restituisce un oggetto ``asyncio.Future`` il cui risultato una volta completato sarà il dizionario dei dati disponibile sul server

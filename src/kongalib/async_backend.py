@@ -28,6 +28,7 @@ coroutine, e restituendo ``False`` interrompe l'operazione; annullare il future 
 
 import asyncio
 import inspect
+import traceback
 
 from kongalib import Error, ABORTED, EXECUTE_ABORTED, ensure_text
 
@@ -95,6 +96,15 @@ def _cancel(future):
 	future.cancel()
 
 
+def _call_user_message_handler(handler, source, text):
+	try:
+		result = handler(source, text)
+		if inspect.isawaitable(result):
+			asyncio.ensure_future(result)
+	except Exception:
+		traceback.print_exc()
+
+
 class NativeBackend(object):
 	"""Back-end sul client nativo :class:`_kongalib.Client`."""
 
@@ -123,6 +133,20 @@ class NativeBackend(object):
 
 	def interrupt(self):
 		self.impl.interrupt()
+
+	def send_user_message(self, text, targets=None):
+		self.impl.send_user_message(text, targets)
+
+	def set_user_message_handler(self, handler):
+		"""Il client nativo chiama l'handler da un thread suo: lo si esegue sul loop di chi l'ha
+		impostato."""
+		if handler is None:
+			self.impl.set_user_message_handler(None)
+			return
+		loop = asyncio.get_running_loop()
+		def relay(source, text):
+			_call_soon(loop, _call_user_message_handler, handler, source, text)
+		self.impl.set_user_message_handler(relay)
 
 	@staticmethod
 	def make_progress(future, progress, userdata):

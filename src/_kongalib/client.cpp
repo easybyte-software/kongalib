@@ -602,7 +602,10 @@ MGA_Client_connect(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 MGA_Client_disconnect(MGA::ClientObject *self, PyObject *args)
 {
+	/* Without the GIL: disconnecting waits for the user messages listener, whose handler may be waiting for it */
+	Py_BEGIN_ALLOW_THREADS
 	self->fClient->Disconnect();
+	Py_END_ALLOW_THREADS
 	
 	Py_RETURN_NONE;
 }
@@ -721,6 +724,115 @@ MGA_Client_interrupt(MGA::ClientObject *self, PyObject *args)
 {
 	self->fClient->Interrupt();
 
+	Py_RETURN_NONE;
+}
+
+
+/**
+ *	Sends a user message through the server to the clients with the given IDs, or to all of them; there is no reply, and only the
+ *	clients which asked for user messages when connecting (the 'user_messages' option) receive it.
+ *	\param	self				The client.
+ *	\param	args				Arguments tuple.
+ *	\param	kwds				Supported argument keywords: \e text, the message, and \e targets, a client ID, a sequence of them or
+ *								None for all.
+ *	\return						Always None.
+ */
+static PyObject *
+MGA_Client_send_user_message(MGA::ClientObject *self, PyObject *args, PyObject *kwds)
+{
+	char *kwlist[] = { "text", "targets", NULL };
+	PyObject *textObj, *targetsObj = Py_None;
+	string text;
+	CLU_List targets;
+	MGA_Status result;
+	
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &textObj, &targetsObj))
+		return NULL;
+	if (!MGA::ConvertString(textObj, &text))
+		return NULL;
+	if (PyLong_Check(targetsObj)) {
+		targets.Append((int64)PyLong_AsLongLong(targetsObj));
+	}
+	else if (targetsObj != Py_None) {
+		PyObject *seq = PySequence_Fast(targetsObj, "'targets' must be a client ID, a sequence of them or None");
+		if (!seq)
+			return NULL;
+		for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(seq); i++) {
+			PyObject *item = PySequence_Fast_GET_ITEM(seq, i);
+			if (!PyLong_Check(item)) {
+				Py_DECREF(seq);
+				PyErr_SetString(PyExc_TypeError, "'targets' must be a client ID, a sequence of them or None");
+				return NULL;
+			}
+			targets.Append((int64)PyLong_AsLongLong(item));
+		}
+		Py_DECREF(seq);
+	}
+	if (PyErr_Occurred())
+		return NULL;
+	
+	Py_BEGIN_ALLOW_THREADS
+	result = self->fClient->SendUserMessage(text, targets);
+	Py_END_ALLOW_THREADS
+	if (result != MGA_OK)
+		return MGA::setException(result);
+	
+	Py_RETURN_NONE;
+}
+
+
+static void
+_UserMessageCB(uint32 source, const string& text, MGA::ClientObject *self)
+{
+	if (!Py_IsInitialized())
+		return;
+	
+	PyGILState_STATE gstate = PyGILState_Ensure();
+	MGA::MODULE_STATE *state = (MGA::MODULE_STATE *)PyType_GetModuleState(Py_TYPE(self));
+	PyObject *handler = self->fUserMessageHandler;
+	if ((state) && (state->fInitialized) && (handler)) {
+		Py_INCREF(handler);
+		PyObject *textObj = PyUnicode_DecodeUTF8(text.data(), text.size(), "replace");
+		PyObject *result = textObj ? PyObject_CallFunction(handler, "IO", (unsigned int)source, textObj) : NULL;
+		if (!result) {
+			PyErr_Print();
+			PyErr_Clear();
+		}
+		else
+			Py_DECREF(result);
+		Py_XDECREF(textObj);
+		Py_DECREF(handler);
+	}
+	PyGILState_Release(gstate);
+}
+
+
+/**
+ *	Sets the handler receiving the user messages relayed by the server, if the client asked for them when connecting (the
+ *	'user_messages' option): handler(source, text), called on a thread of the client, where source is the ID of the client which
+ *	sent the message.
+ *	\param	self				The client.
+ *	\param	handler				The handler, or None to stop receiving them.
+ *	\return						Always None.
+ */
+static PyObject *
+MGA_Client_set_user_message_handler(MGA::ClientObject *self, PyObject *handler)
+{
+	if ((handler != Py_None) && (!PyCallable_Check(handler))) {
+		PyErr_SetString(PyExc_TypeError, "the handler must be callable or None");
+		return NULL;
+	}
+	/* Without the GIL: this waits for a call of the handler in progress */
+	Py_BEGIN_ALLOW_THREADS
+	self->fClient->SetUserMessageCB(NULL);
+	Py_END_ALLOW_THREADS
+	Py_CLEAR(self->fUserMessageHandler);
+	if (handler != Py_None) {
+		Py_INCREF(handler);
+		self->fUserMessageHandler = handler;
+		self->fClient->SetUserMessageCB((MGA_UserMessageCB)_UserMessageCB, self);
+	}
+	
 	Py_RETURN_NONE;
 }
 
@@ -1619,6 +1731,12 @@ MGA_Client_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static void
 MGA_Client_dealloc(MGA::ClientObject *self)
 {
+	/* The user messages listener stops before the client goes back to the pool, without the GIL its handler may be waiting for */
+	Py_BEGIN_ALLOW_THREADS
+	self->fClient->SetUserMessageCB(NULL);
+	self->fClient->Disconnect();
+	Py_END_ALLOW_THREADS
+	Py_CLEAR(self->fUserMessageHandler);
 	MGA::untrackClient(self);
 
 	PyTypeObject *type = Py_TYPE(self);
@@ -1636,6 +1754,8 @@ static PyMethodDef MGA_Client_methods[] = {
 	{	"get_connection_info",		(PyCFunction)MGA_Client_get_connection_info,	METH_NOARGS,					"get_connection_info() -> dict | None\n\nReturns informations on the currently connected server or None if not connected at all." },
 	{	"execute",					(PyCFunction)MGA_Client_execute,				METH_VARARGS | METH_KEYWORDS,	"execute(command [, data, timeout, success, error, progress, userdata]) -> dict | Deferred\n\nExecutes an operation on the server. If feed is True, the progress callback will receive partial results." },
 	{	"interrupt",				(PyCFunction)MGA_Client_interrupt,				METH_NOARGS,					"interrupt()\n\nInterrupts all pending operations on this client." },
+	{	"send_user_message",		(PyCFunction)MGA_Client_send_user_message,		METH_VARARGS | METH_KEYWORDS,	"send_user_message(text [, targets])\n\nSends a user message to the clients with the IDs in targets (one or a sequence), or to all of them; only the clients which asked for user messages when connecting (the 'user_messages' option) receive it. There is no reply." },
+	{	"set_user_message_handler",	(PyCFunction)MGA_Client_set_user_message_handler,	METH_O,						"set_user_message_handler(handler)\n\nSets the handler(source, text) receiving the user messages, if the client asked for them when connecting (the 'user_messages' option); it is called on a thread of the client. None stops receiving them." },
 	{	"get_data_dictionary",		(PyCFunction)MGA_Client_get_data_dictionary,	METH_VARARGS | METH_KEYWORDS,	"get_data_dictionary([success, error, progress, userdata]) -> dict | Deferred\n\nGets the data dictionary from currently connected server." },
 	{	"list_drivers",				(PyCFunction)MGA_Client_list_drivers,			METH_VARARGS | METH_KEYWORDS,	"list_drivers([success, error, progress, userdata]) -> list | Deferred\n\nReturns a list where each entry is in the form {'name': ..., 'description': ..., 'icon': ... }, identifying the supported server drivers." },
 	{	"list_databases",			(PyCFunction)MGA_Client_list_databases,			METH_VARARGS | METH_KEYWORDS,	"list_databases([success, error, progress, userdata]) -> dict | Deferred\n\nReturns a dictionary with an entry for each supported server driver. The entry value is a list where each entry contains informations on a single database for that driver as found on the server." },
@@ -1681,7 +1801,7 @@ PyType_Spec Client_spec = {
 namespace MGA {
 
 	ClientObject::ClientObject()
-		: fClient(NULL)
+		: fClient(NULL), fUserMessageHandler(NULL)
 	{
 	}
 

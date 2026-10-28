@@ -71,6 +71,7 @@ typedef struct ClientObject
 	ClientObject();
 
 	MGA_Client		*fClient;				/**< The #MGA_Client object doing the real work behind the scene. */
+	PyObject		*fUserMessageHandler;	/**< Receives the user messages (see set_user_message_handler()), or NULL. */
 } ClientObject;
 
 

@@ -279,6 +279,8 @@ class Session(object):
 			targets = ()
 		elif isinstance(targets, int):
 			targets = (targets,)
+		elif isinstance(targets, (str, bytes)) or not all(isinstance(target, int) for target in targets):
+			raise TypeError("'targets' must be a client ID, a sequence of them or None")
 		self.stream.write(self.codec.user_message(text, targets))
 
 	def _user_message(self, header, payload):
@@ -586,3 +588,9 @@ class WireBackend(object):
 
 	def interrupt(self):
 		self.session.interrupt()
+
+	def send_user_message(self, text, targets=None):
+		self.session.send_user_message(text, targets)
+
+	def set_user_message_handler(self, handler):
+		self.session.set_user_message_handler(handler)
