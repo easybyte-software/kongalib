@@ -33,6 +33,12 @@ DISCOVERY_PATH = '/client/discovery'
 #: URL esplicito del gateway; ``None`` lo ricava dalla posizione della pagina
 URL = None
 
+#: Chiamata (se data) a ogni chiusura del WebSocket, anche quando il gateway lo rifiuta prima di aprirlo, con il codice
+#: di chiusura e se era stato aperto: l'applicazione può capire perché (il gateway chiude con 1008 quando il server
+#: disconnette tutti i browser, e rifiuta un browser senza il cookie del client web) e reagire. Va data solo nella
+#: pagina; non deve sollevare eccezioni.
+ON_CLOSE = None
+
 # Oltre questo, i dati già affidati al WebSocket fanno attendere drain()
 _HIGH_WATER = 4 * 1024 * 1024
 
@@ -90,10 +96,16 @@ class WebSocketStream(Stream):
 				stream.queue.put_nowait(data.to_bytes())
 
 		def on_close(event):
-			# un rifiuto della stretta di mano (origine, servizio spento, tetto) chiude prima di aprire
-			if not opened.done():
+			# un rifiuto della stretta di mano (origine, servizio spento, tetto, cookie) chiude prima di aprire
+			was_open = opened.done()
+			if not was_open:
 				opened.set_exception(ConnectionRefusedError('WebSocket closed (%s)' % event.code))
 			stream.queue.put_nowait(b'')
+			if ON_CLOSE is not None:
+				try:
+					ON_CLOSE(int(event.code), was_open)
+				except Exception:
+					pass
 
 		for name, handler in (('onopen', on_open), ('onmessage', on_message), ('onclose', on_close)):
 			proxy = create_proxy(handler)
