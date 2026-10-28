@@ -34,6 +34,7 @@ import inspect
 import json
 import sys
 import time
+import traceback
 
 from _kongalib import _clu_encode, _clu_decode, _error_message, checksum, hash_password
 from kongalib import Error, PROGRESS_EXECUTE, PROGRESS_COMPLETE, constants as C
@@ -162,6 +163,7 @@ class Session(object):
 		self.info = None
 		self.database = None
 		self.user = None
+		self.user_message_handler = None
 
 	# --- connessione -------------------------------------------------------------------------
 
@@ -260,6 +262,39 @@ class Session(object):
 		if self.stream is not None:
 			self.stream.write(P.abort_all_request())
 
+	# --- messaggi utente ---------------------------------------------------------------------
+
+	def set_user_message_handler(self, handler):
+		"""*handler(source, text)* riceve i messaggi utente (anche una coroutine), se alla
+		connessione le opzioni avevano ``user_messages``; *source* è l'ID del client che l'ha
+		mandato. None smette di riceverli."""
+		self.user_message_handler = handler
+
+	def send_user_message(self, text, targets=None):
+		"""Manda il messaggio *text* ai client *targets* (un ID o una lista di ID), o a tutti se
+		None; senza risposta: chi non li ha chiesti alla connessione non lo riceve."""
+		if (self.stream is None) or (self.codec is None):
+			raise error(P.NOT_CONNECTED)
+		if targets is None:
+			targets = ()
+		elif isinstance(targets, int):
+			targets = (targets,)
+		self.stream.write(self.codec.user_message(text, targets))
+
+	def _user_message(self, header, payload):
+		handler = self.user_message_handler
+		if (handler is None) or (self.codec is None):
+			return
+		message = self.codec.decode_user_message(header, payload)
+		if message is None:
+			return
+		try:
+			result = handler(*message)
+			if inspect.isawaitable(result):
+				asyncio.ensure_future(result)
+		except Exception:
+			traceback.print_exc()
+
 	async def list_servers(self, timeout=5000, port=0, progress=None, userdata=None):
 		# la scoperta dei server in broadcast UDP non esiste nel browser: il client web vede solo il
 		# server che lo serve, che risponde in HTTP; come in una scoperta, la risposta arriva allo
@@ -289,6 +324,9 @@ class Session(object):
 					break
 				self.last_activity = time.monotonic()
 				for header, payload in self.packets.feed(data):
+					if header.type == P.TYPE_USER_MESSAGE:
+						self._user_message(header, payload)
+						continue
 					request = self.requests.get(header.sequence)
 					if request is None:
 						# risposta o PING di una richiesta finita, scaduta o interrotta

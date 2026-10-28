@@ -24,7 +24,7 @@ pari ai byte che restano compresi i suoi.
 import struct
 import zlib
 
-from _kongalib import checksum, _Cipher
+from _kongalib import checksum, _Cipher, _clu_encode, _clu_decode
 
 
 MAGIC = 0xF79BF0B7
@@ -38,6 +38,7 @@ TYPE_DATA = 6
 TYPE_FAILED = 7
 TYPE_ABORT = 8
 TYPE_ABORT_ALL = 9
+TYPE_USER_MESSAGE = 10
 
 FLAG_TEA = 0x1
 FLAG_BLOWFISH = 0x2
@@ -69,6 +70,7 @@ _UNION_DATA = struct.Struct('<II')			# comando, checksum
 _UNION_SERVER = struct.Struct('<Q')			# ID del server
 _UNION_CONNECTION = struct.Struct('<II')	# ID del client, flag della connessione o errore
 _UNION_PING = struct.Struct('<H6x')			# completezza
+_UNION_MESSAGE = struct.Struct('<II')		# ID del client mittente, checksum
 _NO_UNION = bytes(8)
 
 
@@ -121,6 +123,15 @@ class Header(object):
 	def error(self):
 		# NO_AUTH: codice d'errore; richiesta AUTH: flag della connessione
 		return _UNION_CONNECTION.unpack(self.union)[1]
+
+	@property
+	def source(self):
+		"""Messaggio utente: l'ID del client che l'ha mandato (lo mette il server)."""
+		return _UNION_MESSAGE.unpack(self.union)[0]
+
+	@property
+	def message_checksum(self):
+		return _UNION_MESSAGE.unpack(self.union)[1]
 
 	@property
 	def completeness(self):
@@ -196,6 +207,30 @@ class Codec(object):
 					flags &= ~FLAG_COMPRESS
 			data = self.cipher.encrypt(data)
 		return split(TYPE_DATA, flags, sequence, data, union)
+
+	def user_message(self, text, targets=()):
+		"""Il pacchetto di un messaggio utente per i client *targets* (ID), o per tutti se vuoto:
+		uno solo, cifrato come una richiesta e senza risposta. Il server lo inoltra ai client che
+		hanno chiesto i messaggi utente alla connessione (``user_messages``)."""
+		data = _clu_encode({ 'targets': [ int(target) for target in targets ], 'text': str(text) })
+		if len(data) > PACKET_SIZE:
+			raise ValueError('user message too long')
+		union = _UNION_MESSAGE.pack(0, checksum(data))
+		return Header(TYPE_USER_MESSAGE, FLAG_HEAD, 0, len(data), union).pack() + self.cipher.encrypt(data)
+
+	def decode_user_message(self, header, payload):
+		"""Un messaggio utente arrivato dal server: ``(mittente, testo)``, o None se non è
+		valido."""
+		if (not (header.flags & FLAG_HEAD)) or (header.size != len(payload)):
+			return None
+		data = self.cipher.decrypt(payload) if payload else b''
+		if checksum(data) != header.message_checksum:
+			return None
+		try:
+			message = _clu_decode(data)
+		except ValueError:
+			return None
+		return header.source, str(message.get('text') or '')
 
 
 class PacketReader(object):
