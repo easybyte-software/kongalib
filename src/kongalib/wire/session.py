@@ -557,7 +557,8 @@ class Session(object):
 		if new_password is not None:
 			input[C.IN_NEW_PASSWORD] = hash_password(new_password)
 		output = await self._command(C.CMD_AUTHENTICATE, input, timeout, progress, userdata)
-		self.user = { 'name': username, 'password': password }
+		# the password from now on, as MGA_Client::Authenticate() keeps it (the print compositor logs in with it)
+		self.user = { 'name': username, 'password': password if new_password is None else new_password }
 		return output.get(C.OUT_USERINFO)
 
 	async def full_text_search(self, text, limit=0, progress=None, userdata=None, timeout=10000):
