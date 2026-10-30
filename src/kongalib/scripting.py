@@ -155,8 +155,29 @@ class _ScriptException(Exception):
 
 
 
+class _Pickler(multiprocessing.reduction.ForkingPickler):
+	"""Il pickler dei messaggi tra script e host: gli elementi e gli alberi di lxml, che pickle non sa
+	serializzare, passano come il loro XML (e dall'altra parte tornano elementi, copie degli originali:
+	Konga dà così allo script l'XML del documento elettronico, e lo riprende modificato). lxml viene
+	importato solo quando ne passa un oggetto."""
+	def reducer_override(self, obj):
+		if type(obj).__module__.startswith('lxml.'):
+			from lxml import etree
+			if isinstance(obj, etree._ElementTree):
+				return (_load_xml, (etree.tostring(obj), True))
+			if isinstance(obj, etree._Element):
+				return (_load_xml, (etree.tostring(obj, with_tail=False), False))
+		return NotImplemented
+
+
+def _load_xml(data, tree):
+	from lxml import etree
+	root = etree.fromstring(data)
+	return root.getroottree() if tree else root
+
+
 def _dumps(obj):
-	return bytes(multiprocessing.reduction.ForkingPickler.dumps(obj))
+	return bytes(_Pickler.dumps(obj))
 
 
 def _loads(data):
