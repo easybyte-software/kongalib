@@ -122,11 +122,24 @@ def _web_run_sync(coro):
 	"""Una chiamata sincrona nel browser: sospende lo stack di Python (JSPI) finché *coro* non finisce
 	sul loop di Pyodide. Possibile solo partendo da un punto d'ingresso che lo consente
 	(``runPythonAsync``, un gestore asincrono, un'applicazione di slew)."""
-	from pyodide.ffi import can_run_sync, run_sync
+	from pyodide.ffi import can_run_sync
 	if not can_run_sync():
 		coro.close()
 		raise RuntimeError('synchronous kongalib call where the stack cannot be suspended: use kongalib.AsyncClient, or call it from code started by runPythonAsync')
-	return run_sync(coro)
+	return web_wait(coro)
+
+
+def web_wait(awaitable):
+	"""Attende *awaitable* nel browser sospendendo lo stack (``run_sync``) e ne restituisce il risultato,
+	o ne solleva l'eccezione. L'esito è preso qui e non da ``run_sync``: un'eccezione che torna da lì passa
+	per JavaScript, dove Pyodide la dà a ``sys.excepthook`` (la segnalazione di crash) anche se poi chi
+	chiama la gestisce."""
+	from pyodide.ffi import run_sync
+	future = asyncio.ensure_future(awaitable)
+	async def settled():
+		await asyncio.wait({ future })
+	run_sync(settled())
+	return future.result()
 
 
 def _running_loop():

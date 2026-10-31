@@ -892,18 +892,30 @@ def _worker_post(kind, id, payload=b''):
 	js.postMessage(to_js([ kind, id, to_js(memoryview(payload)) ]))
 
 
+def _web_wait(awaitable):
+	"""Attende *awaitable* nel browser sospendendo lo stack (``run_sync``) e ne restituisce il risultato, o ne
+	solleva l'eccezione. L'esito è preso qui e non da ``run_sync``: un'eccezione che torna da lì passa per
+	JavaScript, dove Pyodide la dà a ``sys.excepthook`` (la segnalazione di crash) anche se poi chi chiama la
+	gestisce. (Come ``kongalib.wire.client.web_wait()``, qui per non legare lo scripting al client wire.)"""
+	from pyodide.ffi import run_sync
+	future = asyncio.ensure_future(awaitable)
+	async def settled():
+		await asyncio.wait({ future })
+	run_sync(settled())
+	return future.result()
+
+
 class _WorkerChannel:
 	"""Canale delle chiamate dello script verso l'host nel browser: messaggi del worker, con la
 	risposta attesa sospendendo lo stack dello script (``run_sync``)."""
 	def call(self, data):
-		from pyodide.ffi import run_sync
 		_Worker.next_id += 1
 		id = _Worker.next_id
 		future = asyncio.get_event_loop().create_future()
 		_Worker.pending[id] = future
 		try:
 			_worker_post('call', id, _CALL + data)
-			return run_sync(future)
+			return _web_wait(future)
 		finally:
 			_Worker.pending.pop(id, None)
 
@@ -1388,8 +1400,7 @@ class Interpreter:
 		l'interprete non riesce a collegarsi."""
 		if _WEB:
 			# nel browser l'attesa sospende lo stack (run_sync) mentre il loop prosegue
-			from pyodide.ffi import run_sync
-			return run_sync(self.execute_async(script, filename, argv, path, timeout, run, connection))
+			return _web_wait(self.execute_async(script, filename, argv, path, timeout, run, connection))
 		if run is None:
 			run = _Run()
 		backend = self._start_run(script, filename, argv, path, timeout, connection)
@@ -2095,8 +2106,7 @@ def execute(script=None, filename=None, argv=None, path=None, timeout=0, handler
 	quello in esecuzione nel thread chiamante, se c'è)."""
 	if _WEB:
 		# nel browser l'attesa sospende lo stack (run_sync) mentre il loop prosegue
-		from pyodide.ffi import run_sync
-		return run_sync(execute_async(script, filename, argv, path, timeout, handlers, interpreter))
+		return _web_wait(execute_async(script, filename, argv, path, timeout, handlers, interpreter))
 	if loop is None:
 		try:
 			loop = asyncio.get_running_loop()
