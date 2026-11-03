@@ -36,7 +36,7 @@ import sys
 import time
 import traceback
 
-from _kongalib import _clu_encode, _clu_decode, _error_message, checksum, hash_password
+from _kongalib import _clu_encode, _clu_decode, _error_message, _NoiseSession, checksum, hash_password
 from kongalib import Error, PROGRESS_EXECUTE, PROGRESS_COMPLETE, constants as C
 from kongalib.wire import protocol as P
 
@@ -154,6 +154,7 @@ class Session(object):
 		self.stream = None
 		self.reader_task = None
 		self.packets = None
+		self.noise = None
 		self.requests = {}
 		self.next_sequence = 1
 		self.codec = None
@@ -201,8 +202,17 @@ class Session(object):
 		self.last_activity = time.monotonic()
 		self.reader_task = asyncio.ensure_future(self._read())
 		try:
-			reply = await self._exchange(lambda seq: P.server_info_request(seq), None, timeout)
+			request = []
+			def server_info(sequence):
+				request.append(P.server_info_request(sequence))
+				return request[0]
+			reply = await self._exchange(server_info, None, timeout)
 			server_id = reply.header.server_id
+			if reply.header.flags & P.FLAG_NOISE_AVAILABLE:
+				# La richiesta come è partita e la risposta come è arrivata: il prologo della stretta di mano
+				await self._handshake(request[0] + reply.header.pack(), timeout)
+			if sys.platform == 'emscripten':
+				await self._check_page_key()
 			settings = self._settings(server, host, port, options, timeout)
 			reply = await self._exchange(lambda seq: P.auth_request(seq, _clu_encode(settings), settings['conn_flags']), None, timeout)
 			if reply.header.type == P.TYPE_NO_AUTH:
@@ -219,10 +229,55 @@ class Session(object):
 		self.codec = P.Codec(reply.header.flags, self.client_id, server_id)
 		info['host'] = host
 		info['port'] = port
+		# La chiave pubblica del server, perché il chiamante la verifichi: solo dalla stretta di mano, e
+		# mai quella che il server mette nella sua risposta, senza il canale non autenticata
+		info.pop('server_key', None)
+		if self.noise is not None:
+			info['server_key'] = self.noise.get_remote_static_key()
 		self.info = info
 		self.database = None
 		self.user = None
 		return info
+
+	async def _handshake(self, prologue, timeout):
+		"""La stretta di mano Noise (``plans/ipc_security.md``): da qui ogni pacchetto è un record."""
+		noise = _NoiseSession()
+		noise.start(prologue)
+		message = noise.write_handshake()
+		reply = await self._exchange(lambda seq: P.noise_handshake_request(seq, message), None, timeout)
+		if reply.header.type == P.TYPE_NO_AUTH:
+			raise error(reply.header.error)
+		if reply.header.type != P.TYPE_NOISE_HANDSHAKE:
+			raise error(P.BAD_REPLY)
+		try:
+			noise.read_handshake(reply.data)
+		except ValueError:
+			# falsificata, o non dal server che ha risposto al SERVER_INFO
+			raise error(P.BAD_REPLY)
+		# Quello che il server manda dopo segue l'AUTH: nulla tra la risposta e il cambio di lettore
+		self.packets = P.RecordReader(noise, self.packets.buffer)
+		self.noise = noise
+
+	async def _check_page_key(self):
+		"""Nel browser: la chiave del server deve essere quella data con la pagina (``server_key`` di
+		``/client/discovery``, in https autenticata), prima che l'AUTH parta. Il server senza canale
+		sicuro non la dà, e allora non c'è nulla da confrontare."""
+		from .websocket import server_key
+		try:
+			expected = await server_key()
+		except Exception:
+			expected = None
+		if expected is None:
+			return
+		if (self.noise is None) or (self.noise.get_remote_static_key() != expected):
+			raise error(P.BAD_REPLY, "La chiave del server non è quella data con la pagina: la connessione potrebbe essere intercettata")
+
+	def _write(self, data):
+		"""Scrive i pacchetti in *data*: così come sono, o ciascuno come record una volta stabilito
+		il canale sicuro (nell'ordine in cui partono, quello dei loro nonce)."""
+		if self.noise is not None:
+			data = b''.join(self.noise.write_record(packet) for packet in P.packets(data))
+		self.stream.write(data)
 
 	def disconnect(self, code=P.NOT_CONNECTED):
 		"""Chiude la connessione (senza avvisare il server, come il client nativo) e azzera lo
@@ -240,6 +295,7 @@ class Session(object):
 			request.post(error(code))
 		self.requests.clear()
 		self.codec = None
+		self.noise = None
 		self.client_id = 0
 		self.info = None
 		self.database = None
@@ -260,7 +316,7 @@ class Session(object):
 		"""Interrompe tutte le richieste in esecuzione sul server; ciascuna termina con
 		l'annullamento."""
 		if self.stream is not None:
-			self.stream.write(P.abort_all_request())
+			self._write(P.abort_all_request())
 
 	# --- messaggi utente ---------------------------------------------------------------------
 
@@ -281,7 +337,7 @@ class Session(object):
 			targets = (targets,)
 		elif isinstance(targets, (str, bytes)) or not all(isinstance(target, int) for target in targets):
 			raise TypeError("'targets' must be a client ID, a sequence of them or None")
-		self.stream.write(self.codec.user_message(text, targets))
+		self._write(self.codec.user_message(text, targets))
 
 	def _user_message(self, header, payload):
 		handler = self.user_message_handler
@@ -351,7 +407,7 @@ class Session(object):
 		sequence = self.next_sequence
 		self.next_sequence = (self.next_sequence + 1) & 0xFFFFFFFF or 1
 		request = self.requests[sequence] = _Request(cipher)
-		self.stream.write(build(sequence))
+		self._write(build(sequence))
 		return sequence, request
 
 	async def _exchange(self, build, cipher, timeout, progress=None, userdata=None):
@@ -400,7 +456,7 @@ class Session(object):
 			# annullata (o interrotta dal progresso): il server la ferma, la sua risposta
 			# verrà scartata
 			if self.requests.pop(sequence, None) is not None and self.stream is not None:
-				self.stream.write(P.abort_request(sequence))
+				self._write(P.abort_request(sequence))
 			raise
 		except BaseException:
 			self.requests.pop(sequence, None)

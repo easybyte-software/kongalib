@@ -19,12 +19,16 @@ Riferimento: ``plans/notes/kongalib_wire.md`` nel repository di Konga, e ``src/e
 ``PACKET_SIZE`` byte di dati; un'operazione (richiesta o risposta) più lunga è divisa in più
 pacchetti con la stessa sequenza, il primo con il flag ``FLAG_HEAD``, e ``size`` di ciascuno
 pari ai byte che restano compresi i suoi.
+
+Se il server lo offre (``FLAG_NOISE_AVAILABLE`` nella risposta SERVER_INFO), dopo la stretta di
+mano Noise (``TYPE_NOISE_HANDSHAKE``) ogni pacchetto viaggia in entrambi i sensi come record:
+due byte big-endian con la dimensione, poi il pacchetto cifrato (``plans/ipc_security.md``).
 """
 
 import struct
 import zlib
 
-from _kongalib import checksum, _Cipher, _clu_encode, _clu_decode
+from _kongalib import checksum, _Cipher, _NoiseSession, _clu_encode, _clu_decode
 
 
 MAGIC = 0xF79BF0B7
@@ -39,16 +43,20 @@ TYPE_FAILED = 7
 TYPE_ABORT = 8
 TYPE_ABORT_ALL = 9
 TYPE_USER_MESSAGE = 10
+TYPE_NOISE_HANDSHAKE = 11
 
 FLAG_TEA = 0x1
 FLAG_BLOWFISH = 0x2
 FLAG_AES = 0x4
 FLAG_COMPRESS = 0x100
+FLAG_NOISE_AVAILABLE = 0x0200		# solo nella risposta SERVER_INFO: il server offre il canale sicuro
 FLAG_HEAD = 0x1000
 
 HEADER = struct.Struct('<IIHHII8sI')
 HEADER_SIZE = HEADER.size		# 32
 PACKET_SIZE = 8192 - HEADER_SIZE
+RECORD_PREFIX_SIZE = 2
+TAG_SIZE = 16					# Poly1305
 MAX_REQUEST_SIZE = 512 * 1024 * 1024
 DEFAULT_PORT = 51965
 
@@ -171,6 +179,22 @@ def auth_request(sequence, settings, conn_flags):
 	return split(TYPE_AUTH, 0, sequence, settings, _UNION_CONNECTION.pack(0, conn_flags))
 
 
+def noise_handshake_request(sequence, message):
+	"""Il primo messaggio della stretta di mano Noise, in chiaro come la sua risposta."""
+	return split(TYPE_NOISE_HANDSHAKE, 0, sequence, message)
+
+
+def packets(data):
+	"""I pacchetti in *data*, come li compongono le funzioni di questo modulo (uno o più, uno
+	dopo l'altro): ciascuno diventa un record del canale sicuro."""
+	offset = 0
+	while offset < len(data):
+		header = Header.unpack(data[offset:offset + HEADER_SIZE])
+		end = offset + HEADER_SIZE + min(header.size, PACKET_SIZE)
+		yield data[offset:end]
+		offset = end
+
+
 def abort_request(sequence):
 	"""Interrompe la richiesta *sequence* in corso."""
 	return Header(TYPE_ABORT, FLAG_HEAD, sequence, 0).pack()
@@ -254,6 +278,39 @@ class PacketReader(object):
 			payload = bytes(self.buffer[HEADER_SIZE:HEADER_SIZE + length])
 			del self.buffer[:HEADER_SIZE + length]
 			packets.append((header, payload))
+		return packets
+
+
+class RecordReader(object):
+	"""Divide in record i byte che arrivano dal server una volta stabilito il canale sicuro, e ne
+	restituisce i pacchetti come :class:`PacketReader`. *noise* è la sessione della stretta di mano;
+	*data* i byte già arrivati dopo la sua risposta. Un record falsificato, ripetuto, fuori ordine
+	o che non contiene esattamente un pacchetto solleva :class:`ProtocolError`."""
+
+	def __init__(self, noise, data=b''):
+		self.noise = noise
+		self.buffer = bytearray(data)
+
+	def feed(self, data):
+		self.buffer += data
+		packets = []
+		while len(self.buffer) >= RECORD_PREFIX_SIZE:
+			size = int.from_bytes(self.buffer[:RECORD_PREFIX_SIZE], 'big')
+			if len(self.buffer) < RECORD_PREFIX_SIZE + size:
+				break
+			if size < HEADER_SIZE + TAG_SIZE:
+				raise ProtocolError('record too short')
+			try:
+				packet = self.noise.decrypt(bytes(self.buffer[RECORD_PREFIX_SIZE:RECORD_PREFIX_SIZE + size]))
+			except ValueError:
+				raise ProtocolError('record does not decrypt')
+			del self.buffer[:RECORD_PREFIX_SIZE + size]
+			header = Header.unpack(packet)
+			if header.magic != MAGIC:
+				raise ProtocolError('bad packet magic 0x%08x' % header.magic)
+			if len(packet) != HEADER_SIZE + min(header.size, PACKET_SIZE):
+				raise ProtocolError('record does not hold one packet')
+			packets.append((header, packet[HEADER_SIZE:]))
 		return packets
 
 

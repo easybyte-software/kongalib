@@ -38,6 +38,7 @@ extern PyType_Spec Decimal_spec;
 extern PyType_Spec JSONEncoder_spec;
 extern PyType_Spec JSONDecoder_spec;
 extern PyType_Spec Cipher_spec;
+extern PyType_Spec Noise_spec;
 #ifndef KONGALIB_CORE_ONLY
 extern PyType_Spec Client_spec;
 extern PyType_Spec NamedSemaphore_spec;
@@ -1091,6 +1092,7 @@ module_clear(PyObject *m)
 	Py_CLEAR(s->fJSONDecoderType);
 	Py_CLEAR(s->fNamedSemaphoreType);
 	Py_CLEAR(s->fCipherType);
+	Py_CLEAR(s->fNoiseType);
 
 	return 0;
 }
@@ -1157,6 +1159,7 @@ module_traverse(PyObject *m, visitproc visit, void *arg)
 	Py_VISIT(s->fJSONDecoderType);
 	Py_VISIT(s->fNamedSemaphoreType);
 	Py_VISIT(s->fCipherType);
+	Py_VISIT(s->fNoiseType);
 
 	return 0;
 }
@@ -1227,6 +1230,12 @@ module_exec(PyObject *module)
 	if (!state->fCipherType)
 		return -1;
 	if (PyModule_AddType(module, state->fCipherType) < 0)
+		return -1;
+
+	state->fNoiseType = (PyTypeObject *)PyType_FromModuleAndSpec(module, &Noise_spec, NULL);
+	if (!state->fNoiseType)
+		return -1;
+	if (PyModule_AddType(module, state->fNoiseType) < 0)
 		return -1;
 
 	// True nel modulo ridotto al nucleo di ebpr (es. nel browser): mancano Client, Deferred,

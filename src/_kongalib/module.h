@@ -30,6 +30,7 @@
 #include <ebpr/timestamp.h>
 #include <ebpr/socket.h>
 #include <ebpr/dispatcher.h>
+#include <ebpr/noise.h>
 #include <ebpr/cipher.h>
 #include <ebpr/regex.h>
 #include <ebpr/thread.h>
@@ -174,6 +175,20 @@ typedef struct CipherObject
 } CipherObject;
 
 
+/**
+ *	Noise session of an IPC connection's secure channel, as used by CL_TCPClient (see wire.cpp).
+ */
+typedef struct NoiseObject
+{
+	PyObject_HEAD
+
+	NoiseObject() : fSession(NULL) {}
+	~NoiseObject() { delete fSession; }
+
+	CL_NoiseSession	*fSession;
+} NoiseObject;
+
+
 typedef struct MODULE_STATE
 {
 	PyObject						*fParentModule;
@@ -207,6 +222,7 @@ typedef struct MODULE_STATE
 	PyTypeObject					*fJSONDecoderType;
 	PyTypeObject					*fNamedSemaphoreType;
 	PyTypeObject					*fCipherType;
+	PyTypeObject					*fNoiseType;
 	unsigned long					fMainThreadID;
 } MODULE_STATE;
 

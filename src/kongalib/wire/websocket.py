@@ -65,6 +65,18 @@ async def discover():
 	return ( info, )
 
 
+async def server_key():
+	"""La chiave pubblica del canale sicuro del server che ha servito la pagina, come la dà
+	``/client/discovery`` (in https arriva autenticata, con la pagina): None se non la dà."""
+	import js
+	url = str(js.location.origin) + DISCOVERY_PATH
+	response = await js.fetch(url, js.Object.fromEntries([ [ 'cache', 'no-store' ] ]))
+	if not response.ok:
+		return None
+	key = (await response.json()).to_py().get('server_key')
+	return bytes.fromhex(key) if key else None
+
+
 class WebSocketStream(Stream):
 	"""Flusso su un ``WebSocket`` del browser: i messaggi binari arrivano in una coda, la chiusura è la
 	fine del flusso."""
