@@ -31,6 +31,39 @@ function fail(error) {
 	post('error', 0, new TextEncoder().encode(String((error && error.stack) || error)));
 }
 
+// The site's versioned files (a ?v= in their URL, or under pyodide-<hash>/) from Cache Storage, as slew-web's loader
+// keeps them for the page (same cache, same rule: see installSiteCache() in its loader.ts): the browser's HTTP cache
+// keeps nothing from a site whose certificate it doesn't trust, and every worker fetched Pyodide and the wheels again.
+// Where Cache Storage isn't there (not a secure context) the HTTP cache does it. The page prunes the old versions.
+const SITE_CACHE = 'slew-site';
+const VERSIONED_DIR = /\/pyodide-[0-9a-f]+\//;
+
+function installSiteCache() {
+	if ((typeof caches === 'undefined') || !self.isSecureContext)
+		return;
+	const original = self.fetch;
+	self.fetch = async (input, init) => {
+		const method = ((init && init.method) || ((input instanceof Request) ? input.method : 'GET')).toUpperCase();
+		const url = new URL((input instanceof Request) ? input.url : String(input), self.location.href);
+		if ((method !== 'GET') || (url.origin !== self.location.origin) || !(url.searchParams.has('v') || VERSIONED_DIR.test(url.pathname)))
+			return original(input, init);
+		let cache;
+		try {
+			cache = await caches.open(SITE_CACHE);
+		}
+		catch {
+			return original(input, init);
+		}
+		const kept = await cache.match(url.href, { ignoreVary: true }).catch(() => undefined);
+		if (kept)
+			return kept;
+		const response = await original(input, init);
+		if (response.status === 200)
+			cache.put(url.href, response.clone()).catch(() => {});
+		return response;
+	};
+}
+
 async function init(config) {
 	if (config.lock) {
 		await new Promise((locked) => {
@@ -41,6 +74,7 @@ async function init(config) {
 		});
 		post('locked', 0);
 	}
+	installSiteCache();
 	const { loadPyodide } = await import(new URL('pyodide.mjs', config.index_url).href);
 	pyodide = await loadPyodide({ indexURL: config.index_url });
 	if (config.packages && config.packages.length)
